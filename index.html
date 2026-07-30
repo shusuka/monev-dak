@@ -651,19 +651,27 @@ const store = {
     this.cacheHasil = null;
   },
 
-  /** Seluruh hasil untuk papan peringkat. */
+  /** Seluruh hasil untuk papan peringkat. Tidak pernah melempar:
+      kegagalan dicatat di `galat` supaya tampilan bisa memberi tahu. */
   async semuaHasil(paksa) {
     if (this.cacheHasil && !paksa) return this.cacheHasil;
-    let rows;
-    if (this.mode === 'firebase') {
-      const { collection, query, limit, getDocs } = this.fs;
-      const snap = await getDocs(query(collection(this.db, 'hasil'), limit(1000)));
-      rows = snap.docs.map(d => d.data());
-    } else {
-      rows = Object.values(this.lokal.hasil);
+    try {
+      let rows;
+      if (this.mode === 'firebase') {
+        const { collection, query, limit, getDocs } = this.fs;
+        const snap = await getDocs(query(collection(this.db, 'hasil'), limit(1000)));
+        rows = snap.docs.map(d => d.data());
+      } else {
+        rows = Object.values(this.lokal.hasil);
+      }
+      this.galat = null;
+      this.cacheHasil = rows;
+      return rows;
+    } catch (e) {
+      console.warn('[MonevDAK] gagal membaca hasil:', e);
+      this.galat = e;
+      return [];
     }
-    this.cacheHasil = rows;
-    return rows;
   }
 };
 
@@ -710,7 +718,16 @@ let HASIL_SAYA = [];
 const hasilSaya = kind => HASIL_SAYA.find(h => h.tw === TW_AKTIF && h.kind === kind);
 
 async function muatHasilSaya() {
-  HASIL_SAYA = ME ? await store.hasilPeserta(ME.pid) : [];
+  if (!ME) { HASIL_SAYA = []; return; }
+  try {
+    HASIL_SAYA = await store.hasilPeserta(ME.pid);
+    store.galat = null;
+  } catch (e) {
+    console.warn('[MonevDAK] gagal membaca hasil peserta:', e);
+    store.galat = e;
+    HASIL_SAYA = [];
+    throw e;   // pemanggil yang memutuskan cara menampilkan kegagalan
+  }
 }
 
 
@@ -798,8 +815,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   try {
     const s = sessionStorage.getItem(SESSION_KEY);
-    if (s) { ME = JSON.parse(s); await muatHasilSaya(); syncChip(); go('dashboard'); }
-  } catch (e) {}
+    if (s) {
+      ME = JSON.parse(s);
+      try { await muatHasilSaya(); } catch (e) { toast('Nilai tersimpan belum dapat dibaca dari basis data.'); }
+      syncChip();
+      go('dashboard');
+    }
+  } catch (e) { ME = null; }
 });
 function closeMenu() { $('#mobileMenu').classList.add('hidden'); }
 
@@ -935,7 +957,11 @@ async function doLogin(e) {
   } catch (ex) {
     console.error(ex);
     ME = null;
-    fail('Gagal menyimpan identitas: ' + (ex && ex.message ? ex.message : 'kesalahan tidak diketahui'));
+    const izin = String(ex && (ex.code || ex.message)).includes('permission')
+      || String(ex && ex.message).includes('insufficient permissions');
+    fail(izin
+      ? 'Basis data menolak penyimpanan. Security rules Firestore belum dipublikasikan — hubungi pengelola aplikasi.'
+      : 'Gagal menyimpan identitas: ' + (ex && ex.message ? ex.message : 'kesalahan tidak diketahui'));
   } finally {
     btn.disabled = false;
   }
@@ -1317,6 +1343,20 @@ async function renderRank(paksa) {
   const nilaiUtama = x => kind === 'delta' ? (x.delta > 0 ? '+' : '') + x.delta : (kind === 'pre' ? x.preNilai : x.postNilai);
   const benarUtama = x => kind === 'pre' ? x.preBenar : x.postBenar;
   const durUtama   = x => kind === 'pre' ? x.preDur : x.postDur;
+
+  if (store.galat) {
+    const izin = String(store.galat.code || store.galat.message).includes('permission-denied')
+      || String(store.galat.message || '').includes('insufficient permissions');
+    $('#rankPodium').innerHTML = `<div class="glass rounded-3xl border-amber-400/40 bg-amber-400/10 p-6 sm:col-span-3">
+      <p class="text-[15px] font-semibold text-amber-200">Papan peringkat belum dapat dimuat</p>
+      <p class="mt-2 text-[14px] leading-[1.7] text-amber-200/80">${izin
+        ? 'Firestore menolak permintaan baca. Security rules proyek <strong>emondak-faee8</strong> belum dipublikasikan — tempel isi <code>firestore.rules</code> di Firebase Console → Firestore Database → Rules → Publish.'
+        : 'Terjadi kesalahan koneksi ke Firestore. Periksa jaringan lalu tekan Muat ulang.'}</p>
+      <p class="mt-3 text-[12px] text-amber-200/60">${esc(String(store.galat.code || store.galat.message || ''))}</p>
+    </div>`;
+    $('#rankTable').innerHTML = '';
+    return;
+  }
 
   $('#rankPodium').innerHTML = list.slice(0, 3).map((x, i) => {
     const medal = ['bg-white text-black', 'bg-white/70 text-black', 'bg-white/45 text-black'][i];
