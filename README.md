@@ -17,7 +17,10 @@ Situs statis tanpa proses build: HTML + Tailwind (CDN) + JavaScript biasa, denga
 | Batas waktu | 20 menit, sesi dikirim otomatis saat habis |
 | Pengacakan | Urutan soal **dan** urutan opsi A–D diacak ulang setiap kali peserta masuk |
 | Sesi per peserta | 1 pre test + 1 post test; sekali kirim, tidak dapat diulang |
+| Urutan sesi | **Post test terkunci** sampai pre test selesai |
 | Peringkat | Jumlah jawaban **benar** terbanyak; bila sama, **waktu penyelesaian** tercepat |
+
+Kartu sesi di dashboard peserta berwarna **hijau** bila sesi siap dikerjakan atau sudah selesai, dan **merah** bila masih terkunci.
 
 Mengubah aturan: `assets/soal-tw2.js` → objek `window.ATURAN`.
 Mengubah/menambah soal: `assets/soal-tw2.js` → array `window.SOAL_TW2`.
@@ -34,7 +37,8 @@ monev-dak/
 ├── assets/
 │   ├── wilayah.js             38 provinsi + kabupaten/kota (autocomplete)
 │   ├── soal-tw2.js            bank soal TW II + aturan penilaian
-│   └── firebase-config.js     konfigurasi Firebase — ISI SEBELUM DEPLOY
+│   ├── firebase-config.js     konfigurasi Firebase
+│   └── logo-pu.png            logo Kementerian PU — LETAKKAN BERKASNYA DI SINI
 ├── firestore.rules            security rules, tempel di Firebase Console
 ├── vercel.json                konfigurasi hosting statis
 └── README.md
@@ -80,7 +84,38 @@ Tidak ada composite index yang perlu dibuat: papan peringkat mengambil koleksi `
 
 ---
 
-## 3. Deploy ke GitHub + Vercel
+## 3. Logo Kementerian PU
+
+Letakkan berkas logo resmi sebagai **`assets/logo-pu.png`** (PNG latar transparan, tinggi minimal 160 px). Berkas itu dipakai di tiga tempat: ikon di hero, lambang di header peserta, dan header admin.
+
+Bila berkas belum ada, aplikasi otomatis menampilkan ikon cadangan berupa penanda peta — jadi halaman tidak pernah tampak rusak. Untuk memakai SVG, ubah `src="assets/logo-pu.png"` menjadi `.svg` pada `index.html` (tiga kemunculan).
+
+---
+
+## 4. Akun admin
+
+Admin dapat memantau progres seluruh pemda, meninjau jawaban tiap peserta, dan mengunduh rekap (CSV dan Excel). Pintu masuknya tombol **Masuk Admin** di footer halaman depan.
+
+### Menyiapkan akun
+
+1. Firebase Console → **Authentication → Sign-in method → Email/Password → Enable.**
+2. **Authentication → Users → Add user** → isi email dan kata sandi admin.
+3. Buka `firestore.rules`, ganti `'admin@emondak.go.id'` pada fungsi `adminEmail()` dengan email tadi (boleh lebih dari satu, pisahkan dengan koma), lalu **Publish** ulang di Console.
+
+Langkah 3 penting: koleksi `peserta` memuat email dinas, sehingga hanya email yang terdaftar di `adminEmail()` yang boleh membacanya. Tanpa langkah itu admin tetap bisa masuk dan melihat seluruh nilai, hanya saja angka “Belum mengisi” tidak dapat dihitung — aplikasi menampilkan pemberitahuan yang menjelaskan hal ini.
+
+### Isi halaman admin
+
+- **Enam kartu ringkasan** — peserta terdaftar, sudah pre test, sudah post test, belum mengisi, rata-rata nilai pre → post, rata-rata peningkatan.
+- **Tabel seluruh peserta** dengan penyaring status, provinsi, pengurutan, dan pencarian. Tombol **Detail** menampilkan jawaban peserta butir demi butir beserta kuncinya.
+- **Analisis butir soal** — persentase jawaban benar tiap butir, diurutkan dari yang paling sering salah, untuk menentukan materi yang perlu diperkuat saat pendampingan.
+- **Unduh CSV** dan **Unduh Excel**, mengikuti penyaring yang sedang aktif. Berkas Excel dibuat dari tabel HTML agar kolomnya tidak bergantung pada pengaturan pemisah daftar di masing-masing komputer.
+
+> Gerbang admin mengatur akses ke tampilan rekap dan ekspor, bukan kerahasiaan data. Koleksi `hasil` memang berstatus baca-publik karena papan peringkat peserta memerlukannya.
+
+---
+
+## 5. Deploy ke GitHub + Vercel
 
 ```bash
 git init

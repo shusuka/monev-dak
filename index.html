@@ -84,7 +84,7 @@
   .field input::placeholder { color: #9ca3af; }
 
   /* ---------- autocomplete ---------- */
-  .ac-panel { position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 60; max-height: 264px; overflow-y: auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 1.1rem; box-shadow: 0 24px 60px -18px rgba(0,0,0,.35); padding: 6px; }
+  .ac-panel { position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 90; max-height: 264px; overflow-y: auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 1.1rem; box-shadow: 0 24px 60px -18px rgba(0,0,0,.35); padding: 6px; }
   .ac-item { padding: 10px 12px; border-radius: .8rem; cursor: pointer; font-size: 14px; color: #111827; display: flex; align-items: baseline; gap: 8px; }
   .ac-item:hover, .ac-item[aria-selected="true"] { background: #f3f4f6; }
   .ac-item mark { background: transparent; color: #ea580c; font-weight: 600; }
@@ -131,8 +131,10 @@
   <header class="absolute inset-x-0 top-0 z-10 px-6 py-6 md:px-16 md:py-10">
     <div class="mx-auto flex max-w-7xl items-center justify-between">
       <a href="#top" class="anim-fade flex items-center gap-3" style="animation-delay:.15s">
-        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur-md">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="h-[18px] w-[18px] text-white">
+        <span class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/20 backdrop-blur-md">
+          <img src="assets/logo-pu.png" alt="Kementerian PU" class="h-[22px] w-auto"
+               onerror="this.remove();document.getElementById('navLogoFallback').classList.remove('hidden')" />
+          <svg id="navLogoFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="hidden h-[18px] w-[18px] text-white">
             <circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.6-4-9s1.4-6.5 4-9z"/>
           </svg>
         </span>
@@ -174,7 +176,11 @@
 
     <div class="relative mx-auto flex max-w-4xl flex-col items-center text-center">
       <div class="anim-pin mb-7">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="pin-shadow h-11 w-11 text-white md:h-12 md:w-12">
+        <!-- Letakkan berkas logo resmi di assets/logo-pu.png (atau .svg lalu ubah src).
+             Bila berkas belum ada, ikon cadangan di bawah yang tampil. -->
+        <img src="assets/logo-pu.png" alt="Logo Kementerian Pekerjaan Umum" class="pin-shadow mx-auto h-16 w-auto md:h-20"
+             onerror="this.remove();document.getElementById('heroLogoFallback').classList.remove('hidden')" />
+        <svg id="heroLogoFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="pin-shadow mx-auto hidden h-11 w-11 text-white md:h-12 md:w-12">
           <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.6"/>
         </svg>
       </div>
@@ -192,9 +198,10 @@
         <button id="heroCta2" onclick="go('rank')" class="anim-cta rounded-full border border-white/25 bg-white/10 px-7 py-[14px] text-[15px] font-medium text-white backdrop-blur-md transition hover:bg-white/20">Lihat Peringkat</button>
       </div>
 
-      <p id="heroMeta" class="anim-fade mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-white/55">
-        SE Menteri PU No. 5/SE/Mn/2026 &nbsp;·&nbsp; eMonitoring DAK PU
-      </p>
+      <div id="heroMeta" class="anim-fade mt-8">
+        <p class="text-[13px] font-semibold uppercase tracking-[0.2em] text-white/80">Pusat Fasilitasi Infrastruktur</p>
+        <p class="mt-1.5 text-[12px] font-medium uppercase tracking-[0.24em] text-white/55">Kementerian PU</p>
+      </div>
     </div>
 
     <a href="#alur" class="anim-fade absolute bottom-8 left-1/2 -translate-x-1/2 text-white/60 transition hover:text-white" style="animation-delay:2.6s" aria-label="Gulir ke bawah">
@@ -271,8 +278,11 @@
 
     <footer class="border-t border-white/10">
       <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-10 text-[13px] text-white/50 md:flex-row md:items-center md:justify-between md:px-16">
-        <p>MonevDAK · Pusat Fasilitasi Infrastruktur Daerah</p>
-        <p id="footMode">Memeriksa koneksi basis data…</p>
+        <p>MonevDAK · Pusat Fasilitasi Infrastruktur, Kementerian PU</p>
+        <div class="flex flex-wrap items-center gap-4">
+          <p id="footMode">Memeriksa koneksi basis data…</p>
+          <button onclick="go('adminlogin')" class="rounded-full border border-white/15 px-4 py-1.5 text-[12px] font-medium text-white/60 transition hover:bg-white/10 hover:text-white">Masuk Admin</button>
+        </div>
       </div>
     </footer>
   </div>
@@ -297,12 +307,12 @@
         Beranda
       </button>
 
-      <div class="relative z-10 text-center">
+      <div class="relative z-10 mt-auto text-center">
         <h2 class="text-[32px] font-semibold tracking-[-0.03em] text-gray-900 md:text-[40px]">Masuk Pemda</h2>
-        <p class="mt-2 text-sm text-gray-500">Identitas peserta monev DAK Fisik Bidang Jalan</p>
+        <p class="mt-2 text-sm text-gray-500">Pendaftaran sekaligus masuk — cukup isi identitas di bawah</p>
       </div>
 
-      <form id="loginForm" class="relative z-10 mt-9 space-y-3" autocomplete="off" novalidate>
+      <form id="loginForm" class="relative z-20 mb-auto mt-9 space-y-3" autocomplete="off" novalidate>
 
         <div class="field flex items-center gap-3">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -353,13 +363,118 @@
 
         <p id="loginErr" class="hidden pl-2 pt-1 text-[13px] font-medium text-red-500"></p>
       </form>
-
-      <p class="relative z-10 mt-auto pt-8 text-center text-[13px] text-gray-500">
-        Belum pernah mengisi? <button type="button" onclick="document.getElementById('inNama').focus()" class="sunset-text font-semibold">Akun dibuat otomatis saat masuk</button>
-      </p>
     </div>
   </div>
 </main>
+
+
+<!-- ═══════════ VIEW: LOGIN ADMIN ═══════════ -->
+<main id="view-adminlogin" data-view class="relative z-10 hidden min-h-screen items-center justify-center px-5 py-12">
+  <div class="glass w-full max-w-[440px] rounded-[2rem] p-8 md:p-10">
+    <button onclick="go('landing')" class="mb-7 flex items-center gap-2 text-[13px] font-medium text-white/55 transition hover:text-white">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Beranda
+    </button>
+
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Area terbatas</p>
+    <h1 class="mt-3 text-[28px] font-semibold tracking-[-0.02em]">Masuk Admin</h1>
+    <p class="mt-3 text-[14px] leading-[1.65] text-white/60">Pantau progres seluruh pemerintah daerah, tinjau hasil pengisian, dan unduh rekapnya.</p>
+
+    <form id="adminForm" class="mt-8 space-y-3" autocomplete="off" novalidate>
+      <div>
+        <label for="adEmail" class="mb-1.5 block text-[12px] font-medium text-white/60">Email admin</label>
+        <input id="adEmail" type="email" placeholder="admin@contoh.go.id" class="w-full rounded-2xl border border-white/12 bg-black/40 px-4 py-3 text-[15px] outline-none transition focus:border-white/35" />
+      </div>
+      <div>
+        <label for="adPass" class="mb-1.5 block text-[12px] font-medium text-white/60">Kata sandi</label>
+        <input id="adPass" type="password" placeholder="••••••••" class="w-full rounded-2xl border border-white/12 bg-black/40 px-4 py-3 text-[15px] outline-none transition focus:border-white/35" />
+      </div>
+      <button id="adBtn" type="submit" class="cta-glow mt-2 w-full rounded-2xl bg-white px-6 py-3.5 text-[15px] font-medium text-black">Masuk</button>
+      <p id="adErr" class="hidden pt-1 text-[13px] font-medium text-red-400"></p>
+    </form>
+  </div>
+</main>
+
+
+<!-- ═══════════ ADMIN SHELL ═══════════ -->
+<div id="adminShell" class="relative z-10 hidden min-h-screen">
+  <header class="sticky top-0 z-30 border-b border-white/10 bg-black/55 backdrop-blur-2xl">
+    <div class="mx-auto flex max-w-[1400px] items-center gap-4 px-5 py-4 md:px-10">
+      <span class="flex items-center gap-3">
+        <span class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/20 backdrop-blur-md">
+          <img src="assets/logo-pu.png" alt="Kementerian PU" class="h-[22px] w-auto" onerror="this.remove()" />
+        </span>
+        <span class="text-[16px] font-medium tracking-wide">MonevDAK</span>
+        <span class="rounded-full bg-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-black">Admin</span>
+      </span>
+      <div class="ml-auto flex items-center gap-3">
+        <span id="adWho" class="hidden text-[12px] text-white/55 sm:inline"></span>
+        <button onclick="muatAdmin(true)" class="rounded-full border border-white/20 px-4 py-2 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Muat ulang</button>
+        <button onclick="keluarAdmin()" title="Keluar" class="rounded-full p-2 text-white/60 transition hover:bg-white/10 hover:text-white">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px]"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <section id="view-admin" data-view class="mx-auto max-w-[1400px] px-5 py-10 md:px-10 md:py-12">
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Rekapitulasi · Triwulan II</p>
+    <h1 class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[38px]">Progres pengisian seluruh pemda</h1>
+
+    <div id="adNotice" class="mt-6 hidden"></div>
+    <div id="adStats" class="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"></div>
+
+    <div class="mt-10 flex flex-wrap items-center gap-3">
+      <select id="adFilter" onchange="renderAdmin()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink">
+        <option value="semua">Semua peserta</option>
+        <option value="lengkap">Sudah lengkap (pre + post)</option>
+        <option value="prasaja">Baru pre test</option>
+        <option value="possaja">Baru post test</option>
+        <option value="belum">Belum mengisi sama sekali</option>
+      </select>
+      <select id="adProv" onchange="renderAdmin()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink"></select>
+      <select id="adUrut" onchange="renderAdmin()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink">
+        <option value="post">Urut nilai post tertinggi</option>
+        <option value="pre">Urut nilai pre tertinggi</option>
+        <option value="delta">Urut peningkatan terbesar</option>
+        <option value="nama">Urut nama A–Z</option>
+        <option value="wilayah">Urut provinsi</option>
+      </select>
+      <div class="glass flex items-center gap-2 rounded-full px-5 py-2.5">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4 text-white/50"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="adQ" oninput="renderAdmin()" placeholder="Cari nama atau daerah" class="w-48 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
+      </div>
+      <div class="ml-auto flex flex-wrap gap-2">
+        <button onclick="exportCSV()" class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 transition hover:bg-white/10">Unduh CSV</button>
+        <button onclick="exportXLS()" class="cta-glow rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black">Unduh Excel</button>
+      </div>
+    </div>
+
+    <div id="adTable" class="glass mt-6 overflow-hidden rounded-3xl"></div>
+
+    <h2 class="mt-14 text-[20px] font-semibold tracking-[-0.01em]">Analisis butir soal</h2>
+    <p class="mt-2 max-w-[640px] text-[14px] leading-[1.7] text-white/60">Persentase jawaban benar tiap butir, dihitung dari seluruh sesi yang tersimpan. Butir dengan persentase rendah menandakan materi yang perlu diperkuat saat pendampingan.</p>
+    <div id="adSoal" class="glass mt-6 overflow-hidden rounded-3xl"></div>
+  </section>
+
+  <!-- panel detail jawaban -->
+  <div id="adDetail" class="fixed inset-0 z-[85] hidden overflow-y-auto bg-black/70 px-4 py-10 backdrop-blur-md">
+    <div class="glass mx-auto max-w-3xl rounded-[2rem] p-6 md:p-9">
+      <div class="flex items-start justify-between gap-4">
+        <div id="adDetailHead"></div>
+        <button onclick="tutupDetail()" class="rounded-full p-2 text-white/60 transition hover:bg-white/10 hover:text-white">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-5 w-5"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div id="adDetailBody" class="mt-7"></div>
+    </div>
+  </div>
+
+  <footer class="border-t border-white/10 bg-black/50 backdrop-blur-xl">
+    <div class="mx-auto px-5 py-8 text-[12px] text-white/45 md:px-10">
+      <p>MonevDAK · Pusat Fasilitasi Infrastruktur, Kementerian PU</p>
+    </div>
+  </footer>
+</div>
 
 
 <!-- ═══════════ APP SHELL ═══════════ -->
@@ -368,8 +483,10 @@
   <header class="sticky top-0 z-30 border-b border-white/10 bg-black/55 backdrop-blur-2xl">
     <div class="mx-auto flex max-w-7xl items-center gap-4 px-5 py-4 md:px-10">
       <button onclick="go('dashboard')" class="flex items-center gap-3">
-        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur-md">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="h-[18px] w-[18px]"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.6-4-9s1.4-6.5 4-9z"/></svg>
+        <span class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/20 backdrop-blur-md">
+          <img src="assets/logo-pu.png" alt="Kementerian PU" class="h-[22px] w-auto"
+               onerror="this.remove();document.getElementById('appLogoFallback').classList.remove('hidden')" />
+          <svg id="appLogoFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="hidden h-[18px] w-[18px]"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.6-4-9s1.4-6.5 4-9z"/></svg>
         </span>
         <span class="hidden text-[16px] font-medium tracking-wide sm:inline">MonevDAK</span>
       </button>
@@ -594,6 +711,8 @@ const store = {
       const auth = authMod.getAuth(app);
       const cred = await authMod.signInAnonymously(auth);
       this.uid = cred.user.uid;
+      this.authMod = authMod;
+      this.auth = auth;
       this.fs = fsMod;
       this.db = fsMod.getFirestore(app);
       this.mode = 'firebase';
@@ -649,6 +768,34 @@ const store = {
       this.simpanLokal();
     }
     this.cacheHasil = null;
+  },
+
+  /** Masuk sebagai admin dengan akun Email/Password Firebase. */
+  async masukAdmin(email, pass) {
+    if (this.mode !== 'firebase') throw new Error('mode-lokal');
+    const cred = await this.authMod.signInWithEmailAndPassword(this.auth, email, pass);
+    this.uid = cred.user.uid;
+    this.cacheHasil = null;
+    return { email: cred.user.email, uid: cred.user.uid };
+  },
+
+  /** Kembali ke sesi anonim setelah admin keluar. */
+  async kembaliAnonim() {
+    if (this.mode !== 'firebase') return;
+    const cred = await this.authMod.signInAnonymously(this.auth);
+    this.uid = cred.user.uid;
+    this.cacheHasil = null;
+  },
+
+  /** Daftar seluruh peserta terdaftar — hanya untuk admin.
+      Rules membatasi baca koleksi ini, jadi pemanggil wajib menangani galat. */
+  async semuaPeserta() {
+    if (this.mode === 'firebase') {
+      const { collection, query, limit, getDocs } = this.fs;
+      const snap = await getDocs(query(collection(this.db, 'peserta'), limit(2000)));
+      return snap.docs.map(d => ({ pid: d.id, ...d.data() }));
+    }
+    return Object.values(this.lokal.peserta);
   },
 
   /** Seluruh hasil untuk papan peringkat. Tidak pernah melempar:
@@ -734,18 +881,22 @@ async function muatHasilSaya() {
 /* ═══════════════════════════════════════════════════════════════
    5. ROUTER
    ═══════════════════════════════════════════════════════════════ */
-const APP_VIEWS = ['dashboard', 'quiz', 'result', 'rank', 'compare'];
+const APP_VIEWS   = ['dashboard', 'quiz', 'result', 'rank', 'compare'];
+const ADMIN_VIEWS = ['admin'];
 
 async function go(view) {
   if (APP_VIEWS.includes(view) && !ME) view = 'login';
+  if (ADMIN_VIEWS.includes(view) && !ADMIN) view = 'adminlogin';
 
   $$('[data-view]').forEach(v => v.classList.add('hidden'));
-  const inApp = APP_VIEWS.includes(view);
+  const inApp   = APP_VIEWS.includes(view);
+  const inAdmin = ADMIN_VIEWS.includes(view);
   $('#appShell').classList.toggle('hidden', !inApp);
-  $('#bgScrim').style.opacity = (view === 'landing') ? '0' : (inApp ? '1' : '.7');
+  $('#adminShell').classList.toggle('hidden', !inAdmin);
+  $('#bgScrim').style.opacity = (view === 'landing') ? '0' : ((inApp || inAdmin) ? '1' : '.7');
 
   const el = $('#view-' + view);
-  if (el) { el.classList.remove('hidden'); if (view === 'login') el.classList.add('flex'); }
+  if (el) { el.classList.remove('hidden'); if (view === 'login' || view === 'adminlogin') el.classList.add('flex'); }
 
   $$('[data-nav]').forEach(b => {
     const on = b.dataset.nav === view;
@@ -757,6 +908,7 @@ async function go(view) {
   if (view === 'dashboard') await renderDashboard();
   if (view === 'rank')      await renderRank();
   if (view === 'compare')   renderCompare();
+  if (view === 'admin')     await muatAdmin();
 }
 
 
@@ -806,6 +958,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderTwGrid();
   bindAutocomplete();
   $('#loginForm').addEventListener('submit', doLogin);
+  $('#adminForm').addEventListener('submit', doAdminLogin);
+  $('#adDetail').addEventListener('click', e => { if (e.target.id === 'adDetail') tutupDetail(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') tutupDetail(); });
 
   const mode = await store.init();
   $('#modeBadge').classList.toggle('hidden', mode === 'firebase');
@@ -1010,17 +1165,39 @@ async function renderDashboard() {
   }
   $('#kpiRank').textContent = posisi;
 
-  const kartu = (r, kind) => r
-    ? `<button onclick="showResult('${kind}')" class="rounded-2xl border border-white/12 bg-white/[.07] px-4 py-3 text-left transition hover:bg-white/[.12]">
-         <p class="text-[11px] uppercase tracking-[0.14em] text-white/50">${kind === 'pre' ? 'Pre test' : 'Post test'}</p>
-         <p class="mt-1 text-[22px] font-semibold tabular-nums">${r.nilai}<span class="text-[13px] font-medium text-white/50"> / ${NILAI_MAX}</span></p>
-         <p class="mt-0.5 text-[11px] text-white/50">${r.benar}/${r.total} benar · ${fmtDur(r.durasiMs)} · pembahasan</p>
-       </button>`
-    : `<button onclick="startQuiz('${kind}')" class="rounded-2xl border border-dashed border-white/20 px-4 py-3 text-left transition hover:border-white/40 hover:bg-white/[.07]">
-         <p class="text-[11px] uppercase tracking-[0.14em] text-white/50">${kind === 'pre' ? 'Pre test' : 'Post test'}</p>
-         <p class="mt-1 text-[15px] font-semibold">Mulai sekarang</p>
-         <p class="mt-0.5 text-[11px] text-white/50">${ATURAN.jumlahSoal} soal acak · ${ATURAN.durasiMenit} menit</p>
-       </button>`;
+  /* Warna kartu menandakan ketersediaan sesi:
+     hijau = sudah selesai atau siap dikerjakan, merah = masih terkunci. */
+  const IKON = {
+    selesai: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M20 6 9 17l-5-5"/></svg>',
+    mulai:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M5 3l14 9-14 9V3z"/></svg>',
+    kunci:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'
+  };
+
+  const kartu = (r, kind, terkunci) => {
+    const judul = kind === 'pre' ? 'Pre test' : 'Post test';
+
+    if (terkunci) {
+      return `<div class="rounded-2xl border border-red-400/45 bg-red-500/[.14] px-4 py-3">
+        <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-red-200/90">${IKON.kunci}${judul}</p>
+        <p class="mt-1.5 text-[15px] font-semibold text-red-50">Terkunci</p>
+        <p class="mt-0.5 text-[11px] leading-[1.5] text-red-200/75">Selesaikan pre test lebih dahulu</p>
+      </div>`;
+    }
+
+    if (r) {
+      return `<button onclick="showResult('${kind}')" class="rounded-2xl border border-emerald-400/45 bg-emerald-500/[.15] px-4 py-3 text-left transition hover:bg-emerald-500/[.24]">
+        <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-emerald-200/90">${IKON.selesai}${judul}</p>
+        <p class="mt-1.5 text-[22px] font-semibold tabular-nums text-emerald-50">${r.nilai}<span class="text-[13px] font-medium text-emerald-200/70"> / ${NILAI_MAX}</span></p>
+        <p class="mt-0.5 text-[11px] leading-[1.5] text-emerald-200/75">${r.benar}/${r.total} benar · ${fmtDur(r.durasiMs)} · pembahasan</p>
+      </button>`;
+    }
+
+    return `<button onclick="startQuiz('${kind}')" class="rounded-2xl border border-emerald-400/45 bg-emerald-500/[.09] px-4 py-3 text-left transition hover:bg-emerald-500/[.20]">
+      <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-emerald-200/90">${IKON.mulai}${judul}</p>
+      <p class="mt-1.5 text-[15px] font-semibold text-emerald-50">Mulai sekarang</p>
+      <p class="mt-0.5 text-[11px] leading-[1.5] text-emerald-200/75">${ATURAN.jumlahSoal} soal acak · ${ATURAN.durasiMenit} menit</p>
+    </button>`;
+  };
 
   const aktifCard = `<div class="glass rounded-3xl p-6 ring-1 ring-white/40 md:p-7">
       <div class="flex items-start justify-between gap-4">
@@ -1030,7 +1207,7 @@ async function renderDashboard() {
         </div>
         <span class="shrink-0 rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-black">Dinilai</span>
       </div>
-      <div class="mt-5 grid grid-cols-2 gap-3">${kartu(rp, 'pre')}${kartu(rq, 'post')}</div>
+      <div class="mt-5 grid grid-cols-2 gap-3">${kartu(rp, 'pre', false)}${kartu(rq, 'post', !rp)}</div>
       ${d !== null ? `<div class="mt-4 flex items-center gap-2 rounded-2xl bg-white/[.06] px-4 py-3">
         <span class="text-[12px] text-white/60">Peningkatan</span>
         <span class="text-[15px] font-semibold tabular-nums ${d > 0 ? 'text-emerald-400' : d < 0 ? 'text-red-400' : 'text-white/70'}">${d > 0 ? '+' : ''}${d} poin</span>
@@ -1070,7 +1247,8 @@ function buatSesi() {
 
 function startQuiz(kind) {
   if (hasilSaya(kind)) { toast('Sesi ini sudah pernah Anda selesaikan.'); return; }
-  if (kind === 'post' && !hasilSaya('pre') && !confirm('Pre test belum dikerjakan. Lanjut ke post test?')) return;
+  // post test terkunci sampai pre test selesai
+  if (kind === 'post' && !hasilSaya('pre')) { toast('Post test terbuka setelah pre test selesai.'); return; }
   if (BANK.length < ATURAN.jumlahSoal) { toast('Bank soal kurang dari ' + ATURAN.jumlahSoal + ' soal.'); return; }
 
   Q = {
@@ -1333,7 +1511,17 @@ async function daftarPeringkat(kind, paksa) {
 
 async function refreshRank() { store.cacheHasil = null; await renderRank(true); toast('Data peringkat dimuat ulang.'); }
 
+let rankDefaultDiatur = false;
+
 async function renderRank(paksa) {
+  /* Filter bawaan "Post Test" membuat papan tampak kosong padahal ada nilai
+     pre test. Pada kunjungan pertama, pilih otomatis filter yang berisi data. */
+  if (!rankDefaultDiatur) {
+    rankDefaultDiatur = true;
+    const adaPost = (await daftarPeringkat('post', paksa)).length;
+    if (!adaPost && (await daftarPeringkat('pre')).length) $('#rankKind').value = 'pre';
+  }
+
   const kind = $('#rankKind').value, q = norm($('#rankQ').value);
   const list = await daftarPeringkat(kind, paksa);
   list.forEach((x, i) => x.pos = i + 1);
@@ -1370,7 +1558,14 @@ async function renderRank(paksa) {
       <p class="mt-5 text-[30px] font-semibold tabular-nums">${nilaiUtama(x)}</p>
       <p class="mt-1 text-[12px] text-white/55">${benarUtama(x) ?? '—'} benar · ${fmtDur(durUtama(x))}</p>
     </div>`;
-  }).join('') || '<p class="text-[14px] text-white/55">Belum ada data untuk filter ini.</p>';
+  }).join('') || `<div class="glass rounded-3xl p-6 sm:col-span-3">
+      <p class="text-[15px] font-semibold">Belum ada nilai pada kategori ini</p>
+      <p class="mt-2 text-[14px] leading-[1.7] text-white/65">${
+        kind === 'delta'
+          ? 'Peringkat peningkatan baru muncul setelah ada peserta yang menyelesaikan pre test <em>dan</em> post test.'
+          : 'Belum ada pemerintah daerah yang menyelesaikan ' + (kind === 'pre' ? 'pre test' : 'post test') + '. Coba pilih kategori lain pada penyaring di atas.'
+      }</p>
+    </div>`;
 
   $('#rankTable').innerHTML = `
     <div class="overflow-x-auto">
@@ -1454,6 +1649,355 @@ async function renderCompare() {
       <div><p class="text-[11px] uppercase tracking-[0.14em] text-white/50">Predikat akhir</p><p class="mt-1.5 text-[14px] font-semibold">${post ? predikat(post.nilai) : '—'}</p></div>
     </div>
   </div>`;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   14. ADMIN
+   Masuk memakai akun Email/Password Firebase. Koleksi `hasil` memang
+   berstatus baca-publik (papan peringkat memerlukannya), sehingga gerbang
+   ini mengatur akses ke tampilan rekap dan ekspor — bukan kerahasiaan
+   datanya. Koleksi `peserta` (memuat email) dibatasi untuk admin di rules.
+   ═══════════════════════════════════════════════════════════════ */
+let ADMIN = null;
+let ADATA = { peserta: [], hasil: [], gabung: [], galatPeserta: null };
+
+async function doAdminLogin(e) {
+  e.preventDefault();
+  const email = $('#adEmail').value.trim();
+  const pass  = $('#adPass').value;
+  const err   = $('#adErr');
+  const fail  = m => { err.textContent = m; err.classList.remove('hidden'); };
+  err.classList.add('hidden');
+
+  if (!/^\S+@\S+\.\S+$/.test(email)) return fail('Format email tidak valid.');
+  if (pass.length < 6)               return fail('Kata sandi minimal 6 karakter.');
+
+  const btn = $('#adBtn');
+  btn.disabled = true; btn.textContent = 'Memeriksa…';
+  try {
+    ADMIN = store.mode === 'lokal'
+      ? { email: email, lokal: true }              // mode lokal: tanpa server, untuk uji tampilan
+      : await store.masukAdmin(email, pass);
+    $('#adWho').textContent = ADMIN.email + (ADMIN.lokal ? ' · mode lokal' : '');
+    $('#adPass').value = '';
+    await go('admin');
+  } catch (ex) {
+    console.error(ex);
+    ADMIN = null;
+    const c = String((ex && (ex.code || ex.message)) || '');
+    fail(
+      /invalid-credential|wrong-password|user-not-found|invalid-email/.test(c) ? 'Email atau kata sandi salah.' :
+      /operation-not-allowed/.test(c) ? 'Metode Email/Password belum diaktifkan pada Firebase Authentication.' :
+      /too-many-requests/.test(c)     ? 'Terlalu banyak percobaan. Coba lagi beberapa saat lagi.' :
+      /network/.test(c)               ? 'Gagal menghubungi server. Periksa koneksi.' :
+      'Gagal masuk: ' + c
+    );
+  } finally {
+    btn.disabled = false; btn.textContent = 'Masuk';
+  }
+}
+
+async function keluarAdmin() {
+  ADMIN = null;
+  ADATA = { peserta: [], hasil: [], gabung: [], galatPeserta: null };
+  $('#adEmail').value = ''; $('#adPass').value = '';
+  try { await store.kembaliAnonim(); } catch (e) { console.warn(e); }
+  go('landing');
+}
+
+async function muatAdmin(paksa) {
+  const hasil = await store.semuaHasil(paksa);
+
+  let peserta = [], galatPeserta = null;
+  try { peserta = await store.semuaPeserta(); }
+  catch (e) { console.warn('[MonevDAK] daftar peserta tidak terbaca:', e); galatPeserta = e; }
+
+  /* Gabungkan: peserta terdaftar sebagai kerangka, hasil ditempelkan.
+     Peserta yang hasilnya ada tapi dokumen pesertanya tak terbaca tetap masuk. */
+  const map = {};
+  peserta.forEach(p => {
+    map[p.pid] = { pid: p.pid, nama: p.nama || '(tanpa nama)', prov: p.prov || '', kab: p.kab || '', email: p.email || '', pre: null, post: null };
+  });
+  hasil.forEach(h => {
+    if (h.tw !== TW_AKTIF) return;
+    const g = map[h.pid] || (map[h.pid] = { pid: h.pid, nama: h.nama, prov: h.prov, kab: h.kab, email: '', pre: null, post: null });
+    g[h.kind] = h;
+    if (!g.nama || g.nama === '(tanpa nama)') { g.nama = h.nama; g.prov = h.prov; g.kab = h.kab; }
+  });
+
+  ADATA = { peserta, hasil: hasil.filter(h => h.tw === TW_AKTIF), gabung: Object.values(map), galatPeserta };
+  isiProvinsiAdmin();
+  renderAdmin();
+  if (paksa) toast('Data admin dimuat ulang.');
+}
+
+function isiProvinsiAdmin() {
+  const sel = $('#adProv');
+  const lama = sel.value;
+  const provs = Array.from(new Set(ADATA.gabung.map(g => g.prov).filter(Boolean))).sort();
+  sel.innerHTML = '<option value="">Semua provinsi</option>' + provs.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+  if (lama && provs.includes(lama)) sel.value = lama;
+}
+
+const statusPeserta = g => g.pre && g.post ? 'lengkap' : g.pre ? 'prasaja' : g.post ? 'possaja' : 'belum';
+const LABEL_STATUS = { lengkap: 'Lengkap', prasaja: 'Baru pre test', possaja: 'Baru post test', belum: 'Belum mengisi' };
+
+/** Baris yang sedang tampil — dipakai bersama oleh tabel dan ekspor. */
+function dataTampilAdmin() {
+  const f = $('#adFilter').value, prov = $('#adProv').value, urut = $('#adUrut').value, q = norm($('#adQ').value);
+  let rows = ADATA.gabung.slice();
+  if (f !== 'semua') rows = rows.filter(g => statusPeserta(g) === f);
+  if (prov)          rows = rows.filter(g => g.prov === prov);
+  if (q)             rows = rows.filter(g => norm(g.nama + ' ' + g.kab + ' ' + g.prov + ' ' + g.email).includes(q));
+
+  const nilai = (g, k) => g[k] ? g[k].nilai : -1;
+  const delta = g => (g.pre && g.post) ? g.post.nilai - g.pre.nilai : -999;
+  const cmp = {
+    post:    (a, b) => nilai(b, 'post') - nilai(a, 'post') || ((a.post && b.post) ? a.post.durasiMs - b.post.durasiMs : 0) || a.nama.localeCompare(b.nama),
+    pre:     (a, b) => nilai(b, 'pre')  - nilai(a, 'pre')  || ((a.pre && b.pre)  ? a.pre.durasiMs  - b.pre.durasiMs  : 0) || a.nama.localeCompare(b.nama),
+    delta:   (a, b) => delta(b) - delta(a) || a.nama.localeCompare(b.nama),
+    nama:    (a, b) => a.nama.localeCompare(b.nama),
+    wilayah: (a, b) => (a.prov || '').localeCompare(b.prov || '') || (a.kab || '').localeCompare(b.kab || '') || a.nama.localeCompare(b.nama)
+  }[urut];
+  return rows.sort(cmp);
+}
+
+function renderAdmin() {
+  const semua = ADATA.gabung;
+  const sudahPre  = semua.filter(g => g.pre).length;
+  const sudahPost = semua.filter(g => g.post).length;
+  const lengkap   = semua.filter(g => g.pre && g.post).length;
+  const belum     = semua.filter(g => !g.pre && !g.post).length;
+  const rata = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+  const rPre  = rata(semua.filter(g => g.pre).map(g => g.pre.nilai));
+  const rPost = rata(semua.filter(g => g.post).map(g => g.post.nilai));
+  const rDelta = rata(semua.filter(g => g.pre && g.post).map(g => g.post.nilai - g.pre.nilai));
+
+  /* pemberitahuan bila daftar peserta tidak terbaca */
+  const notis = $('#adNotice');
+  if (ADATA.galatPeserta) {
+    notis.classList.remove('hidden');
+    notis.innerHTML = `<div class="rounded-3xl border border-amber-400/40 bg-amber-400/10 p-5 text-[14px] leading-[1.7] text-amber-200/90">
+      <p class="font-semibold text-amber-200">Daftar peserta terdaftar tidak dapat dibaca</p>
+      <p class="mt-1.5">Angka “Belum mengisi” tidak dapat dihitung. Tambahkan email admin ini ke daftar <code>ADMIN_EMAIL</code> pada <code>firestore.rules</code>, lalu publikasikan ulang. Rekap di bawah tetap lengkap untuk peserta yang sudah mengisi.</p>
+      <p class="mt-2 text-[12px] text-amber-200/60">${esc(String(ADATA.galatPeserta.code || ADATA.galatPeserta.message || ''))}</p>
+    </div>`;
+  } else notis.classList.add('hidden');
+
+  const kartu = (label, isi, sub, warna) => `<div class="glass rounded-3xl p-5">
+    <p class="text-[11px] uppercase tracking-[0.14em] text-white/50">${label}</p>
+    <p class="mt-2.5 text-[28px] font-semibold tabular-nums ${warna || ''}">${isi}</p>
+    <p class="mt-1 text-[11px] text-white/50">${sub}</p>
+  </div>`;
+
+  $('#adStats').innerHTML =
+    kartu('Peserta terdaftar', semua.length, ADATA.galatPeserta ? 'yang sudah mengisi' : 'termasuk yang belum mengisi') +
+    kartu('Sudah pre test', sudahPre, semua.length ? Math.round(sudahPre / semua.length * 100) + '% dari peserta' : '—', 'text-emerald-400') +
+    kartu('Sudah post test', sudahPost, semua.length ? Math.round(sudahPost / semua.length * 100) + '% dari peserta' : '—', 'text-emerald-400') +
+    kartu('Belum mengisi', ADATA.galatPeserta ? '—' : belum, 'belum ada sesi', belum ? 'text-red-400' : '') +
+    kartu('Rata-rata nilai', (rPre ?? '—') + ' → ' + (rPost ?? '—'), 'pre → post') +
+    kartu('Rata-rata peningkatan', rDelta === null ? '—' : (rDelta > 0 ? '+' : '') + rDelta, 'dari ' + lengkap + ' peserta lengkap',
+          rDelta === null ? '' : rDelta > 0 ? 'text-emerald-400' : 'text-red-400');
+
+  const rows = dataTampilAdmin();
+  const sel = (g, k, f) => g[k] ? f(g[k]) : '—';
+  const badge = s => {
+    const w = { lengkap: 'bg-emerald-400/20 text-emerald-300', prasaja: 'bg-amber-400/20 text-amber-300', possaja: 'bg-amber-400/20 text-amber-300', belum: 'bg-red-400/20 text-red-300' }[s];
+    return `<span class="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${w}">${LABEL_STATUS[s]}</span>`;
+  };
+
+  $('#adTable').innerHTML = `
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[1080px] text-left text-[14px]">
+        <thead class="border-b border-white/10 text-[11px] uppercase tracking-[0.14em] text-white/45">
+          <tr>
+            <th class="px-5 py-4 font-semibold">#</th>
+            <th class="px-5 py-4 font-semibold">Peserta</th>
+            <th class="px-5 py-4 font-semibold">Daerah</th>
+            <th class="px-5 py-4 font-semibold">Status</th>
+            <th class="px-5 py-4 text-right font-semibold">Pre</th>
+            <th class="px-5 py-4 text-right font-semibold">Post</th>
+            <th class="px-5 py-4 text-right font-semibold">Selisih</th>
+            <th class="px-5 py-4 text-right font-semibold">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.length ? rows.map((g, i) => {
+            const d = (g.pre && g.post) ? g.post.nilai - g.pre.nilai : null;
+            return `<tr class="border-b border-white/[.06]">
+              <td class="px-5 py-4 tabular-nums text-white/50">${i + 1}</td>
+              <td class="px-5 py-4"><p class="font-medium">${esc(g.nama)}</p>${g.email ? `<p class="text-[12px] text-white/45">${esc(g.email)}</p>` : ''}</td>
+              <td class="px-5 py-4 text-white/65">${esc(g.kab || '—')}${g.prov ? '<br><span class="text-[12px] text-white/40">' + esc(g.prov) + '</span>' : ''}</td>
+              <td class="px-5 py-4">${badge(statusPeserta(g))}</td>
+              <td class="px-5 py-4 text-right tabular-nums">${sel(g, 'pre', r => `<span class="font-semibold">${r.nilai}</span><br><span class="text-[11px] text-white/45">${r.benar}/${r.total} · ${fmtDur(r.durasiMs)}</span>`)}</td>
+              <td class="px-5 py-4 text-right tabular-nums">${sel(g, 'post', r => `<span class="font-semibold">${r.nilai}</span><br><span class="text-[11px] text-white/45">${r.benar}/${r.total} · ${fmtDur(r.durasiMs)}</span>`)}</td>
+              <td class="px-5 py-4 text-right tabular-nums ${d === null ? 'text-white/35' : d > 0 ? 'text-emerald-400' : d < 0 ? 'text-red-400' : 'text-white/60'}">${d === null ? '—' : (d > 0 ? '+' : '') + d}</td>
+              <td class="px-5 py-4 text-right">${(g.pre || g.post)
+                ? `<button onclick="bukaDetail('${esc(g.pid)}')" class="rounded-full border border-white/20 px-3.5 py-1.5 text-[12px] font-medium text-white/80 transition hover:bg-white/10">Detail</button>`
+                : '<span class="text-[12px] text-white/30">—</span>'}</td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="8" class="px-5 py-12 text-center text-white/50">Tidak ada peserta yang cocok dengan penyaring.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+    <p class="border-t border-white/10 px-5 py-4 text-[12px] text-white/40">Menampilkan ${rows.length} dari ${semua.length} peserta. Tombol unduh mengikuti penyaring yang sedang aktif.</p>`;
+
+  /* analisis butir soal */
+  const stat = {};
+  BANK.forEach(s => stat[s.id] = { id: s.id, q: s.q, tampil: 0, benar: 0 });
+  ADATA.hasil.forEach(h => (h.detail || []).forEach(d => {
+    const s = SOAL_BY_ID[d.id], row = stat[d.id];
+    if (!s || !row || !d.ord) return;
+    row.tampil++;
+    if (d.pick >= 0 && d.ord[d.pick] === s.a) row.benar++;
+  }));
+  const butir = Object.values(stat).sort((a, b) =>
+    (a.tampil ? a.benar / a.tampil : 2) - (b.tampil ? b.benar / b.tampil : 2));
+
+  $('#adSoal').innerHTML = `
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[720px] text-left text-[14px]">
+        <thead class="border-b border-white/10 text-[11px] uppercase tracking-[0.14em] text-white/45">
+          <tr>
+            <th class="px-5 py-4 font-semibold">Butir</th>
+            <th class="px-5 py-4 font-semibold">Pertanyaan</th>
+            <th class="px-5 py-4 text-right font-semibold">Muncul</th>
+            <th class="px-5 py-4 text-right font-semibold">Benar</th>
+            <th class="px-5 py-4 text-right font-semibold">% Benar</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${butir.map(b => {
+            const pct = b.tampil ? Math.round(b.benar / b.tampil * 100) : null;
+            const w = pct === null ? 'text-white/35' : pct < 50 ? 'text-red-400' : pct < 75 ? 'text-amber-300' : 'text-emerald-400';
+            return `<tr class="border-b border-white/[.06]">
+              <td class="px-5 py-4 font-mono text-[12px] text-white/50">${esc(b.id)}</td>
+              <td class="px-5 py-4"><p class="max-w-[620px] leading-[1.55] text-white/80">${esc(b.q)}</p></td>
+              <td class="px-5 py-4 text-right tabular-nums text-white/60">${b.tampil || '—'}</td>
+              <td class="px-5 py-4 text-right tabular-nums text-white/60">${b.tampil ? b.benar : '—'}</td>
+              <td class="px-5 py-4 text-right text-[15px] font-semibold tabular-nums ${w}">${pct === null ? '—' : pct + '%'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+    <p class="border-t border-white/10 px-5 py-4 text-[12px] text-white/40">Diurutkan dari persentase benar terendah. Butir yang belum pernah muncul ditandai “—”.</p>`;
+}
+
+/* ── detail jawaban satu peserta ── */
+function bukaDetail(pid) {
+  const g = ADATA.gabung.find(x => x.pid === pid);
+  if (!g) return;
+
+  $('#adDetailHead').innerHTML = `
+    <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/50">Hasil pengisian</p>
+    <h2 class="mt-2 text-[22px] font-semibold tracking-[-0.01em]">${esc(g.nama)}</h2>
+    <p class="mt-1.5 text-[14px] text-white/60">${esc(g.kab || '—')}${g.prov ? ', ' + esc(g.prov) : ''}${g.email ? ' · ' + esc(g.email) : ''}</p>`;
+
+  const sesi = (r, judul) => {
+    if (!r) return `<div class="glass rounded-2xl p-5"><p class="text-[13px] font-semibold text-white/70">${judul}</p><p class="mt-1.5 text-[13px] text-white/45">Belum dikerjakan</p></div>`;
+    const detail = r.detail || [];
+    return `<div class="glass rounded-2xl p-5">
+      <div class="flex flex-wrap items-baseline justify-between gap-3">
+        <p class="text-[13px] font-semibold">${judul}</p>
+        <p class="text-[13px] text-white/60">Nilai <span class="font-semibold text-white">${r.nilai}</span> · ${r.benar}/${r.total} benar · ${fmtDur(r.durasiMs)} · ${esc(tglStr(r.selesaiAt))}</p>
+      </div>
+      ${detail.length ? `<div class="mt-4 space-y-2">
+        ${detail.map((d, i) => {
+          const s = SOAL_BY_ID[d.id];
+          if (!s) return '';
+          const benarTampil = d.ord.indexOf(s.a);
+          const ok = d.pick === benarTampil;
+          return `<div class="flex items-start gap-3 rounded-xl bg-white/[.04] px-3.5 py-2.5">
+            <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${ok ? 'bg-emerald-400 text-black' : 'bg-red-400 text-black'}">${ok ? '✓' : '✕'}</span>
+            <div class="min-w-0 flex-1">
+              <p class="text-[13px] leading-[1.5] text-white/80">${i + 1}. ${esc(s.q)}</p>
+              <p class="mt-1 text-[12px] text-white/50">Dijawab: ${d.pick >= 0 ? esc(s.o[d.ord[d.pick]]) : '<em>tidak dijawab</em>'}${ok ? '' : ' · Kunci: ' + esc(s.o[s.a])}</p>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : '<p class="mt-3 text-[13px] text-white/45">Rincian jawaban tidak tersimpan untuk sesi ini.</p>'}
+    </div>`;
+  };
+
+  $('#adDetailBody').innerHTML = sesi(g.pre, 'Pre test') + '<div class="h-4"></div>' + sesi(g.post, 'Post test');
+  $('#adDetail').classList.remove('hidden');
+}
+function tutupDetail() { $('#adDetail').classList.add('hidden'); }
+
+/* ── ekspor ── */
+function tglStr(v) {
+  if (!v) return '';
+  const d = v && typeof v.toDate === 'function' ? v.toDate() : new Date(v);
+  if (!(d instanceof Date) || isNaN(d.getTime())) return '';
+  return d.toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+const detikStr = ms => ms == null ? '' : Math.round(ms / 1000);
+
+function barisEkspor() {
+  return dataTampilAdmin().map((g, i) => ({
+    'No': i + 1,
+    'Nama': g.nama,
+    'Provinsi': g.prov,
+    'Kabupaten/Kota': g.kab,
+    'Email': g.email,
+    'Status': LABEL_STATUS[statusPeserta(g)],
+    'Pre Benar': g.pre ? g.pre.benar : '',
+    'Pre Total': g.pre ? g.pre.total : '',
+    'Pre Nilai': g.pre ? g.pre.nilai : '',
+    'Pre Waktu': g.pre ? fmtDur(g.pre.durasiMs) : '',
+    'Pre Detik': g.pre ? detikStr(g.pre.durasiMs) : '',
+    'Pre Selesai': g.pre ? tglStr(g.pre.selesaiAt) : '',
+    'Post Benar': g.post ? g.post.benar : '',
+    'Post Total': g.post ? g.post.total : '',
+    'Post Nilai': g.post ? g.post.nilai : '',
+    'Post Waktu': g.post ? fmtDur(g.post.durasiMs) : '',
+    'Post Detik': g.post ? detikStr(g.post.durasiMs) : '',
+    'Post Selesai': g.post ? tglStr(g.post.selesaiAt) : '',
+    'Peningkatan': (g.pre && g.post) ? g.post.nilai - g.pre.nilai : ''
+  }));
+}
+
+function namaBerkas(ext) {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `monevdak-tw${TW_AKTIF}-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.${ext}`;
+}
+
+function unduh(isi, nama, mime) {
+  const url = URL.createObjectURL(new Blob([isi], { type: mime }));
+  const a = document.createElement('a');
+  a.href = url; a.download = nama;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+function exportCSV() {
+  const rows = barisEkspor();
+  if (!rows.length) return toast('Tidak ada baris untuk diunduh.');
+  const head = Object.keys(rows[0]);
+  const sel = v => { const s = v == null ? '' : String(v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const csv = [head.join(','), ...rows.map(r => head.map(k => sel(r[k])).join(','))].join('\r\n');
+  unduh('﻿' + csv, namaBerkas('csv'), 'text/csv;charset=utf-8');   // BOM agar Excel membaca UTF-8
+  toast(rows.length + ' baris diunduh sebagai CSV.');
+}
+
+/* Excel dibuat dari tabel HTML, bukan CSV, supaya kolom tidak bergantung
+   pada pengaturan pemisah desimal/daftar di komputer masing-masing. */
+function exportXLS() {
+  const rows = barisEkspor();
+  if (!rows.length) return toast('Tidak ada baris untuk diunduh.');
+  const head = Object.keys(rows[0]);
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+<head><meta charset="utf-8"><style>td,th{border:1px solid #999;padding:4px 6px;font-family:Calibri,sans-serif;font-size:11pt}th{background:#e8eef7;font-weight:bold}</style></head>
+<body><h3>Rekap MonevDAK — Triwulan ${TW_META[TW_AKTIF].rom}</h3>
+<p>Diunduh ${esc(tglStr(Date.now()))} · ${rows.length} peserta</p>
+<table><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+<tbody>${rows.map(r => `<tr>${head.map(k => `<td>${esc(r[k] == null ? '' : r[k])}</td>`).join('')}</tr>`).join('')}</tbody></table>
+</body></html>`;
+  unduh(html, namaBerkas('xls'), 'application/vnd.ms-excel');
+  toast(rows.length + ' baris diunduh sebagai Excel.');
 }
 </script>
 </body>
