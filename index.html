@@ -346,6 +346,13 @@
           <button type="button" onclick="lupaSandi()" class="font-medium text-gray-500 transition hover:text-gray-800">Lupa kata sandi?</button>
           <button type="button" onclick="setTabLogin('daftar')" class="sunset-text font-semibold">Belum punya akun? Daftar</button>
         </div>
+
+        <div class="border-t border-gray-100 pt-4 text-center">
+          <button type="button" onclick="go('adminlogin')" class="inline-flex items-center gap-2 text-[13px] font-medium text-gray-400 transition hover:text-gray-700">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M12 3l8 4v5c0 4.4-3.4 8.3-8 9-4.6-.7-8-4.6-8-9V7l8-4z"/></svg>
+            Masuk sebagai admin
+          </button>
+        </div>
       </form>
 
       <!-- ══ DAFTAR ══ -->
@@ -1283,8 +1290,13 @@ async function doMasuk(e) {
   try {
     const profil = await store.masukAkun(email, sandi);
     if (!profil) {
+      /* Kata sandinya benar, tetapi akun ini tidak punya identitas peserta —
+         hampir selalu karena akun admin memakai pintu masuk peserta. */
       await store.keluarAkun();
-      return fail('Identitas peserta tidak ditemukan untuk akun ini. Silakan daftar ulang atau hubungi pengelola.');
+      err.innerHTML = 'Akun ini terdaftar, tetapi bukan akun peserta. Bila ini akun admin, masuklah lewat '
+        + '<button type="button" onclick="go(\'adminlogin\')" class="underline underline-offset-2 font-semibold">halaman admin</button>.';
+      err.classList.remove('hidden');
+      return;
     }
     $('#mkSandi').value = '';
     await mulaiSesiPeserta(profil, 'Selamat datang kembali');

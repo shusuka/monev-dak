@@ -29,7 +29,7 @@ service cloud.firestore {
     // └───────────────────────────────────────────────────────────────────┘
     function adminEmail() {
       return [
-        'admin@emondak.go.id'
+        'pfidbidangjalan@gmail.com'
       ];
     }
 
