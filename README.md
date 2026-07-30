@@ -54,7 +54,7 @@ Klik dua kali `index.html`, atau:
 npx serve .
 ```
 
-Selama `assets/firebase-config.js` masih kosong — atau berkas dibuka lewat `file://` — aplikasi berjalan dalam **mode lokal**: data tersimpan di `localStorage` peramban dan papan peringkat diisi 14 data contoh. Sebuah pita kuning muncul di kiri bawah sebagai penanda.
+Selama `assets/firebase-config.js` masih kosong — atau berkas dibuka lewat `file://` — aplikasi berjalan dalam **mode lokal**: data tersimpan di `localStorage` peramban dan papan peringkat diisi 14 data contoh. Sebuah pita kuning muncul di kiri bawah sebagai penanda. Pada mode ini pendaftaran dan masuk tetap berjalan, tetapi kata sandi tidak diperiksa dan pengaturan ulang kata sandi tidak tersedia.
 
 Untuk mencoba jalur Firebase, isi konfigurasi lalu jalankan lewat `npx serve .` (bukan `file://`, karena modul Firebase memerlukan http/https).
 
@@ -64,8 +64,8 @@ Untuk mencoba jalur Firebase, isi konfigurasi lalu jalankan lewat `npx serve .` 
 
 1. Buka [console.firebase.google.com](https://console.firebase.google.com) → **Add project**.
 2. **Build → Firestore Database → Create database** → pilih lokasi `asia-southeast2` (Jakarta) → mulai dalam *production mode*.
-3. **Build → Authentication → Get started → Sign-in method → Anonymous → Enable.**
-   Aplikasi memakai anonymous auth agar security rules dapat membedakan penulis yang sah dari lalu lintas anonim.
+3. **Build → Authentication → Get started → Sign-in method → Email/Password → Enable.**
+   **Langkah ini wajib.** Peserta mendaftar dan masuk dengan email dan kata sandi; tanpa metode ini diaktifkan, pendaftaran akan ditolak. Provider Anonymous tidak diperlukan.
 4. **Project settings → General → Your apps → Web (`</>`)** → daftarkan app → salin objek `firebaseConfig`.
 5. Tempel nilainya ke `assets/firebase-config.js`.
 6. **Firestore Database → Rules** → tempel seluruh isi `firestore.rules` → **Publish**.
@@ -75,8 +75,10 @@ Untuk mencoba jalur Firebase, isi konfigurasi lalu jalankan lewat `npx serve .` 
 
 | Koleksi | ID dokumen | Isi |
 |---|---|---|
-| `peserta` | `nama_provinsi_kabupaten` (slug) | `nama`, `prov`, `kab`, `email`, `uid`, `updatedAt` |
-| `hasil` | `{pid}__tw2__pre` / `{pid}__tw2__post` | `pid`, `nama`, `prov`, `kab`, `tw`, `kind`, `benar`, `total`, `nilai`, `durasiMs`, `detail[]`, `selesaiAt` |
+| `peserta` | `uid` akun Firebase | `nama`, `prov`, `kab`, `email`, `uid`, `updatedAt` |
+| `hasil` | `{uid}__tw2__pre` / `{uid}__tw2__post` | `pid` (= uid), `uid`, `nama`, `prov`, `kab`, `tw`, `kind`, `benar`, `total`, `nilai`, `durasiMs`, `detail[]`, `selesaiAt` |
+
+Identitas peserta terikat pada akun Firebase, bukan pada ejaan namanya. Peserta yang keluar lalu masuk kembali dengan email dan kata sandinya akan menemukan nilainya utuh, dan `firestore.rules` memastikan seseorang hanya dapat menulis hasil miliknya sendiri.
 
 `detail[]` menyimpan `{ id, ord, pick }` per soal — `ord` adalah urutan opsi yang ditampilkan ke peserta, sehingga halaman pembahasan dapat direproduksi persis.
 
@@ -98,11 +100,48 @@ Admin dapat memantau progres seluruh pemda, meninjau jawaban tiap peserta, dan m
 
 ### Menyiapkan akun
 
-1. Firebase Console → **Authentication → Sign-in method → Email/Password → Enable.**
-2. **Authentication → Users → Add user** → isi email dan kata sandi admin.
-3. Buka `firestore.rules`, ganti `'admin@emondak.go.id'` pada fungsi `adminEmail()` dengan email tadi (boleh lebih dari satu, pisahkan dengan koma), lalu **Publish** ulang di Console.
+1. **Authentication → Users → Add user** → isi email dan kata sandi admin. (Metode Email/Password sudah diaktifkan pada langkah 2.3.)
+2. Daftarkan email itu sebagai admin di `firestore.rules` — lihat rincian langkahnya di bawah.
 
-Langkah 3 penting: koleksi `peserta` memuat email dinas, sehingga hanya email yang terdaftar di `adminEmail()` yang boleh membacanya. Tanpa langkah itu admin tetap bisa masuk dan melihat seluruh nilai, hanya saja angka “Belum mengisi” tidak dapat dihitung — aplikasi menampilkan pemberitahuan yang menjelaskan hal ini.
+**Kelayakan admin ditentukan sepenuhnya oleh `firestore.rules`,** bukan oleh kode aplikasi. Saat seseorang masuk lewat halaman admin, aplikasi mencoba membaca koleksi `peserta`; bila rules menolak, aplikasi langsung mengeluarkannya kembali dengan keterangan bahwa akun itu bukan admin. Jadi tanpa langkah 2, halaman admin tidak dapat dibuka sama sekali.
+
+### Cara mendaftarkan email admin di rules
+
+1. Buka [halaman Rules Firestore](https://console.firebase.google.com/u/0/project/emondak-faee8/firestore/rules). Yang tampil adalah satu kotak teks besar berisi aturan yang sedang berlaku.
+2. Pilih semua isi kotak itu (klik di dalamnya lalu `Ctrl+A`) dan hapus.
+3. Buka berkas `firestore.rules` dari repositori ini dengan Notepad, salin **seluruh** isinya, lalu tempel ke kotak tadi.
+4. Cari bagian ini di dalam kotak — kira-kira sepertiga dari atas:
+
+   ```
+   function adminEmail() {
+     return [
+       'admin@emondak.go.id'
+     ];
+   }
+   ```
+
+5. Ganti `admin@emondak.go.id` dengan email admin yang Anda buat pada langkah 1. **Tanda kutip tunggal harus tetap ada.** Contoh bila emailnya `pfid.monev@pu.go.id`:
+
+   ```
+   function adminEmail() {
+     return [
+       'pfid.monev@pu.go.id'
+     ];
+   }
+   ```
+
+   Untuk dua admin atau lebih, pisahkan dengan koma:
+
+   ```
+   return [
+     'pfid.monev@pu.go.id',
+     'kepala.pfid@pu.go.id'
+   ];
+   ```
+
+6. Klik tombol **Publish** di kanan atas halaman. Tunggu sampai muncul keterangan bahwa aturan sudah tersimpan — biasanya di bawah satu menit.
+
+Setelah itu masuk lewat tombol **Masuk Admin** di footer halaman depan memakai email dan kata sandi tadi.
 
 ### Isi halaman admin
 

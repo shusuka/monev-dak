@@ -115,10 +115,7 @@
   <div class="bg-fallback absolute inset-0"></div>
   <video id="bgVideo" autoplay muted loop playsinline preload="auto"
          class="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-1000">
-    <!-- URL yang diminta (halaman share Jumpshare — bukan file mp4 langsung) -->
-    <source src="https://jumpshare.com/s/6t6K21KuNJZrELSewqEK" type="video/mp4">
-    <!-- fallback mp4 yang dapat diputar langsung -->
-    <source src="https://cdn.midjourney.com/video/71048e88-d8e6-470e-88ef-555c01eacb12/0.mp4" type="video/mp4">
+    <source src="assets/video-erasio.mp4" type="video/mp4">
   </video>
   <div class="absolute inset-0 bg-black/30"></div>
   <div id="bgScrim" class="absolute inset-0 bg-black/80 opacity-0 backdrop-blur-2xl transition-opacity duration-500"></div>
@@ -295,7 +292,7 @@
 
     <div class="relative m-3 hidden overflow-hidden rounded-[2rem] bg-ink md:m-4 md:block md:w-[45%]">
       <video autoplay muted loop playsinline class="absolute inset-0 h-full w-full object-cover">
-        <source src="https://cdn.midjourney.com/video/71048e88-d8e6-470e-88ef-555c01eacb12/0.mp4" type="video/mp4">
+        <source src="assets/video-erasio.mp4" type="video/mp4">
       </video>
     </div>
 
@@ -308,12 +305,51 @@
       </button>
 
       <div class="relative z-10 mt-auto text-center">
-        <h2 class="text-[32px] font-semibold tracking-[-0.03em] text-gray-900 md:text-[40px]">Masuk Pemda</h2>
-        <p class="mt-2 text-sm text-gray-500">Pendaftaran sekaligus masuk — cukup isi identitas di bawah</p>
+        <h2 id="loginTitle" class="text-[32px] font-semibold tracking-[-0.03em] text-gray-900 md:text-[40px]">Masuk Pemda</h2>
+        <p id="loginSub" class="mt-2 text-sm text-gray-500">Gunakan email dan kata sandi akun Anda</p>
       </div>
 
-      <form id="loginForm" class="relative z-20 mb-auto mt-9 space-y-3" autocomplete="off" novalidate>
+      <!-- pilihan menu -->
+      <div class="relative z-10 mt-7 flex gap-1 rounded-2xl bg-gray-100 p-1">
+        <button id="tabMasuk"  type="button" onclick="setTabLogin('masuk')"  class="flex-1 rounded-xl px-4 py-2.5 text-[14px] font-semibold transition">Masuk</button>
+        <button id="tabDaftar" type="button" onclick="setTabLogin('daftar')" class="flex-1 rounded-xl px-4 py-2.5 text-[14px] font-semibold transition">Daftar</button>
+      </div>
 
+      <!-- ══ MASUK ══ -->
+      <form id="formMasuk" class="relative z-20 mb-auto mt-4 space-y-3" autocomplete="on" novalidate>
+        <div class="field flex items-center gap-3">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m3 6 9 7 9-7"/></svg>
+          <div class="min-w-0 flex-1 py-1">
+            <label for="mkEmail" class="block text-[11px] font-medium text-gray-500">Email</label>
+            <input id="mkEmail" type="email" autocomplete="username" placeholder="nama@dinaspu.go.id" class="text-[15px] text-gray-900" />
+          </div>
+        </div>
+
+        <div class="field flex items-center gap-3">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <div class="min-w-0 flex-1 py-1">
+            <label for="mkSandi" class="block text-[11px] font-medium text-gray-500">Kata sandi</label>
+            <input id="mkSandi" type="password" autocomplete="current-password" placeholder="••••••••" class="text-[15px] text-gray-900" />
+          </div>
+          <button id="mkBtn" type="submit" class="gbtn" aria-label="Masuk">
+            <span class="gbtn__glow"></span><span class="gbtn__ring"></span>
+            <span class="gbtn__core">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="gbtn__icon h-[18px] w-[18px]"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </span>
+          </button>
+        </div>
+
+        <p id="errMasuk" class="hidden pl-2 pt-1 text-[13px] font-medium text-red-500"></p>
+        <p id="okMasuk" class="hidden pl-2 pt-1 text-[13px] font-medium text-emerald-600"></p>
+
+        <div class="flex items-center justify-between pl-2 pt-2 text-[13px]">
+          <button type="button" onclick="lupaSandi()" class="font-medium text-gray-500 transition hover:text-gray-800">Lupa kata sandi?</button>
+          <button type="button" onclick="setTabLogin('daftar')" class="sunset-text font-semibold">Belum punya akun? Daftar</button>
+        </div>
+      </form>
+
+      <!-- ══ DAFTAR ══ -->
+      <form id="formDaftar" class="relative z-20 mb-auto mt-4 hidden space-y-3" autocomplete="off" novalidate>
         <div class="field flex items-center gap-3">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           <div class="min-w-0 flex-1 py-1">
@@ -349,12 +385,19 @@
         <div class="field flex items-center gap-3">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m3 6 9 7 9-7"/></svg>
           <div class="min-w-0 flex-1 py-1">
-            <label for="inEmail" class="block text-[11px] font-medium text-gray-500">Email Dinas <span class="text-gray-400">(opsional)</span></label>
+            <label for="inEmail" class="block text-[11px] font-medium text-gray-500">Email Dinas</label>
             <input id="inEmail" type="email" placeholder="nama@dinaspu.go.id" class="text-[15px] text-gray-900" />
           </div>
-          <button id="loginBtn" type="submit" class="gbtn" aria-label="Masuk">
-            <span class="gbtn__glow"></span>
-            <span class="gbtn__ring"></span>
+        </div>
+
+        <div class="field flex items-center gap-3">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <div class="min-w-0 flex-1 py-1">
+            <label for="inSandi" class="block text-[11px] font-medium text-gray-500">Kata sandi <span class="text-gray-400">(minimal 6 karakter)</span></label>
+            <input id="inSandi" type="password" autocomplete="new-password" placeholder="••••••••" class="text-[15px] text-gray-900" />
+          </div>
+          <button id="loginBtn" type="submit" class="gbtn" aria-label="Daftar">
+            <span class="gbtn__glow"></span><span class="gbtn__ring"></span>
             <span class="gbtn__core">
               <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="gbtn__icon h-[18px] w-[18px]"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </span>
@@ -709,13 +752,18 @@ const store = {
       ]);
       const app = appMod.initializeApp(cfg);
       const auth = authMod.getAuth(app);
-      const cred = await authMod.signInAnonymously(auth);
-      this.uid = cred.user.uid;
       this.authMod = authMod;
       this.auth = auth;
       this.fs = fsMod;
       this.db = fsMod.getFirestore(app);
       this.mode = 'firebase';
+      /* Tunggu laporan status sesi yang pertama: Firebase memulihkan sesi
+         yang tersimpan di peramban, sehingga peserta yang belum keluar tidak
+         perlu masuk lagi setelah halaman dimuat ulang. */
+      this.user = await new Promise(res => {
+        const stop = authMod.onAuthStateChanged(auth, u => { stop(); res(u || null); });
+      });
+      this.uid = this.user ? this.user.uid : null;
     } catch (e) {
       console.warn('[MonevDAK] Firebase gagal dimuat, beralih ke mode lokal:', e);
       this.initLokal();
@@ -770,21 +818,77 @@ const store = {
     this.cacheHasil = null;
   },
 
-  /** Masuk sebagai admin dengan akun Email/Password Firebase. */
+  /* ── akun peserta ───────────────────────────────────────────── */
+
+  async daftarAkun(email, pass, profil) {
+    if (this.mode !== 'firebase') return this.daftarLokal(email, profil);
+    const cred = await this.authMod.createUserWithEmailAndPassword(this.auth, email, pass);
+    this.user = cred.user; this.uid = cred.user.uid; this.cacheHasil = null;
+    const p = { pid: this.uid, uid: this.uid, nama: profil.nama, prov: profil.prov, kab: profil.kab, email };
+    await this.simpanPeserta(p);
+    return p;
+  },
+
+  async masukAkun(email, pass) {
+    if (this.mode !== 'firebase') return this.masukLokal(email);
+    const cred = await this.authMod.signInWithEmailAndPassword(this.auth, email, pass);
+    this.user = cred.user; this.uid = cred.user.uid; this.cacheHasil = null;
+    return await this.profilSaya();
+  },
+
+  /** Identitas peserta yang sedang masuk, dibaca dari koleksi `peserta`. */
+  async profilSaya() {
+    if (this.mode !== 'firebase') {
+      const p = Object.values((this.lokal.akun || {})).find(x => x.uid === this.uid);
+      return p || null;
+    }
+    const { doc, getDoc } = this.fs;
+    const d = await getDoc(doc(this.db, 'peserta', this.uid));
+    if (!d.exists()) return null;
+    const x = d.data();
+    return {
+      pid: this.uid, uid: this.uid,
+      nama: x.nama, prov: x.prov, kab: x.kab,
+      email: x.email || (this.user && this.user.email) || ''
+    };
+  },
+
+  async keluarAkun() {
+    if (this.mode === 'firebase') await this.authMod.signOut(this.auth);
+    this.user = null; this.uid = null; this.cacheHasil = null;
+  },
+
+  async kirimResetSandi(email) {
+    if (this.mode !== 'firebase') throw new Error('mode-lokal');
+    await this.authMod.sendPasswordResetEmail(this.auth, email);
+  },
+
+  /* Mode lokal (pratinjau tanpa server): kata sandi tidak diperiksa. */
+  daftarLokal(email, profil) {
+    this.lokal.akun = this.lokal.akun || {};
+    const k = email.toLowerCase();
+    if (this.lokal.akun[k]) { const e = new Error('email sudah dipakai'); e.code = 'auth/email-already-in-use'; throw e; }
+    const uid = 'lokal-' + slug(email);
+    const p = { pid: uid, uid, nama: profil.nama, prov: profil.prov, kab: profil.kab, email };
+    this.lokal.akun[k] = p;
+    this.lokal.peserta[uid] = { ...p };
+    this.uid = uid; this.simpanLokal();
+    return p;
+  },
+  masukLokal(email) {
+    const p = (this.lokal.akun || {})[email.toLowerCase()];
+    if (!p) { const e = new Error('akun tidak ada'); e.code = 'auth/user-not-found'; throw e; }
+    this.uid = p.uid;
+    return p;
+  },
+
+  /** Masuk sebagai admin — kelayakannya diperiksa oleh pemanggil
+      lewat percobaan membaca koleksi `peserta` (lihat firestore.rules). */
   async masukAdmin(email, pass) {
     if (this.mode !== 'firebase') throw new Error('mode-lokal');
     const cred = await this.authMod.signInWithEmailAndPassword(this.auth, email, pass);
-    this.uid = cred.user.uid;
-    this.cacheHasil = null;
+    this.user = cred.user; this.uid = cred.user.uid; this.cacheHasil = null;
     return { email: cred.user.email, uid: cred.user.uid };
-  },
-
-  /** Kembali ke sesi anonim setelah admin keluar. */
-  async kembaliAnonim() {
-    if (this.mode !== 'firebase') return;
-    const cred = await this.authMod.signInAnonymously(this.auth);
-    this.uid = cred.user.uid;
-    this.cacheHasil = null;
   },
 
   /** Daftar seluruh peserta terdaftar — hanya untuk admin.
@@ -858,7 +962,6 @@ function seedLokal(d) {
 /* ═══════════════════════════════════════════════════════════════
    4. SESI PESERTA
    ═══════════════════════════════════════════════════════════════ */
-const SESSION_KEY = 'monevdak.sesi';
 let ME = null;
 let HASIL_SAYA = [];
 
@@ -957,7 +1060,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   renderTwGrid();
   bindAutocomplete();
-  $('#loginForm').addEventListener('submit', doLogin);
+  setTabLogin('masuk');
+  $('#formDaftar').addEventListener('submit', doDaftar);
+  $('#formMasuk').addEventListener('submit', doMasuk);
   $('#adminForm').addEventListener('submit', doAdminLogin);
   $('#adDetail').addEventListener('click', e => { if (e.target.id === 'adDetail') tutupDetail(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') tutupDetail(); });
@@ -968,15 +1073,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     ? 'Data tersimpan di Firebase Firestore.'
     : 'Mode lokal — data tersimpan di peramban perangkat ini.';
 
-  try {
-    const s = sessionStorage.getItem(SESSION_KEY);
-    if (s) {
-      ME = JSON.parse(s);
-      try { await muatHasilSaya(); } catch (e) { toast('Nilai tersimpan belum dapat dibaca dari basis data.'); }
-      syncChip();
-      go('dashboard');
-    }
-  } catch (e) { ME = null; }
+  /* Pulihkan sesi yang masih aktif. Akun admin tidak punya dokumen peserta,
+     jadi bila profil tidak ada, halaman depan yang ditampilkan. */
+  if (store.uid) {
+    try {
+      const profil = await store.profilSaya();
+      if (profil) {
+        ME = profil;
+        try { await muatHasilSaya(); } catch (e) { toast('Nilai tersimpan belum dapat dibaca dari basis data.'); }
+        syncChip();
+        go('dashboard');
+      }
+    } catch (e) { console.warn('[MonevDAK] gagal memulihkan sesi:', e); }
+  }
 });
 function closeMenu() { $('#mobileMenu').classList.add('hidden'); }
 
@@ -1084,49 +1193,137 @@ function makeAC({ input, panel, source, pick }) {
 /* ═══════════════════════════════════════════════════════════════
    8. LOGIN
    ═══════════════════════════════════════════════════════════════ */
-async function doLogin(e) {
+/** Ubah menu antara Masuk dan Daftar. */
+function setTabLogin(tab) {
+  const daftar = tab === 'daftar';
+  $('#formMasuk').classList.toggle('hidden', daftar);
+  $('#formDaftar').classList.toggle('hidden', !daftar);
+  $('#loginTitle').textContent = daftar ? 'Daftar Pemda' : 'Masuk Pemda';
+  $('#loginSub').textContent = daftar
+    ? 'Sekali daftar, akun tersimpan untuk pengisian berikutnya'
+    : 'Gunakan email dan kata sandi akun Anda';
+  const aktif   = 'flex-1 rounded-xl px-4 py-2.5 text-[14px] font-semibold transition bg-white text-gray-900 shadow-sm';
+  const nonaktif = 'flex-1 rounded-xl px-4 py-2.5 text-[14px] font-semibold transition text-gray-500 hover:text-gray-800';
+  $('#tabMasuk').className  = daftar ? nonaktif : aktif;
+  $('#tabDaftar').className = daftar ? aktif : nonaktif;
+  ['#errMasuk', '#okMasuk', '#loginErr'].forEach(s => $(s).classList.add('hidden'));
+}
+
+/** Terjemahkan kode galat Firebase Auth ke bahasa yang bisa dipahami peserta. */
+function pesanAuth(ex) {
+  const c = String((ex && (ex.code || ex.message)) || '');
+  if (/email-already-in-use/.test(c))       return 'Email ini sudah terdaftar. Gunakan menu Masuk.';
+  if (/invalid-credential|wrong-password/.test(c)) return 'Email atau kata sandi salah.';
+  if (/user-not-found/.test(c))             return 'Akun belum terdaftar. Silakan daftar lebih dahulu.';
+  if (/invalid-email/.test(c))              return 'Format email tidak valid.';
+  if (/weak-password/.test(c))              return 'Kata sandi terlalu lemah, minimal 6 karakter.';
+  if (/operation-not-allowed|configuration-not-found/.test(c))
+    return 'Metode Email/Password belum diaktifkan pada Firebase Authentication. Hubungi pengelola aplikasi.';
+  if (/too-many-requests/.test(c))          return 'Terlalu banyak percobaan. Coba lagi beberapa saat lagi.';
+  if (/network-request-failed|network/.test(c)) return 'Gagal menghubungi server. Periksa koneksi internet.';
+  if (/permission|insufficient permissions/.test(c))
+    return 'Basis data menolak permintaan. Security rules Firestore belum dipublikasikan — hubungi pengelola aplikasi.';
+  return 'Terjadi kesalahan: ' + c;
+}
+
+/** Lanjutan setelah identitas peserta didapat. */
+async function mulaiSesiPeserta(profil, sapaan) {
+  ME = profil;
+  await muatHasilSaya();
+  syncChip();
+  if (sapaan) toast(sapaan + ', ' + String(profil.nama).split(' ')[0] + '.');
+  go('dashboard');
+}
+
+async function doDaftar(e) {
   e.preventDefault();
   const nama  = $('#inNama').value.trim().replace(/\s+/g, ' ');
   const prov  = $('#inProv').value.trim();
   const kab   = $('#inKab').value.trim();
   const email = $('#inEmail').value.trim();
+  const sandi = $('#inSandi').value;
   const err   = $('#loginErr');
   const fail  = m => { err.textContent = m; err.classList.remove('hidden'); };
   err.classList.add('hidden');
 
-  if (nama.length < 3)                        return fail('Nama lengkap wajib diisi.');
-  if (!PROVINSI.includes(prov))               return fail('Provinsi belum sesuai daftar. Pilih dari saran yang muncul.');
-  if (!KAB_OF(prov).includes(kab))            return fail('Kabupaten/Kota tidak terdaftar pada ' + prov + '.');
-  if (email && !/^\S+@\S+\.\S+$/.test(email)) return fail('Format email tidak valid.');
+  if (nama.length < 3)                     return fail('Nama lengkap wajib diisi.');
+  if (!PROVINSI.includes(prov))             return fail('Provinsi belum sesuai daftar. Pilih dari saran yang muncul.');
+  if (!KAB_OF(prov).includes(kab))          return fail('Kabupaten/Kota tidak terdaftar pada ' + prov + '.');
+  if (!/^\S+@\S+\.\S+$/.test(email))        return fail('Email wajib diisi dan formatnya harus benar.');
+  if (sandi.length < 6)                     return fail('Kata sandi minimal 6 karakter.');
 
   const btn = $('#loginBtn');
   btn.disabled = true;
   try {
-    ME = { pid: pesertaId(nama, prov, kab), nama, prov, kab, email };
-    await store.simpanPeserta(ME);
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(ME));
-    await muatHasilSaya();
-    syncChip();
-    toast('Selamat datang, ' + nama.split(' ')[0] + '.');
-    go('dashboard');
+    const profil = await store.daftarAkun(email, sandi, { nama, prov, kab });
+    $('#inSandi').value = '';
+    await mulaiSesiPeserta(profil, 'Akun dibuat. Selamat datang');
   } catch (ex) {
     console.error(ex);
     ME = null;
-    const izin = String(ex && (ex.code || ex.message)).includes('permission')
-      || String(ex && ex.message).includes('insufficient permissions');
-    fail(izin
-      ? 'Basis data menolak penyimpanan. Security rules Firestore belum dipublikasikan — hubungi pengelola aplikasi.'
-      : 'Gagal menyimpan identitas: ' + (ex && ex.message ? ex.message : 'kesalahan tidak diketahui'));
+    fail(pesanAuth(ex));
   } finally {
     btn.disabled = false;
   }
 }
 
-function logout() {
+async function doMasuk(e) {
+  e.preventDefault();
+  const email = $('#mkEmail').value.trim();
+  const sandi = $('#mkSandi').value;
+  const err   = $('#errMasuk');
+  const fail  = m => { err.textContent = m; err.classList.remove('hidden'); };
+  err.classList.add('hidden'); $('#okMasuk').classList.add('hidden');
+
+  if (!/^\S+@\S+\.\S+$/.test(email)) return fail('Masukkan email yang terdaftar.');
+  if (!sandi)                        return fail('Kata sandi wajib diisi.');
+
+  const btn = $('#mkBtn');
+  btn.disabled = true;
+  try {
+    const profil = await store.masukAkun(email, sandi);
+    if (!profil) {
+      await store.keluarAkun();
+      return fail('Identitas peserta tidak ditemukan untuk akun ini. Silakan daftar ulang atau hubungi pengelola.');
+    }
+    $('#mkSandi').value = '';
+    await mulaiSesiPeserta(profil, 'Selamat datang kembali');
+  } catch (ex) {
+    console.error(ex);
+    ME = null;
+    fail(pesanAuth(ex));
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function lupaSandi() {
+  const email = $('#mkEmail').value.trim();
+  const err = $('#errMasuk'), ok = $('#okMasuk');
+  err.classList.add('hidden'); ok.classList.add('hidden');
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    err.textContent = 'Isi kolom email lebih dahulu, tautan pengaturan ulang akan dikirim ke sana.';
+    err.classList.remove('hidden');
+    return;
+  }
+  try {
+    await store.kirimResetSandi(email);
+    ok.textContent = 'Tautan pengaturan ulang kata sandi telah dikirim ke ' + email + '.';
+    ok.classList.remove('hidden');
+  } catch (ex) {
+    err.textContent = store.mode === 'lokal'
+      ? 'Pengaturan ulang kata sandi hanya tersedia bila Firebase aktif.'
+      : pesanAuth(ex);
+    err.classList.remove('hidden');
+  }
+}
+
+async function logout() {
   ME = null; HASIL_SAYA = [];
-  sessionStorage.removeItem(SESSION_KEY);
   SEL = { prov: '', kab: '' };
-  ['inNama', 'inProv', 'inKab', 'inEmail'].forEach(id => $('#' + id).value = '');
+  try { await store.keluarAkun(); } catch (e) { console.warn(e); }
+  ['inNama', 'inProv', 'inKab', 'inEmail', 'inSandi', 'mkEmail', 'mkSandi'].forEach(id => { const el = $('#' + id); if (el) el.value = ''; });
+  setTabLogin('masuk');
   go('landing');
 }
 
@@ -1676,9 +1873,20 @@ async function doAdminLogin(e) {
   const btn = $('#adBtn');
   btn.disabled = true; btn.textContent = 'Memeriksa…';
   try {
-    ADMIN = store.mode === 'lokal'
-      ? { email: email, lokal: true }              // mode lokal: tanpa server, untuk uji tampilan
-      : await store.masukAdmin(email, pass);
+    if (store.mode === 'lokal') {
+      ADMIN = { email: email, lokal: true };       // mode lokal: tanpa server, untuk uji tampilan
+    } else {
+      const akun = await store.masukAdmin(email, pass);
+      /* Kelayakan admin ditentukan oleh firestore.rules: hanya email yang
+         terdaftar di sana yang boleh membaca koleksi `peserta`. */
+      try {
+        await store.semuaPeserta();
+      } catch (ce) {
+        await store.keluarAkun();
+        throw Object.assign(new Error('bukan-admin'), { code: 'bukan-admin' });
+      }
+      ADMIN = akun;
+    }
     $('#adWho').textContent = ADMIN.email + (ADMIN.lokal ? ' · mode lokal' : '');
     $('#adPass').value = '';
     await go('admin');
@@ -1686,13 +1894,9 @@ async function doAdminLogin(e) {
     console.error(ex);
     ADMIN = null;
     const c = String((ex && (ex.code || ex.message)) || '');
-    fail(
-      /invalid-credential|wrong-password|user-not-found|invalid-email/.test(c) ? 'Email atau kata sandi salah.' :
-      /operation-not-allowed/.test(c) ? 'Metode Email/Password belum diaktifkan pada Firebase Authentication.' :
-      /too-many-requests/.test(c)     ? 'Terlalu banyak percobaan. Coba lagi beberapa saat lagi.' :
-      /network/.test(c)               ? 'Gagal menghubungi server. Periksa koneksi.' :
-      'Gagal masuk: ' + c
-    );
+    fail(/bukan-admin/.test(c)
+      ? 'Akun ini bukan admin. Tambahkan emailnya ke daftar adminEmail() pada firestore.rules, lalu publikasikan ulang.'
+      : pesanAuth(ex));
   } finally {
     btn.disabled = false; btn.textContent = 'Masuk';
   }
@@ -1702,7 +1906,7 @@ async function keluarAdmin() {
   ADMIN = null;
   ADATA = { peserta: [], hasil: [], gabung: [], galatPeserta: null };
   $('#adEmail').value = ''; $('#adPass').value = '';
-  try { await store.kembaliAnonim(); } catch (e) { console.warn(e); }
+  try { await store.keluarAkun(); } catch (e) { console.warn(e); }
   go('landing');
 }
 

@@ -1,27 +1,35 @@
 rules_version = '2';
 
-// Tempel isi berkas ini di Firebase Console → Firestore Database → Rules → Publish.
-//
-// ┌─────────────────────────────────────────────────────────────────────────┐
-// │ WAJIB DIUBAH: ganti daftar ADMIN_EMAIL di bawah dengan email akun admin │
-// │ yang Anda buat di Authentication → Users. Boleh lebih dari satu.        │
-// └─────────────────────────────────────────────────────────────────────────┘
+// ═══════════════════════════════════════════════════════════════════════════
+// CARA MEMASANG
+//   1. Buka https://console.firebase.google.com/u/0/project/emondak-faee8/firestore/rules
+//   2. Hapus seluruh isi kotak teks di halaman itu.
+//   3. Tempel seluruh isi berkas ini.
+//   4. Ganti email pada fungsi adminEmail() di bawah dengan email admin Anda.
+//   5. Klik tombol Publish.
+// ═══════════════════════════════════════════════════════════════════════════
 //
 // Prinsip:
 //  - Koleksi `hasil` boleh DIBACA siapa pun; papan peringkat peserta
 //    memerlukannya. Isinya nama, daerah, nilai, dan waktu — tanpa email.
-//  - Koleksi `peserta` memuat email, jadi hanya admin yang boleh membacanya.
-//  - Hanya sesi terautentikasi yang boleh MENULIS.
+//  - Koleksi `peserta` memuat email, jadi hanya pemilik akunnya sendiri dan
+//    admin yang boleh membacanya.
+//  - Peserta hanya dapat menulis dokumen miliknya sendiri (dikunci oleh uid).
 //  - Dokumen `hasil` hanya boleh DIBUAT sekali; update dan delete ditolak,
-//    sehingga peserta tidak dapat mengulang atau mengubah nilainya. Penghapusan
-//    hanya mungkin dari Firebase Console.
+//    sehingga nilai tidak dapat diulang atau diubah. Penghapusan hanya
+//    mungkin dari Firebase Console.
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ┌───────────────────────────────────────────────────────────────────┐
+    // │ GANTI baris email di bawah dengan email akun admin Anda.          │
+    // │ Boleh lebih dari satu, pisahkan dengan koma:                      │
+    // │     return ['satu@contoh.go.id', 'dua@contoh.go.id'];             │
+    // └───────────────────────────────────────────────────────────────────┘
     function adminEmail() {
       return [
-        'admin@emondak.go.id'      // ← GANTI dengan email admin Anda
+        'admin@emondak.go.id'
       ];
     }
 
@@ -31,14 +39,18 @@ service cloud.firestore {
         && request.auth.token.email in adminEmail();
     }
 
-    match /peserta/{pid} {
-      allow read: if isAdmin();
+    match /peserta/{uid} {
+      // pemilik akun boleh membaca profilnya sendiri; admin boleh membaca semua
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
+
       allow create, update: if request.auth != null
+        && request.auth.uid == uid
         && request.resource.data.nama is string
         && request.resource.data.nama.size() >= 3
         && request.resource.data.nama.size() <= 120
         && request.resource.data.prov is string
         && request.resource.data.kab is string;
+
       allow delete: if false;
     }
 
@@ -46,7 +58,10 @@ service cloud.firestore {
       allow read: if true;
 
       allow create: if request.auth != null
-        && request.resource.data.pid is string
+        // hanya boleh menulis hasil milik sendiri, dan hanya pada id yang benar
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.pid == request.auth.uid
+        && (hid == request.auth.uid + '__tw2__pre' || hid == request.auth.uid + '__tw2__post')
         && request.resource.data.tw == 2
         && (request.resource.data.kind == 'pre' || request.resource.data.kind == 'post')
         && request.resource.data.total == 20
