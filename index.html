@@ -128,8 +128,8 @@
   <header class="absolute inset-x-0 top-0 z-10 px-6 py-6 md:px-16 md:py-10">
     <div class="mx-auto flex max-w-7xl items-center justify-between">
       <a href="#top" class="anim-fade flex items-center gap-3" style="animation-delay:.15s">
-        <span class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/20 backdrop-blur-md">
-          <img src="assets/logo-pu.png" alt="Kementerian PU" class="h-[22px] w-auto"
+        <span class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/20 backdrop-blur-md">
+          <img src="assets/logo-pu.png" alt="Kementerian PU" class="h-full w-full object-contain"
                onerror="this.remove();document.getElementById('navLogoFallback').classList.remove('hidden')" />
           <svg id="navLogoFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="hidden h-[18px] w-[18px] text-white">
             <circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.6-4-9s1.4-6.5 4-9z"/>
@@ -173,9 +173,9 @@
 
     <div class="relative mx-auto flex max-w-4xl flex-col items-center text-center">
       <div class="anim-pin mb-7">
-        <!-- Letakkan berkas logo resmi di assets/logo-pu.png (atau .svg lalu ubah src).
-             Bila berkas belum ada, ikon cadangan di bawah yang tampil. -->
-        <img src="assets/logo-pu.png" alt="Logo Kementerian Pekerjaan Umum" class="pin-shadow mx-auto h-16 w-auto md:h-20"
+        <!-- Logo resmi di assets/logo-pu.png. Bila berkas hilang, ikon cadangan yang tampil. -->
+        <img src="assets/logo-pu.png" alt="Logo Kementerian Pekerjaan Umum"
+             class="pin-shadow mx-auto h-[68px] w-[68px] rounded-2xl object-contain ring-1 ring-white/20 md:h-20 md:w-20"
              onerror="this.remove();document.getElementById('heroLogoFallback').classList.remove('hidden')" />
         <svg id="heroLogoFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="pin-shadow mx-auto hidden h-11 w-11 text-white md:h-12 md:w-12">
           <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.6"/>
@@ -443,8 +443,8 @@
   <header class="sticky top-0 z-30 border-b border-white/10 bg-black/55 backdrop-blur-2xl">
     <div class="mx-auto flex max-w-[1400px] items-center gap-4 px-5 py-4 md:px-10">
       <span class="flex items-center gap-3">
-        <span class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/20 backdrop-blur-md">
-          <img src="assets/logo-pu.png" alt="Kementerian PU" class="h-[22px] w-auto" onerror="this.remove()" />
+        <span class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/20 backdrop-blur-md">
+          <img src="assets/logo-pu.png" alt="Kementerian PU" class="h-full w-full object-contain" onerror="this.remove()" />
         </span>
         <span class="text-[16px] font-medium tracking-wide">MonevDAK</span>
         <span class="rounded-full bg-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-black">Admin</span>
@@ -526,8 +526,8 @@
   <header class="sticky top-0 z-30 border-b border-white/10 bg-black/55 backdrop-blur-2xl">
     <div class="mx-auto flex max-w-7xl items-center gap-4 px-5 py-4 md:px-10">
       <button onclick="go('dashboard')" class="flex items-center gap-3">
-        <span class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/20 backdrop-blur-md">
-          <img src="assets/logo-pu.png" alt="Kementerian PU" class="h-[22px] w-auto"
+        <span class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/20 backdrop-blur-md">
+          <img src="assets/logo-pu.png" alt="Kementerian PU" class="h-full w-full object-contain"
                onerror="this.remove();document.getElementById('appLogoFallback').classList.remove('hidden')" />
           <svg id="appLogoFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="hidden h-[18px] w-[18px]"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.6-4-9s1.4-6.5 4-9z"/></svg>
         </span>
