@@ -1,0 +1,50 @@
+rules_version = '2';
+
+// Tempel isi berkas ini di Firebase Console → Firestore Database → Rules → Publish.
+//
+// Prinsip:
+//  - Siapa pun boleh MEMBACA (papan peringkat bersifat terbuka bagi peserta).
+//  - Hanya sesi yang sudah terautentikasi (anonymous auth) yang boleh MENULIS.
+//  - Dokumen hasil hanya boleh DIBUAT sekali; update dan delete ditolak,
+//    sehingga satu peserta tidak dapat mengulang atau mengubah nilainya.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /peserta/{pid} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.resource.data.nama is string
+        && request.resource.data.nama.size() >= 3
+        && request.resource.data.nama.size() <= 120
+        && request.resource.data.prov is string
+        && request.resource.data.kab is string;
+      allow delete: if false;
+    }
+
+    match /hasil/{hid} {
+      allow read: if true;
+
+      allow create: if request.auth != null
+        && request.resource.data.pid is string
+        && request.resource.data.tw == 2
+        && (request.resource.data.kind == 'pre' || request.resource.data.kind == 'post')
+        && request.resource.data.total == 20
+        && request.resource.data.benar is int
+        && request.resource.data.benar >= 0
+        && request.resource.data.benar <= 20
+        && request.resource.data.nilai == request.resource.data.benar * 5
+        && request.resource.data.durasiMs is int
+        && request.resource.data.durasiMs > 0
+        && request.resource.data.durasiMs <= 1200000;
+
+      // sekali kirim, nilai terkunci
+      allow update, delete: if false;
+    }
+
+    // tutup koleksi lain
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

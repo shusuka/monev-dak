@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MonevDAK — Monitoring &amp; Evaluasi DAK Fisik Bidang Jalan</title>
+<meta name="description" content="Pre test dan post test pelaksanaan monitoring dan evaluasi DAK Fisik Bidang Jalan." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+        colors: { ink: '#0c0c0e' }
+      }
+    }
+  }
+</script>
+<style>
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+
+  /* ---------- keyframes ---------- */
+  @keyframes fadeUp   { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pinDrop  { 0% { opacity: 0; transform: translateY(-22px) scale(.85); } 60% { opacity: 1; transform: translateY(3px) scale(1.04); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes fadeIn   { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes spinRing { to { transform: rotate(360deg); } }
+  @keyframes drift    { 0% { transform: translate3d(0,0,0) scale(1.06); } 50% { transform: translate3d(-2%, -1%, 0) scale(1.12); } 100% { transform: translate3d(0,0,0) scale(1.06); } }
+  @keyframes ringDraw { from { stroke-dashoffset: var(--dash); } }
+  @keyframes growBar  { from { width: 0; } }
+
+  /* ---------- hero animation primitives ---------- */
+  .word-wrap { display: inline-block; opacity: 0; animation: fadeUp .75s cubic-bezier(.22,.61,.36,1) forwards; will-change: transform, opacity; }
+  .anim-pin  { opacity: 0; animation: pinDrop .9s cubic-bezier(.22,.61,.36,1) .1s forwards; }
+  .anim-cta  { opacity: 0; animation: fadeUp .8s cubic-bezier(.22,.61,.36,1) forwards; }
+  .anim-fade { opacity: 0; animation: fadeIn .9s ease forwards; }
+  .pin-shadow { filter: drop-shadow(0 8px 22px rgba(0,0,0,.55)); }
+
+  /* ---------- CTA glow ---------- */
+  .cta-glow { transition: box-shadow .35s ease, transform .35s ease; }
+  .cta-glow:hover { box-shadow: 0 0 0 1px rgba(255,255,255,.7), 0 0 28px rgba(255,255,255,.55), 0 0 70px rgba(255,255,255,.28); transform: translateY(-1px); }
+
+  /* ---------- cinematic background fallback ---------- */
+  .bg-fallback {
+    background:
+      radial-gradient(120% 90% at 15% 10%, #1b2a3f 0%, transparent 55%),
+      radial-gradient(110% 80% at 85% 20%, #3a2418 0%, transparent 55%),
+      radial-gradient(140% 120% at 50% 110%, #0a1a24 0%, transparent 60%),
+      linear-gradient(160deg, #07080a 0%, #0d1117 50%, #05070a 100%);
+    animation: drift 26s ease-in-out infinite;
+  }
+  .bg-fallback::after {
+    content: ''; position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+    background-size: 88px 88px;
+    mask-image: radial-gradient(80% 60% at 50% 45%, #000 0%, transparent 75%);
+  }
+
+  /* ---------- glass ---------- */
+  .glass { background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.11); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+  .glass-hover { transition: background .25s ease, border-color .25s ease, transform .25s ease; }
+  .glass-hover:hover { background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.22); transform: translateY(-2px); }
+
+  /* ---------- conic gradient submit button ---------- */
+  .gbtn { position: relative; width: 52px; height: 52px; flex: 0 0 52px; border-radius: 9999px; }
+  .gbtn__ring, .gbtn__glow { position: absolute; border-radius: 9999px; background: conic-gradient(from 0deg, #00c6ff, #0072ff, #ff007a, #ff8a00, #00c6ff); }
+  .gbtn__ring { inset: -3px; }
+  .gbtn__glow { inset: -9px; filter: blur(16px); opacity: 0; transition: opacity .35s ease; }
+  .gbtn:hover .gbtn__ring, .gbtn:hover .gbtn__glow { animation: spinRing 1.3s linear infinite; }
+  .gbtn:hover .gbtn__glow { opacity: 1; }
+  .gbtn__core { position: absolute; inset: 0; border-radius: 9999px; background: #000; display: flex; align-items: center; justify-content: center; transition: box-shadow .3s ease; }
+  .gbtn:hover .gbtn__core { box-shadow: inset 0 2px 10px rgba(255,255,255,.22), inset 0 -2px 10px rgba(0,0,0,.6); }
+  .gbtn:hover .gbtn__icon { transform: translateX(2px); }
+  .gbtn__icon { transition: transform .3s ease; }
+  .gbtn[disabled] { opacity: .55; pointer-events: none; }
+
+  /* ---------- login field ---------- */
+  .field { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 1.25rem; padding: 8px 8px 8px 18px; transition: background .2s ease, border-color .2s ease; }
+  .field:focus-within { background: #fff; border-color: #9ca3af; }
+  .field input { background: transparent; outline: none; width: 100%; }
+  .field input::placeholder { color: #9ca3af; }
+
+  /* ---------- autocomplete ---------- */
+  .ac-panel { position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 60; max-height: 264px; overflow-y: auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 1.1rem; box-shadow: 0 24px 60px -18px rgba(0,0,0,.35); padding: 6px; }
+  .ac-item { padding: 10px 12px; border-radius: .8rem; cursor: pointer; font-size: 14px; color: #111827; display: flex; align-items: baseline; gap: 8px; }
+  .ac-item:hover, .ac-item[aria-selected="true"] { background: #f3f4f6; }
+  .ac-item mark { background: transparent; color: #ea580c; font-weight: 600; }
+  .ac-empty { padding: 14px 12px; font-size: 13px; color: #9ca3af; }
+  .ac-panel::-webkit-scrollbar { width: 10px; }
+  .ac-panel::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 999px; border: 3px solid #fff; }
+
+  /* ---------- quiz option ---------- */
+  .opt { transition: background .18s ease, border-color .18s ease, transform .18s ease; }
+  .opt:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.28); }
+  .opt[data-picked="1"] { background: rgba(255,255,255,.96); border-color: #fff; color: #0c0c0e; }
+  .opt[data-picked="1"] .opt-key { background: #0c0c0e; color: #fff; border-color: #0c0c0e; }
+  .nav-cell { transition: all .15s ease; }
+
+  /* ---------- misc ---------- */
+  .sunset-text { background: linear-gradient(90deg, #FF512F, #F09819); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .ring-anim { animation: ringDraw 1.1s cubic-bezier(.22,.61,.36,1) forwards; }
+  .bar-anim { animation: growBar .9s cubic-bezier(.22,.61,.36,1) forwards; }
+  ::selection { background: #fff; color: #000; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+</style>
+</head>
+
+<body class="min-h-screen bg-black text-white antialiased">
+
+<!-- ═══════════ FIXED CINEMATIC BACKGROUND ═══════════ -->
+<div class="fixed inset-0 overflow-hidden bg-black" style="z-index:-1">
+  <div class="bg-fallback absolute inset-0"></div>
+  <video id="bgVideo" autoplay muted loop playsinline preload="auto"
+         class="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-1000">
+    <!-- URL yang diminta (halaman share Jumpshare — bukan file mp4 langsung) -->
+    <source src="https://jumpshare.com/s/6t6K21KuNJZrELSewqEK" type="video/mp4">
+    <!-- fallback mp4 yang dapat diputar langsung -->
+    <source src="https://cdn.midjourney.com/video/71048e88-d8e6-470e-88ef-555c01eacb12/0.mp4" type="video/mp4">
+  </video>
+  <div class="absolute inset-0 bg-black/30"></div>
+  <div id="bgScrim" class="absolute inset-0 bg-black/80 opacity-0 backdrop-blur-2xl transition-opacity duration-500"></div>
+</div>
+
+
+<!-- ═══════════ VIEW: LANDING ═══════════ -->
+<main id="view-landing" data-view class="relative">
+
+  <header class="absolute inset-x-0 top-0 z-10 px-6 py-6 md:px-16 md:py-10">
+    <div class="mx-auto flex max-w-7xl items-center justify-between">
+      <a href="#top" class="anim-fade flex items-center gap-3" style="animation-delay:.15s">
+        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur-md">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="h-[18px] w-[18px] text-white">
+            <circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.6-4-9s1.4-6.5 4-9z"/>
+          </svg>
+        </span>
+        <span class="text-[16px] font-medium tracking-wide">MonevDAK</span>
+      </a>
+
+      <nav class="anim-fade hidden items-center md:flex md:space-x-10" style="animation-delay:.3s">
+        <a href="#top"      class="text-[14px] font-medium text-white/95 transition hover:text-white">Beranda</a>
+        <a href="#alur"     class="text-[14px] font-medium text-white/95 transition hover:text-white">Alur Monev</a>
+        <a href="#triwulan" class="text-[14px] font-medium text-white/95 transition hover:text-white">Triwulan</a>
+        <a href="#panduan"  class="text-[14px] font-medium text-white/95 transition hover:text-white">Panduan</a>
+        <button onclick="go('login')" class="rounded-full bg-white/15 px-5 py-2 text-[14px] font-medium text-white backdrop-blur-md transition hover:bg-white/25">Masuk</button>
+      </nav>
+
+      <button id="burger" aria-label="Buka menu" class="anim-fade md:hidden" style="animation-delay:.3s">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-6 w-6"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="mobileMenu" class="fixed inset-0 z-40 hidden bg-black/85 backdrop-blur-xl">
+    <div class="flex items-center justify-between px-6 py-6">
+      <span class="text-[16px] font-medium tracking-wide">MonevDAK</span>
+      <button id="burgerClose" aria-label="Tutup menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-6 w-6"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <nav class="flex flex-col gap-2 px-6 pt-10">
+      <a href="#top"      data-mclose class="border-b border-white/10 py-4 text-[22px] font-medium">Beranda</a>
+      <a href="#alur"     data-mclose class="border-b border-white/10 py-4 text-[22px] font-medium">Alur Monev</a>
+      <a href="#triwulan" data-mclose class="border-b border-white/10 py-4 text-[22px] font-medium">Triwulan</a>
+      <a href="#panduan"  data-mclose class="border-b border-white/10 py-4 text-[22px] font-medium">Panduan</a>
+      <button onclick="closeMenu();go('login')" class="mt-8 rounded-full bg-white px-6 py-4 text-[15px] font-medium text-black">Masuk sebagai Pemda</button>
+    </nav>
+  </div>
+
+  <section id="top" class="relative z-[5] flex h-[100dvh] items-center justify-center px-6">
+    <div class="pointer-events-none absolute inset-0" style="background:radial-gradient(70% 55% at 50% 48%, rgba(0,0,0,.62) 0%, rgba(0,0,0,.34) 55%, rgba(0,0,0,0) 100%), linear-gradient(180deg, rgba(0,0,0,.45) 0%, rgba(0,0,0,0) 28%, rgba(0,0,0,0) 62%, rgba(0,0,0,.55) 100%)"></div>
+
+    <div class="relative mx-auto flex max-w-4xl flex-col items-center text-center">
+      <div class="anim-pin mb-7">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="pin-shadow h-11 w-11 text-white md:h-12 md:w-12">
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.6"/>
+        </svg>
+      </div>
+
+      <h1 id="heroTitle" class="text-[38px] font-semibold leading-[1.1] tracking-[-0.02em] sm:text-[46px] md:text-[60px]">
+        Pantau Setiap Kilometer<br class="hidden md:block"/>DAK Fisik Bidang Jalan
+      </h1>
+
+      <p id="heroSub" class="mt-6 max-w-[480px] text-[16px] font-medium leading-[1.6] text-white/95 md:text-[17px]">
+        Pre test dan post test pelaksanaan monitoring dan evaluasi<br class="hidden md:block"/>DAK Fisik Bidang Jalan — periode penilaian Triwulan II.
+      </p>
+
+      <div class="mt-10 flex flex-col items-center gap-4 sm:flex-row">
+        <button id="heroCta" onclick="go('login')" class="anim-cta cta-glow rounded-full bg-white px-8 py-[14px] text-[15px] font-medium text-black">Mulai Pengisian</button>
+        <button id="heroCta2" onclick="go('rank')" class="anim-cta rounded-full border border-white/25 bg-white/10 px-7 py-[14px] text-[15px] font-medium text-white backdrop-blur-md transition hover:bg-white/20">Lihat Peringkat</button>
+      </div>
+
+      <p id="heroMeta" class="anim-fade mt-8 text-[12px] font-medium uppercase tracking-[0.18em] text-white/55">
+        SE Menteri PU No. 5/SE/Mn/2026 &nbsp;·&nbsp; eMonitoring DAK PU
+      </p>
+    </div>
+
+    <a href="#alur" class="anim-fade absolute bottom-8 left-1/2 -translate-x-1/2 text-white/60 transition hover:text-white" style="animation-delay:2.6s" aria-label="Gulir ke bawah">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="h-6 w-6"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+    </a>
+  </section>
+
+  <div class="relative z-[5] bg-black/80 backdrop-blur-2xl">
+
+    <section id="alur" class="mx-auto max-w-7xl px-6 py-24 md:px-16 md:py-28">
+      <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Alur</p>
+      <h2 class="mt-3 max-w-2xl text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[42px]">Empat langkah, satu siklus evaluasi</h2>
+      <p class="mt-4 max-w-[540px] text-[15px] leading-[1.7] text-white/70">Setiap pemerintah daerah mengikuti alur yang sama, sehingga capaian pemahaman dapat diukur sebelum dan sesudah pendampingan.</p>
+
+      <div class="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="glass glass-hover rounded-3xl p-7">
+          <span class="text-[13px] font-semibold tabular-nums text-white/40">01</span>
+          <h3 class="mt-4 text-[18px] font-semibold">Identitas Pemda</h3>
+          <p class="mt-2 text-[14px] leading-[1.65] text-white/65">Isi nama, provinsi, dan kabupaten/kota. Kolom provinsi dan kabupaten dibantu saran otomatis saat diketik.</p>
+        </div>
+        <div class="glass glass-hover rounded-3xl p-7">
+          <span class="text-[13px] font-semibold tabular-nums text-white/40">02</span>
+          <h3 class="mt-4 text-[18px] font-semibold">Pre Test</h3>
+          <p class="mt-2 text-[14px] leading-[1.65] text-white/65">20 soal acak dari bank 25 soal. Urutan soal dan urutan pilihan jawaban berbeda untuk setiap peserta.</p>
+        </div>
+        <div class="glass glass-hover rounded-3xl p-7">
+          <span class="text-[13px] font-semibold tabular-nums text-white/40">03</span>
+          <h3 class="mt-4 text-[18px] font-semibold">Post Test</h3>
+          <p class="mt-2 text-[14px] leading-[1.65] text-white/65">Dikerjakan setelah pendampingan teknis, dengan pengacakan yang sama sehingga tidak dapat dihafal urutannya.</p>
+        </div>
+        <div class="glass glass-hover rounded-3xl p-7">
+          <span class="text-[13px] font-semibold tabular-nums text-white/40">04</span>
+          <h3 class="mt-4 text-[18px] font-semibold">Nilai &amp; Peringkat</h3>
+          <p class="mt-2 text-[14px] leading-[1.65] text-white/65">Nilai akhir, pembahasan berikut dasar hukum, peringkat nasional, dan grafik perbandingan pre–post.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="triwulan" class="border-t border-white/10">
+      <div class="mx-auto max-w-7xl px-6 py-24 md:px-16 md:py-28">
+        <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Periode</p>
+        <h2 class="mt-3 text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[42px]">Triwulan I – IV</h2>
+        <p class="mt-4 max-w-[540px] text-[15px] leading-[1.7] text-white/70">Untuk saat ini hanya <strong class="font-semibold text-white">Triwulan II</strong> yang dinilai. Triwulan lain menyusul pada periode berikutnya.</p>
+        <div id="twGrid" class="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"></div>
+      </div>
+    </section>
+
+    <section id="panduan" class="border-t border-white/10">
+      <div class="mx-auto grid max-w-7xl gap-14 px-6 py-24 md:grid-cols-2 md:px-16 md:py-28">
+        <div>
+          <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Panduan</p>
+          <h2 class="mt-3 text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[42px]">Sebelum Anda mulai</h2>
+          <ul class="mt-8 space-y-5 text-[15px] leading-[1.7] text-white/70">
+            <li class="flex gap-3"><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-white/60"></span><span>Setiap peserta mengerjakan <strong class="font-semibold text-white">satu pre test</strong> dan <strong class="font-semibold text-white">satu post test</strong>. Sesi yang sudah dikirim tidak dapat diulang.</span></li>
+            <li class="flex gap-3"><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-white/60"></span><span><strong class="font-semibold text-white">20 soal</strong> diambil acak dari 25 soal. Urutan soal dan urutan opsi A–D diacak ulang setiap kali masuk.</span></li>
+            <li class="flex gap-3"><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-white/60"></span><span>Setiap soal bernilai <strong class="font-semibold text-white">5 poin</strong>, sehingga nilai maksimal <strong class="font-semibold text-white">100</strong>. Batas waktu 20 menit; sesi dikirim otomatis saat waktu habis.</span></li>
+            <li class="flex gap-3"><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-white/60"></span><span>Peringkat disusun dari <strong class="font-semibold text-white">jumlah jawaban benar</strong>; bila sama, <strong class="font-semibold text-white">waktu penyelesaian tercepat</strong> yang lebih unggul.</span></li>
+            <li class="flex gap-3"><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-white/60"></span><span>Setelah selesai, setiap soal disertai kunci jawaban dan <strong class="font-semibold text-white">dasar hukum</strong> pada SE dan lampirannya.</span></li>
+          </ul>
+        </div>
+        <div class="glass rounded-3xl p-8 md:p-10">
+          <h3 class="text-[13px] font-semibold uppercase tracking-[0.18em] text-white/50">Dasar hukum bank soal</h3>
+          <p class="mt-5 text-[19px] font-medium leading-[1.5]">Surat Edaran Menteri Pekerjaan Umum Nomor 5/SE/Mn/2026</p>
+          <p class="mt-3 text-[14px] leading-[1.7] text-white/65">Pemantauan, evaluasi, dan pelaksanaan DAK Fisik Infrastruktur Pekerjaan Umum Bidang Jalan, beserta Lampiran I dan Lampiran II.</p>
+          <div class="mt-8 grid grid-cols-4 gap-4 border-t border-white/10 pt-8">
+            <div><p class="text-[26px] font-semibold tabular-nums">25</p><p class="mt-1 text-[12px] text-white/55">Bank soal</p></div>
+            <div><p class="text-[26px] font-semibold tabular-nums">20</p><p class="mt-1 text-[12px] text-white/55">Dikerjakan</p></div>
+            <div><p class="text-[26px] font-semibold tabular-nums">100</p><p class="mt-1 text-[12px] text-white/55">Nilai maks</p></div>
+            <div><p class="text-[26px] font-semibold tabular-nums">20′</p><p class="mt-1 text-[12px] text-white/55">Durasi</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="border-t border-white/10">
+      <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-10 text-[13px] text-white/50 md:flex-row md:items-center md:justify-between md:px-16">
+        <p>MonevDAK · Pusat Fasilitasi Infrastruktur Daerah</p>
+        <p id="footMode">Memeriksa koneksi basis data…</p>
+      </div>
+    </footer>
+  </div>
+</main>
+
+
+<!-- ═══════════ VIEW: LOGIN ═══════════ -->
+<main id="view-login" data-view class="relative z-10 hidden min-h-screen items-center justify-center px-4 py-10">
+  <div class="mx-auto flex w-full max-w-[1040px] flex-col overflow-hidden rounded-[2.5rem] border border-gray-200 bg-white shadow-[0_40px_120px_-30px_rgba(0,0,0,.75)] md:min-h-[650px] md:flex-row">
+
+    <div class="relative m-3 hidden overflow-hidden rounded-[2rem] bg-ink md:m-4 md:block md:w-[45%]">
+      <video autoplay muted loop playsinline class="absolute inset-0 h-full w-full object-cover">
+        <source src="https://cdn.midjourney.com/video/71048e88-d8e6-470e-88ef-555c01eacb12/0.mp4" type="video/mp4">
+      </video>
+    </div>
+
+    <div class="relative flex w-full flex-col overflow-hidden px-7 py-10 md:w-[55%] md:px-12 md:py-12">
+      <div class="pointer-events-none absolute -left-16 -top-16 h-64 w-64 rounded-full opacity-20 blur-[80px]" style="background:linear-gradient(135deg,#FF512F,#F09819)"></div>
+
+      <button onclick="go('landing')" class="relative z-10 mb-6 flex items-center gap-2 self-start text-[13px] font-medium text-gray-400 transition hover:text-gray-700">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Beranda
+      </button>
+
+      <div class="relative z-10 text-center">
+        <h2 class="text-[32px] font-semibold tracking-[-0.03em] text-gray-900 md:text-[40px]">Masuk Pemda</h2>
+        <p class="mt-2 text-sm text-gray-500">Identitas peserta monev DAK Fisik Bidang Jalan</p>
+      </div>
+
+      <form id="loginForm" class="relative z-10 mt-9 space-y-3" autocomplete="off" novalidate>
+
+        <div class="field flex items-center gap-3">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <div class="min-w-0 flex-1 py-1">
+            <label for="inNama" class="block text-[11px] font-medium text-gray-500">Nama Lengkap</label>
+            <input id="inNama" type="text" placeholder="Nama peserta" class="text-[15px] text-gray-900" />
+          </div>
+        </div>
+
+        <div class="relative">
+          <div class="field flex items-center gap-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.6"/></svg>
+            <div class="min-w-0 flex-1 py-1">
+              <label for="inProv" class="block text-[11px] font-medium text-gray-500">Provinsi</label>
+              <input id="inProv" type="text" placeholder="Pilih provinsi" class="text-[15px] text-gray-900" role="combobox" aria-expanded="false" aria-autocomplete="list" />
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="mr-2 h-4 w-4 shrink-0 text-gray-400"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="acProv" class="ac-panel hidden" role="listbox"></div>
+        </div>
+
+        <div class="relative">
+          <div class="field flex items-center gap-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M2 22h20"/><path d="M10 7h4M10 11h4M10 15h4"/></svg>
+            <div class="min-w-0 flex-1 py-1">
+              <label for="inKab" class="block text-[11px] font-medium text-gray-500">Kabupaten / Kota</label>
+              <input id="inKab" type="text" placeholder="Pilih kabupaten/kota" class="text-[15px] text-gray-900" role="combobox" aria-expanded="false" aria-autocomplete="list" />
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="mr-2 h-4 w-4 shrink-0 text-gray-400"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="acKab" class="ac-panel hidden" role="listbox"></div>
+        </div>
+
+        <div class="field flex items-center gap-3">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m3 6 9 7 9-7"/></svg>
+          <div class="min-w-0 flex-1 py-1">
+            <label for="inEmail" class="block text-[11px] font-medium text-gray-500">Email Dinas <span class="text-gray-400">(opsional)</span></label>
+            <input id="inEmail" type="email" placeholder="nama@dinaspu.go.id" class="text-[15px] text-gray-900" />
+          </div>
+          <button id="loginBtn" type="submit" class="gbtn" aria-label="Masuk">
+            <span class="gbtn__glow"></span>
+            <span class="gbtn__ring"></span>
+            <span class="gbtn__core">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="gbtn__icon h-[18px] w-[18px]"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </span>
+          </button>
+        </div>
+
+        <p id="loginErr" class="hidden pl-2 pt-1 text-[13px] font-medium text-red-500"></p>
+      </form>
+
+      <p class="relative z-10 mt-auto pt-8 text-center text-[13px] text-gray-500">
+        Belum pernah mengisi? <button type="button" onclick="document.getElementById('inNama').focus()" class="sunset-text font-semibold">Akun dibuat otomatis saat masuk</button>
+      </p>
+    </div>
+  </div>
+</main>
+
+
+<!-- ═══════════ APP SHELL ═══════════ -->
+<div id="appShell" class="relative z-10 hidden min-h-screen">
+
+  <header class="sticky top-0 z-30 border-b border-white/10 bg-black/55 backdrop-blur-2xl">
+    <div class="mx-auto flex max-w-7xl items-center gap-4 px-5 py-4 md:px-10">
+      <button onclick="go('dashboard')" class="flex items-center gap-3">
+        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur-md">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="h-[18px] w-[18px]"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.6-4-9s1.4-6.5 4-9z"/></svg>
+        </span>
+        <span class="hidden text-[16px] font-medium tracking-wide sm:inline">MonevDAK</span>
+      </button>
+
+      <nav class="no-scrollbar ml-2 flex flex-1 items-center gap-1 overflow-x-auto text-[13px] font-medium">
+        <button data-nav="dashboard" onclick="go('dashboard')" class="whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Dashboard</button>
+        <button data-nav="rank"      onclick="go('rank')"      class="whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Peringkat</button>
+        <button data-nav="compare"   onclick="go('compare')"   class="whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Perbandingan</button>
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <div class="hidden text-right sm:block">
+          <p id="chipName" class="text-[13px] font-semibold leading-tight"></p>
+          <p id="chipRegion" class="text-[11px] leading-tight text-white/55"></p>
+        </div>
+        <div id="chipAvatar" class="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-[13px] font-semibold backdrop-blur-md"></div>
+        <button onclick="logout()" title="Keluar" class="rounded-full p-2 text-white/60 transition hover:bg-white/10 hover:text-white">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px]"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── DASHBOARD ─── -->
+  <section id="view-dashboard" data-view class="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-14">
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Dashboard peserta</p>
+    <h1 id="dashHello" class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[40px]"></h1>
+    <p id="dashRegion" class="mt-3 text-[15px] text-white/65"></p>
+
+    <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="glass rounded-3xl p-6"><p class="text-[12px] uppercase tracking-[0.16em] text-white/50">Nilai pre test</p><p id="kpiPre" class="mt-3 text-[32px] font-semibold tabular-nums">—</p></div>
+      <div class="glass rounded-3xl p-6"><p class="text-[12px] uppercase tracking-[0.16em] text-white/50">Nilai post test</p><p id="kpiPost" class="mt-3 text-[32px] font-semibold tabular-nums">—</p></div>
+      <div class="glass rounded-3xl p-6"><p class="text-[12px] uppercase tracking-[0.16em] text-white/50">Peningkatan</p><p id="kpiDelta" class="mt-3 text-[32px] font-semibold tabular-nums">—</p></div>
+      <div class="glass rounded-3xl p-6"><p class="text-[12px] uppercase tracking-[0.16em] text-white/50">Peringkat post test</p><p id="kpiRank" class="mt-3 text-[32px] font-semibold tabular-nums">—</p></div>
+    </div>
+
+    <h2 class="mt-14 text-[20px] font-semibold tracking-[-0.01em]">Pengisian per triwulan</h2>
+    <div id="dashTw" class="mt-6 grid gap-5 lg:grid-cols-2"></div>
+  </section>
+
+  <!-- ─── QUIZ ─── -->
+  <section id="view-quiz" data-view class="mx-auto max-w-4xl px-5 py-8 md:px-10 md:py-12">
+    <div class="glass rounded-3xl p-5 md:p-7">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p id="quizKind" class="text-[12px] font-semibold uppercase tracking-[0.18em] text-white/55"></p>
+          <h1 id="quizTitle" class="mt-1.5 text-[20px] font-semibold tracking-[-0.01em] md:text-[24px]"></h1>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="glass rounded-full px-4 py-2 text-[14px] font-semibold tabular-nums" id="quizTimer">20:00</div>
+          <button onclick="abandonQuiz()" class="rounded-full border border-white/20 px-4 py-2 text-[13px] font-medium text-white/75 transition hover:bg-white/10">Keluar</button>
+        </div>
+      </div>
+      <div class="mt-5 h-1.5 overflow-hidden rounded-full bg-white/12">
+        <div id="quizProgress" class="h-full rounded-full bg-white transition-all duration-300" style="width:0%"></div>
+      </div>
+      <div id="quizNav" class="mt-5 flex flex-wrap gap-2"></div>
+    </div>
+
+    <div id="quizCard" class="glass mt-5 rounded-3xl p-6 md:p-9"></div>
+
+    <div class="mt-5 flex items-center justify-between gap-3">
+      <button id="quizPrev" onclick="qMove(-1)" class="rounded-full border border-white/20 px-6 py-3 text-[14px] font-medium text-white/85 transition hover:bg-white/10 disabled:opacity-30">Sebelumnya</button>
+      <div class="flex items-center gap-3">
+        <button id="quizNext" onclick="qMove(1)" class="rounded-full border border-white/20 px-6 py-3 text-[14px] font-medium text-white/85 transition hover:bg-white/10 disabled:opacity-30">Berikutnya</button>
+        <button id="quizSubmit" onclick="submitQuiz(false)" class="cta-glow rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black">Selesai &amp; Kirim</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── RESULT ─── -->
+  <section id="view-result" data-view class="mx-auto max-w-5xl px-5 py-10 md:px-10 md:py-14"></section>
+
+  <!-- ─── RANK ─── -->
+  <section id="view-rank" data-view class="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-14">
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Peringkat nasional · Triwulan II</p>
+    <h1 class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[40px]">Papan peringkat peserta</h1>
+    <p class="mt-3 max-w-[600px] text-[15px] text-white/65">Diurutkan dari jumlah jawaban benar terbanyak; bila jumlah benar sama, waktu penyelesaian tercepat lebih unggul.</p>
+
+    <div class="mt-8 flex flex-wrap items-center gap-3">
+      <select id="rankKind" onchange="renderRank()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink">
+        <option value="post">Post Test</option>
+        <option value="pre">Pre Test</option>
+        <option value="delta">Peningkatan (post − pre)</option>
+      </select>
+      <div class="glass flex items-center gap-2 rounded-full px-5 py-2.5">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4 text-white/50"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="rankQ" oninput="renderRank()" placeholder="Cari nama atau daerah" class="w-44 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
+      </div>
+      <button onclick="refreshRank()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Muat ulang</button>
+    </div>
+
+    <div id="rankPodium" class="mt-9 grid gap-4 sm:grid-cols-3"></div>
+    <div id="rankTable" class="glass mt-6 overflow-hidden rounded-3xl"></div>
+  </section>
+
+  <!-- ─── COMPARE ─── -->
+  <section id="view-compare" data-view class="mx-auto max-w-5xl px-5 py-10 md:px-10 md:py-14">
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Analisis</p>
+    <h1 class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[40px]">Sebelum dan sesudah</h1>
+    <p class="mt-3 max-w-[560px] text-[15px] text-white/65">Perbandingan nilai pre test dan post test Anda pada Triwulan II.</p>
+    <div id="compareBody" class="mt-10 space-y-5"></div>
+  </section>
+
+  <footer class="border-t border-white/10 bg-black/50 backdrop-blur-xl">
+    <div class="mx-auto flex max-w-7xl flex-col gap-2 px-5 py-8 text-[12px] text-white/45 md:flex-row md:items-center md:justify-between md:px-10">
+      <p>MonevDAK · Pre test &amp; post test DAK Fisik Bidang Jalan</p>
+      <p>Bank soal: SE Menteri PU No. 5/SE/Mn/2026 (Lampiran I &amp; II)</p>
+    </div>
+  </footer>
+</div>
+
+
+<!-- mode lokal indicator -->
+<div id="modeBadge" class="fixed bottom-4 left-4 z-[70] hidden flex max-w-[240px] items-start gap-2 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-3.5 py-2.5 text-[11px] leading-[1.55] text-amber-200 backdrop-blur-xl md:max-w-[300px] md:text-[12px]">
+  <span class="flex-1"><strong class="font-semibold">Mode lokal.</strong> Firebase belum dikonfigurasi, data hanya tersimpan di peramban ini.</span>
+  <button onclick="this.parentElement.classList.add('hidden')" aria-label="Tutup" class="-mr-1 -mt-0.5 shrink-0 rounded-full p-1 text-amber-200/70 transition hover:bg-amber-400/20 hover:text-amber-100">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="h-3 w-3"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+</div>
+
+<!-- toast -->
+<div id="toast" class="pointer-events-none fixed bottom-6 left-1/2 z-[80] -translate-x-1/2 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black opacity-0 shadow-2xl transition-all duration-300"></div>
+
+<script src="assets/wilayah.js"></script>
+<script src="assets/soal-tw2.js"></script>
+<script src="assets/firebase-config.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   1. WILAYAH
+   ═══════════════════════════════════════════════════════════════ */
+const PROVINSI = Object.keys(window.WILAYAH);
+const KAB_OF = p => (window.WILAYAH[p] || "").split(",").filter(Boolean);
+const ALL_KAB = PROVINSI.flatMap(p => KAB_OF(p).map(k => ({ kab: k, prov: p })));
+
+const BANK    = window.SOAL_TW2;
+const ATURAN  = window.ATURAN;
+const SOAL_BY_ID = Object.fromEntries(BANK.map(s => [s.id, s]));
+const TW_AKTIF = ATURAN.twAktif;
+const NILAI_MAX = ATURAN.jumlahSoal * ATURAN.nilaiPerSoal;
+
+const TW_META = {
+  1: { rom:"I",   label:"Triwulan I",   focus:"Perencanaan, Rencana Kegiatan, dan kesiapan kontrak" },
+  2: { rom:"II",  label:"Triwulan II",  focus:"Pelaporan eMonitoring, pelaksanaan, output, dan immediate outcome" },
+  3: { rom:"III", label:"Triwulan III", focus:"Verifikasi capaian dan tindak lanjut deviasi" },
+  4: { rom:"IV",  label:"Triwulan IV",  focus:"Penyelesaian pekerjaan, PHO, dan evaluasi akhir" }
+};
+
+
+/* ═══════════════════════════════════════════════════════════════
+   2. UTIL
+   ═══════════════════════════════════════════════════════════════ */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const initials = n => n.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+const norm = s => String(s).toLowerCase().replace(/[^a-z0-9 ]/g, '');
+const slug = s => norm(s).trim().replace(/\s+/g, '-');
+const predikat = n => n >= 85 ? 'Sangat Baik' : n >= 70 ? 'Baik' : n >= 55 ? 'Cukup' : 'Perlu Peningkatan';
+const KEYS = ['A', 'B', 'C', 'D'];
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function fmtDur(ms) {
+  if (ms == null) return '—';
+  const t = Math.max(0, Math.round(ms / 1000));
+  return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+}
+
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.style.opacity = '1'; t.style.transform = 'translate(-50%,0)';
+  clearTimeout(t._h);
+  t._h = setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translate(-50%,8px)'; }, 3000);
+}
+
+function highlight(text, q) {
+  if (!q) return esc(text);
+  const i = norm(text).indexOf(norm(q));
+  if (i < 0) return esc(text);
+  return esc(text.slice(0, i)) + '<mark>' + esc(text.slice(i, i + q.length)) + '</mark>' + esc(text.slice(i + q.length));
+}
+
+const pesertaId = (nama, prov, kab) => [slug(nama), slug(prov), slug(kab)].join('_');
+const hasilId   = (pid, tw, kind) => `${pid}__tw${tw}__${kind}`;
+
+
+/* ═══════════════════════════════════════════════════════════════
+   3. LAPISAN DATA
+   Firestore bila assets/firebase-config.js sudah diisi dan halaman
+   dilayani lewat http(s); selain itu localStorage (mode lokal).
+   ═══════════════════════════════════════════════════════════════ */
+const LOCAL_KEY = 'monevdak.lokal.v1';
+
+const store = {
+  mode: 'lokal',
+  db: null, fs: null, uid: null,
+  cacheHasil: null,
+
+  async init() {
+    const cfg = window.FIREBASE_CONFIG || {};
+    const siap = cfg.apiKey && cfg.projectId;
+    const httpish = location.protocol === 'http:' || location.protocol === 'https:';
+    if (!siap || !httpish) { this.initLokal(); return this.mode; }
+
+    try {
+      const V = 'https://www.gstatic.com/firebasejs/12.0.0';
+      const [appMod, authMod, fsMod] = await Promise.all([
+        import(`${V}/firebase-app.js`),
+        import(`${V}/firebase-auth.js`),
+        import(`${V}/firebase-firestore.js`)
+      ]);
+      const app = appMod.initializeApp(cfg);
+      const auth = authMod.getAuth(app);
+      const cred = await authMod.signInAnonymously(auth);
+      this.uid = cred.user.uid;
+      this.fs = fsMod;
+      this.db = fsMod.getFirestore(app);
+      this.mode = 'firebase';
+    } catch (e) {
+      console.warn('[MonevDAK] Firebase gagal dimuat, beralih ke mode lokal:', e);
+      this.initLokal();
+    }
+    return this.mode;
+  },
+
+  initLokal() {
+    this.mode = 'lokal';
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem(LOCAL_KEY)); } catch (e) {}
+    if (!d) { d = { peserta: {}, hasil: {} }; seedLokal(d); }
+    this.lokal = d;
+    this.simpanLokal();
+  },
+  simpanLokal() { try { localStorage.setItem(LOCAL_KEY, JSON.stringify(this.lokal)); } catch (e) {} },
+
+  async simpanPeserta(p) {
+    if (this.mode === 'firebase') {
+      const { doc, setDoc, serverTimestamp } = this.fs;
+      await setDoc(doc(this.db, 'peserta', p.pid), {
+        nama: p.nama, prov: p.prov, kab: p.kab, email: p.email || '',
+        uid: this.uid, updatedAt: serverTimestamp()
+      }, { merge: true });
+    } else {
+      this.lokal.peserta[p.pid] = { ...p, updatedAt: Date.now() };
+      this.simpanLokal();
+    }
+  },
+
+  /** Hasil milik satu peserta. */
+  async hasilPeserta(pid) {
+    if (this.mode === 'firebase') {
+      const { collection, query, where, getDocs } = this.fs;
+      const snap = await getDocs(query(collection(this.db, 'hasil'), where('pid', '==', pid)));
+      return snap.docs.map(d => d.data());
+    }
+    return Object.values(this.lokal.hasil).filter(h => h.pid === pid);
+  },
+
+  /** Simpan sekali saja — percobaan kedua ditolak. */
+  async simpanHasil(rec) {
+    const id = hasilId(rec.pid, rec.tw, rec.kind);
+    if (this.mode === 'firebase') {
+      const { doc, setDoc, serverTimestamp } = this.fs;
+      await setDoc(doc(this.db, 'hasil', id), { ...rec, uid: this.uid, selesaiAt: serverTimestamp() });
+    } else {
+      if (this.lokal.hasil[id]) throw new Error('sudah-ada');
+      this.lokal.hasil[id] = { ...rec, selesaiAt: Date.now() };
+      this.simpanLokal();
+    }
+    this.cacheHasil = null;
+  },
+
+  /** Seluruh hasil untuk papan peringkat. */
+  async semuaHasil(paksa) {
+    if (this.cacheHasil && !paksa) return this.cacheHasil;
+    let rows;
+    if (this.mode === 'firebase') {
+      const { collection, query, limit, getDocs } = this.fs;
+      const snap = await getDocs(query(collection(this.db, 'hasil'), limit(1000)));
+      rows = snap.docs.map(d => d.data());
+    } else {
+      rows = Object.values(this.lokal.hasil);
+    }
+    this.cacheHasil = rows;
+    return rows;
+  }
+};
+
+/* Data contoh untuk mode lokal saja, supaya papan peringkat tidak kosong. */
+function seedLokal(d) {
+  const rows = [
+    ["Agus Purnomo","Jawa Tengah","Kebumen",13,18, 742000, 611000],
+    ["Siti Rahmawati","Jawa Barat","Garut",15,17, 690000, 655000],
+    ["Bagus Nugroho","Jawa Timur","Malang",12,18, 810000, 590000],
+    ["Andi Mappe","Sulawesi Selatan","Bone",11,16, 905000, 780000],
+    ["Ratna Dewi","Bali","Buleleng",16,18, 640000, 545000],
+    ["Iwan Setiawan","Sumatera Barat","Agam",9,15, 1010000, 860000],
+    ["Yohana Tallo","Nusa Tenggara Timur","Sikka",8,14, 1120000, 940000],
+    ["Rudi Hartono","Kalimantan Selatan","Banjar",13,16, 770000, 700000],
+    ["Nur Aini","Aceh","Pidie",12,17, 830000, 620000],
+    ["Melkior Waine","Papua","Biak Numfor",7,12, 1180000, 1005000],
+    ["Dedi Kurniawan","Lampung","Pringsewu",11,15, 880000, 815000],
+    ["Tri Handayani","DI Yogyakarta","Bantul",15,20, 705000, 498000],
+    ["Hasan Basri","Riau","Kampar",10,14, 960000, 890000],
+    ["Lita Marlina","Banten","Lebak",12,15, 845000, 805000]
+  ];
+  rows.forEach(([nama, prov, kab, bPre, bPost, dPre, dPost], i) => {
+    const pid = pesertaId(nama, prov, kab);
+    d.peserta[pid] = { pid, nama, prov, kab, email: '', demo: true };
+    [['pre', bPre, dPre], ['post', bPost, dPost]].forEach(([kind, benar, durasiMs]) => {
+      const id = hasilId(pid, TW_AKTIF, kind);
+      d.hasil[id] = {
+        pid, nama, prov, kab, tw: TW_AKTIF, kind,
+        benar, total: ATURAN.jumlahSoal, nilai: benar * ATURAN.nilaiPerSoal,
+        durasiMs, detail: [], demo: true, selesaiAt: Date.now() - (i * 36e5)
+      };
+    });
+  });
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   4. SESI PESERTA
+   ═══════════════════════════════════════════════════════════════ */
+const SESSION_KEY = 'monevdak.sesi';
+let ME = null;
+let HASIL_SAYA = [];
+
+const hasilSaya = kind => HASIL_SAYA.find(h => h.tw === TW_AKTIF && h.kind === kind);
+
+async function muatHasilSaya() {
+  HASIL_SAYA = ME ? await store.hasilPeserta(ME.pid) : [];
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   5. ROUTER
+   ═══════════════════════════════════════════════════════════════ */
+const APP_VIEWS = ['dashboard', 'quiz', 'result', 'rank', 'compare'];
+
+async function go(view) {
+  if (APP_VIEWS.includes(view) && !ME) view = 'login';
+
+  $$('[data-view]').forEach(v => v.classList.add('hidden'));
+  const inApp = APP_VIEWS.includes(view);
+  $('#appShell').classList.toggle('hidden', !inApp);
+  $('#bgScrim').style.opacity = (view === 'landing') ? '0' : (inApp ? '1' : '.7');
+
+  const el = $('#view-' + view);
+  if (el) { el.classList.remove('hidden'); if (view === 'login') el.classList.add('flex'); }
+
+  $$('[data-nav]').forEach(b => {
+    const on = b.dataset.nav === view;
+    b.classList.toggle('bg-white', on); b.classList.toggle('text-black', on); b.classList.toggle('text-white/70', !on);
+  });
+
+  window.scrollTo({ top: 0 });
+
+  if (view === 'dashboard') await renderDashboard();
+  if (view === 'rank')      await renderRank();
+  if (view === 'compare')   renderCompare();
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   6. HERO — animasi kata per kata
+   ═══════════════════════════════════════════════════════════════ */
+function splitWords(el, start, step) {
+  const nodes = Array.from(el.childNodes);
+  el.innerHTML = '';
+  let d = start;
+  nodes.forEach(node => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      node.textContent.split(/(\s+)/).forEach(tok => {
+        if (!tok.trim()) { if (tok) el.appendChild(document.createTextNode(' ')); return; }
+        const s = document.createElement('span');
+        s.className = 'word-wrap';
+        s.textContent = tok;
+        s.style.animationDelay = d.toFixed(3) + 's';
+        el.appendChild(s);
+        d += step;
+      });
+    } else {
+      // spasi sebelum <br> supaya kata tidak menempel saat <br> disembunyikan di mobile
+      if (node.nodeName === 'BR') el.appendChild(document.createTextNode(' '));
+      el.appendChild(node.cloneNode(true));
+    }
+  });
+  return d;
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const v = $('#bgVideo');
+  v.addEventListener('loadeddata', () => v.classList.remove('opacity-0'));
+  v.addEventListener('error', () => v.classList.add('opacity-0'), true);
+
+  const T_PIN = 0.55, STEP_H = 0.075, STEP_S = 0.035;
+  const endHead = splitWords($('#heroTitle'), T_PIN, STEP_H);
+  const endSub  = splitWords($('#heroSub'), endHead - 0.15, STEP_S);
+  $('#heroCta').style.animationDelay  = (endSub + 0.05).toFixed(2) + 's';
+  $('#heroCta2').style.animationDelay = (endSub + 0.14).toFixed(2) + 's';
+  $('#heroMeta').style.animationDelay = (endSub + 0.3).toFixed(2) + 's';
+
+  $('#burger').onclick = () => $('#mobileMenu').classList.remove('hidden');
+  $('#burgerClose').onclick = closeMenu;
+  $$('[data-mclose]').forEach(a => a.onclick = closeMenu);
+
+  renderTwGrid();
+  bindAutocomplete();
+  $('#loginForm').addEventListener('submit', doLogin);
+
+  const mode = await store.init();
+  $('#modeBadge').classList.toggle('hidden', mode === 'firebase');
+  $('#footMode').textContent = mode === 'firebase'
+    ? 'Data tersimpan di Firebase Firestore.'
+    : 'Mode lokal — data tersimpan di peramban perangkat ini.';
+
+  try {
+    const s = sessionStorage.getItem(SESSION_KEY);
+    if (s) { ME = JSON.parse(s); await muatHasilSaya(); syncChip(); go('dashboard'); }
+  } catch (e) {}
+});
+function closeMenu() { $('#mobileMenu').classList.add('hidden'); }
+
+function renderTwGrid() {
+  $('#twGrid').innerHTML = [1, 2, 3, 4].map(tw => {
+    const m = TW_META[tw], aktif = tw === TW_AKTIF;
+    return `<div class="glass glass-hover rounded-3xl p-7 ${aktif ? 'ring-1 ring-white/40' : ''}">
+      <div class="flex items-start justify-between">
+        <span class="text-[30px] font-semibold tracking-[-0.02em] ${aktif ? '' : 'text-white/45'}">TW ${m.rom}</span>
+        <span class="rounded-full px-3 py-1 text-[11px] font-semibold ${aktif ? 'bg-white text-black' : 'border border-white/25 text-white/60'}">${aktif ? 'Dinilai' : 'Belum dinilai'}</span>
+      </div>
+      <p class="mt-4 text-[14px] leading-[1.65] ${aktif ? 'text-white/65' : 'text-white/40'}">${esc(m.focus)}</p>
+      ${aktif
+        ? `<button onclick="go('login')" class="mt-6 text-[13px] font-semibold text-white">Ikuti pre test →</button>`
+        : `<p class="mt-6 text-[13px] font-semibold text-white/35">Menyusul periode berikutnya</p>`}
+    </div>`;
+  }).join('');
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   7. AUTOCOMPLETE
+   ═══════════════════════════════════════════════════════════════ */
+let SEL = { prov: '', kab: '' };
+
+function bindAutocomplete() {
+  makeAC({
+    input: $('#inProv'), panel: $('#acProv'),
+    source: q => {
+      const nq = norm(q);
+      const arr = PROVINSI.map(p => ({ label: p, note: KAB_OF(p).length + ' kab/kota' }));
+      if (!nq) return arr;
+      return arr.filter(x => norm(x.label).includes(nq))
+                .sort((a, b) => norm(a.label).indexOf(nq) - norm(b.label).indexOf(nq));
+    },
+    pick: it => { SEL.prov = it.label; $('#inProv').value = it.label; SEL.kab = ''; $('#inKab').value = ''; $('#inKab').focus(); }
+  });
+
+  makeAC({
+    input: $('#inKab'), panel: $('#acKab'),
+    source: q => {
+      const nq = norm(q);
+      const arr = SEL.prov
+        ? KAB_OF(SEL.prov).map(k => ({ label: k, note: SEL.prov, prov: SEL.prov }))
+        : ALL_KAB.map(x => ({ label: x.kab, note: x.prov, prov: x.prov }));
+      if (!nq) return arr.slice(0, 60);
+      return arr.filter(x => norm(x.label).includes(nq))
+                .sort((a, b) => norm(a.label).indexOf(nq) - norm(b.label).indexOf(nq))
+                .slice(0, 60);
+    },
+    pick: it => {
+      SEL.kab = it.label; $('#inKab').value = it.label;
+      if (it.prov && it.prov !== SEL.prov) { SEL.prov = it.prov; $('#inProv').value = it.prov; }
+      $('#inEmail').focus();
+    }
+  });
+}
+
+function makeAC({ input, panel, source, pick }) {
+  let items = [], cur = -1;
+
+  const render = () => {
+    const q = input.value.trim();
+    items = source(q);
+    panel.innerHTML = items.length
+      ? items.map((it, i) => `<div class="ac-item" role="option" data-i="${i}" aria-selected="${i === cur}">
+             <span class="flex-1">${highlight(it.label, q)}</span>
+             <span class="text-[11px] text-gray-400">${esc(it.note || '')}</span>
+           </div>`).join('')
+      : '<div class="ac-empty">Tidak ditemukan. Periksa ejaan.</div>';
+    panel.querySelectorAll('.ac-item').forEach(n => {
+      n.onmousedown = e => { e.preventDefault(); choose(+n.dataset.i); };
+    });
+  };
+
+  const open  = () => { cur = -1; render(); panel.classList.remove('hidden'); input.setAttribute('aria-expanded', 'true'); };
+  const close = () => { panel.classList.add('hidden'); input.setAttribute('aria-expanded', 'false'); };
+  const choose = i => { if (items[i]) { pick(items[i]); close(); } };
+  const move = d => {
+    if (panel.classList.contains('hidden')) { open(); return; }
+    if (!items.length) return;
+    cur = (cur + d + items.length) % items.length;
+    render();
+    const n = panel.querySelector(`[data-i="${cur}"]`);
+    if (n) n.scrollIntoView({ block: 'nearest' });
+  };
+
+  input.addEventListener('focus', open);
+  input.addEventListener('input', () => {
+    if (input === $('#inProv')) SEL.prov = PROVINSI.find(p => norm(p) === norm(input.value)) || '';
+    if (input === $('#inKab'))  SEL.kab = '';
+    open();
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
+    else if (e.key === 'Enter') { if (!panel.classList.contains('hidden') && cur >= 0) { e.preventDefault(); choose(cur); } }
+    else if (e.key === 'Escape') close();
+    else if (e.key === 'Tab' && items.length && cur < 0 && input.value.trim()) choose(0);
+  });
+  input.addEventListener('blur', () => setTimeout(close, 120));
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   8. LOGIN
+   ═══════════════════════════════════════════════════════════════ */
+async function doLogin(e) {
+  e.preventDefault();
+  const nama  = $('#inNama').value.trim().replace(/\s+/g, ' ');
+  const prov  = $('#inProv').value.trim();
+  const kab   = $('#inKab').value.trim();
+  const email = $('#inEmail').value.trim();
+  const err   = $('#loginErr');
+  const fail  = m => { err.textContent = m; err.classList.remove('hidden'); };
+  err.classList.add('hidden');
+
+  if (nama.length < 3)                        return fail('Nama lengkap wajib diisi.');
+  if (!PROVINSI.includes(prov))               return fail('Provinsi belum sesuai daftar. Pilih dari saran yang muncul.');
+  if (!KAB_OF(prov).includes(kab))            return fail('Kabupaten/Kota tidak terdaftar pada ' + prov + '.');
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) return fail('Format email tidak valid.');
+
+  const btn = $('#loginBtn');
+  btn.disabled = true;
+  try {
+    ME = { pid: pesertaId(nama, prov, kab), nama, prov, kab, email };
+    await store.simpanPeserta(ME);
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(ME));
+    await muatHasilSaya();
+    syncChip();
+    toast('Selamat datang, ' + nama.split(' ')[0] + '.');
+    go('dashboard');
+  } catch (ex) {
+    console.error(ex);
+    ME = null;
+    fail('Gagal menyimpan identitas: ' + (ex && ex.message ? ex.message : 'kesalahan tidak diketahui'));
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function logout() {
+  ME = null; HASIL_SAYA = [];
+  sessionStorage.removeItem(SESSION_KEY);
+  SEL = { prov: '', kab: '' };
+  ['inNama', 'inProv', 'inKab', 'inEmail'].forEach(id => $('#' + id).value = '');
+  go('landing');
+}
+
+function syncChip() {
+  if (!ME) return;
+  $('#chipName').textContent   = ME.nama;
+  $('#chipRegion').textContent = ME.kab + ', ' + ME.prov;
+  $('#chipAvatar').textContent = initials(ME.nama);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   9. DASHBOARD
+   ═══════════════════════════════════════════════════════════════ */
+async function renderDashboard() {
+  syncChip();
+  const jam = new Date().getHours();
+  const sapa = jam < 11 ? 'Selamat pagi' : jam < 15 ? 'Selamat siang' : jam < 19 ? 'Selamat sore' : 'Selamat malam';
+  $('#dashHello').textContent  = sapa + ', ' + ME.nama.split(' ')[0] + '.';
+  $('#dashRegion').textContent = ME.kab + ' · Provinsi ' + ME.prov;
+
+  const rp = hasilSaya('pre'), rq = hasilSaya('post');
+  $('#kpiPre').textContent  = rp ? rp.nilai : '—';
+  $('#kpiPost').textContent = rq ? rq.nilai : '—';
+
+  const d = (rp && rq) ? rq.nilai - rp.nilai : null;
+  const kd = $('#kpiDelta');
+  kd.textContent = d === null ? '—' : (d > 0 ? '+' : '') + d;
+  kd.className = 'mt-3 text-[32px] font-semibold tabular-nums ' + (d === null ? '' : d > 0 ? 'text-emerald-400' : d < 0 ? 'text-red-400' : '');
+
+  let posisi = '—';
+  if (rq) {
+    const list = await daftarPeringkat('post');
+    const i = list.findIndex(x => x.pid === ME.pid);
+    if (i >= 0) posisi = (i + 1) + '/' + list.length;
+  }
+  $('#kpiRank').textContent = posisi;
+
+  const kartu = (r, kind) => r
+    ? `<button onclick="showResult('${kind}')" class="rounded-2xl border border-white/12 bg-white/[.07] px-4 py-3 text-left transition hover:bg-white/[.12]">
+         <p class="text-[11px] uppercase tracking-[0.14em] text-white/50">${kind === 'pre' ? 'Pre test' : 'Post test'}</p>
+         <p class="mt-1 text-[22px] font-semibold tabular-nums">${r.nilai}<span class="text-[13px] font-medium text-white/50"> / ${NILAI_MAX}</span></p>
+         <p class="mt-0.5 text-[11px] text-white/50">${r.benar}/${r.total} benar · ${fmtDur(r.durasiMs)} · pembahasan</p>
+       </button>`
+    : `<button onclick="startQuiz('${kind}')" class="rounded-2xl border border-dashed border-white/20 px-4 py-3 text-left transition hover:border-white/40 hover:bg-white/[.07]">
+         <p class="text-[11px] uppercase tracking-[0.14em] text-white/50">${kind === 'pre' ? 'Pre test' : 'Post test'}</p>
+         <p class="mt-1 text-[15px] font-semibold">Mulai sekarang</p>
+         <p class="mt-0.5 text-[11px] text-white/50">${ATURAN.jumlahSoal} soal acak · ${ATURAN.durasiMenit} menit</p>
+       </button>`;
+
+  const aktifCard = `<div class="glass rounded-3xl p-6 ring-1 ring-white/40 md:p-7">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/50">${TW_META[TW_AKTIF].label}</p>
+          <h3 class="mt-2 text-[17px] font-semibold leading-snug">${esc(TW_META[TW_AKTIF].focus)}</h3>
+        </div>
+        <span class="shrink-0 rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-black">Dinilai</span>
+      </div>
+      <div class="mt-5 grid grid-cols-2 gap-3">${kartu(rp, 'pre')}${kartu(rq, 'post')}</div>
+      ${d !== null ? `<div class="mt-4 flex items-center gap-2 rounded-2xl bg-white/[.06] px-4 py-3">
+        <span class="text-[12px] text-white/60">Peningkatan</span>
+        <span class="text-[15px] font-semibold tabular-nums ${d > 0 ? 'text-emerald-400' : d < 0 ? 'text-red-400' : 'text-white/70'}">${d > 0 ? '+' : ''}${d} poin</span>
+        <button onclick="go('compare')" class="ml-auto text-[12px] font-semibold text-white/70 underline decoration-white/30 underline-offset-4 hover:text-white">grafik</button>
+      </div>` : ''}
+    </div>`;
+
+  const lain = [1, 2, 3, 4].filter(t => t !== TW_AKTIF).map(tw => {
+    const m = TW_META[tw];
+    return `<div class="glass rounded-3xl p-6 opacity-60 md:p-7">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/45">${m.label}</p>
+          <h3 class="mt-2 text-[17px] font-semibold leading-snug text-white/70">${esc(m.focus)}</h3>
+        </div>
+        <span class="shrink-0 rounded-full border border-white/20 px-3 py-1 text-[11px] font-semibold text-white/55">Belum dinilai</span>
+      </div>
+      <p class="mt-5 text-[13px] text-white/45">Pengisian dibuka pada periode berikutnya.</p>
+    </div>`;
+  }).join('');
+
+  $('#dashTw').innerHTML = aktifCard + lain;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   10. KUIS
+   Setiap sesi: 20 soal diambil acak dari bank, urutan opsi diacak.
+   `ord` menyimpan pemetaan posisi tampil → indeks opsi asli, supaya
+   pembahasan dapat disusun ulang tepat seperti yang dilihat peserta.
+   ═══════════════════════════════════════════════════════════════ */
+let Q = null;
+
+function buatSesi() {
+  return shuffle(BANK).slice(0, ATURAN.jumlahSoal).map(s => ({ id: s.id, ord: shuffle([0, 1, 2, 3]) }));
+}
+
+function startQuiz(kind) {
+  if (hasilSaya(kind)) { toast('Sesi ini sudah pernah Anda selesaikan.'); return; }
+  if (kind === 'post' && !hasilSaya('pre') && !confirm('Pre test belum dikerjakan. Lanjut ke post test?')) return;
+  if (BANK.length < ATURAN.jumlahSoal) { toast('Bank soal kurang dari ' + ATURAN.jumlahSoal + ' soal.'); return; }
+
+  Q = {
+    kind,
+    item: buatSesi(),
+    ans: new Array(ATURAN.jumlahSoal).fill(-1),
+    i: 0,
+    mulai: Date.now(),
+    sisa: ATURAN.durasiMenit * 60,
+    kirim: false
+  };
+  $('#quizKind').textContent  = (kind === 'pre' ? 'Pre Test' : 'Post Test') + ' · ' + TW_META[TW_AKTIF].label;
+  $('#quizTitle').textContent = 'DAK Fisik Bidang Jalan';
+  go('quiz');
+  tick();
+  Q.timer = setInterval(tick, 1000);
+  renderQuiz();
+}
+
+function tick() {
+  if (!Q) return;
+  const t = $('#quizTimer');
+  t.textContent = fmtDur(Q.sisa * 1000);
+  t.classList.toggle('text-red-400', Q.sisa <= 60);
+  if (Q.sisa <= 0) { clearInterval(Q.timer); submitQuiz(true); return; }
+  Q.sisa--;
+}
+
+function renderQuiz() {
+  const it = Q.item[Q.i];
+  const s  = SOAL_BY_ID[it.id];
+  $('#quizProgress').style.width = ((Q.ans.filter(a => a >= 0).length / Q.item.length) * 100) + '%';
+
+  $('#quizNav').innerHTML = Q.item.map((_, i) => {
+    const done = Q.ans[i] >= 0, here = i === Q.i;
+    return `<button onclick="qJump(${i})" class="nav-cell h-8 w-8 rounded-lg text-[12px] font-semibold tabular-nums
+      ${here ? 'bg-white text-black' : done ? 'bg-white/25 text-white' : 'border border-white/15 text-white/50 hover:bg-white/10'}">${i + 1}</button>`;
+  }).join('');
+
+  $('#quizCard').innerHTML = `
+    <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/45">Soal ${Q.i + 1} dari ${Q.item.length}</p>
+    <h2 class="mt-4 text-[19px] font-medium leading-[1.55] md:text-[21px]">${esc(s.q)}</h2>
+    <div class="mt-7 space-y-3">
+      ${it.ord.map((asli, tampil) => `
+        <button onclick="qPick(${tampil})" data-picked="${Q.ans[Q.i] === tampil ? 1 : 0}"
+          class="opt flex w-full items-start gap-4 rounded-2xl border border-white/12 bg-white/[.04] p-4 text-left md:p-5">
+          <span class="opt-key mt-[1px] flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/25 text-[12px] font-semibold">${KEYS[tampil]}</span>
+          <span class="text-[15px] leading-[1.6]">${esc(s.o[asli])}</span>
+        </button>`).join('')}
+    </div>`;
+
+  $('#quizPrev').disabled = Q.i === 0;
+  $('#quizNext').disabled = Q.i === Q.item.length - 1;
+}
+
+function qPick(tampil) {
+  Q.ans[Q.i] = tampil;
+  renderQuiz();
+  if (Q.i < Q.item.length - 1) setTimeout(() => { if (Q) { Q.i++; renderQuiz(); } }, 180);
+}
+function qMove(d) { const n = Q.i + d; if (n >= 0 && n < Q.item.length) { Q.i = n; renderQuiz(); } }
+function qJump(i) { Q.i = i; renderQuiz(); }
+
+function abandonQuiz() {
+  if (!confirm('Keluar dari sesi ini? Jawaban tidak akan disimpan.')) return;
+  clearInterval(Q.timer); Q = null; go('dashboard');
+}
+
+async function submitQuiz(auto) {
+  if (!Q || Q.kirim) return;
+  const kosong = Q.ans.filter(a => a < 0).length;
+  if (!auto && kosong && !confirm(kosong + ' soal belum dijawab dan dihitung salah. Kirim sekarang?')) return;
+
+  Q.kirim = true;
+  clearInterval(Q.timer);
+  $('#quizSubmit').disabled = true;
+
+  const detail = Q.item.map((it, i) => ({ id: it.id, ord: it.ord, pick: Q.ans[i] }));
+  const benar  = detail.reduce((n, dd) => n + (dd.pick >= 0 && dd.ord[dd.pick] === SOAL_BY_ID[dd.id].a ? 1 : 0), 0);
+  const batas  = ATURAN.durasiMenit * 60 * 1000;
+
+  const rec = {
+    pid: ME.pid, nama: ME.nama, prov: ME.prov, kab: ME.kab,
+    tw: TW_AKTIF, kind: Q.kind,
+    benar, total: ATURAN.jumlahSoal, nilai: benar * ATURAN.nilaiPerSoal,
+    durasiMs: Math.min(batas, Math.max(1000, Date.now() - Q.mulai)),
+    detail
+  };
+
+  const kind = Q.kind;
+  try {
+    await store.simpanHasil(rec);
+    await muatHasilSaya();
+    Q = null;
+    if (auto) toast('Waktu habis — jawaban dikirim otomatis.');
+    showResult(kind);
+  } catch (ex) {
+    console.error(ex);
+    Q.kirim = false;
+    $('#quizSubmit').disabled = false;
+    if (String(ex && ex.message).includes('sudah-ada') || String(ex && ex.code) === 'permission-denied') {
+      toast('Sesi ini sudah pernah dikirim dan tidak dapat diulang.');
+      Q = null; go('dashboard');
+    } else {
+      toast('Gagal mengirim jawaban. Periksa koneksi lalu coba lagi.');
+    }
+  } finally {
+    $('#quizSubmit').disabled = false;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   11. HASIL
+   ═══════════════════════════════════════════════════════════════ */
+async function showResult(kind) {
+  const r = hasilSaya(kind);
+  if (!r) { toast('Belum ada hasil untuk sesi ini.'); return; }
+  const other = hasilSaya(kind === 'pre' ? 'post' : 'pre');
+  const R = 54, C = 2 * Math.PI * R, off = C * (1 - r.nilai / NILAI_MAX);
+
+  const list = await daftarPeringkat(kind);
+  const pos  = list.findIndex(x => x.pid === ME.pid) + 1;
+
+  const pair = other
+    ? (kind === 'post' ? { pre: other, post: r } : { pre: r, post: other })
+    : null;
+
+  const detail = r.detail && r.detail.length ? r.detail : null;
+
+  $('#view-result').innerHTML = `
+    <button onclick="go('dashboard')" class="mb-7 flex items-center gap-2 text-[13px] font-medium text-white/60 transition hover:text-white">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Dashboard
+    </button>
+
+    <div class="glass rounded-[2rem] p-7 md:p-10">
+      <div class="flex flex-col items-center gap-9 md:flex-row md:items-center md:gap-12">
+        <div class="relative h-[150px] w-[150px] shrink-0">
+          <svg viewBox="0 0 130 130" class="h-full w-full -rotate-90">
+            <circle cx="65" cy="65" r="${R}" fill="none" stroke="rgba(255,255,255,.13)" stroke-width="11"/>
+            <circle cx="65" cy="65" r="${R}" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round"
+                    stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"
+                    class="ring-anim" style="--dash:${C.toFixed(1)}"/>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span class="text-[40px] font-semibold leading-none tabular-nums">${r.nilai}</span>
+            <span class="mt-1 text-[11px] uppercase tracking-[0.16em] text-white/50">dari ${NILAI_MAX}</span>
+          </div>
+        </div>
+
+        <div class="flex-1 text-center md:text-left">
+          <p class="text-[12px] font-semibold uppercase tracking-[0.18em] text-white/50">${kind === 'pre' ? 'Pre Test' : 'Post Test'} · ${TW_META[TW_AKTIF].label}</p>
+          <h1 class="mt-3 text-[28px] font-semibold tracking-[-0.02em] md:text-[38px]">${predikat(r.nilai)}</h1>
+          <p class="mt-3 text-[15px] leading-[1.7] text-white/65">${esc(r.nama)} · ${esc(r.kab)}, ${esc(r.prov)}</p>
+          <div class="mt-6 grid grid-cols-2 gap-4 border-t border-white/10 pt-6 text-center sm:grid-cols-4 md:text-left">
+            <div><p class="text-[22px] font-semibold tabular-nums text-emerald-400">${r.benar}</p><p class="mt-1 text-[12px] text-white/55">Benar</p></div>
+            <div><p class="text-[22px] font-semibold tabular-nums text-red-400">${r.total - r.benar}</p><p class="mt-1 text-[12px] text-white/55">Salah</p></div>
+            <div><p class="text-[22px] font-semibold tabular-nums">${fmtDur(r.durasiMs)}</p><p class="mt-1 text-[12px] text-white/55">Waktu</p></div>
+            <div><p class="text-[22px] font-semibold tabular-nums">${pos || '—'}</p><p class="mt-1 text-[12px] text-white/55">Dari ${list.length} peserta</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    ${pair ? `
+    <div class="glass mt-5 rounded-[2rem] p-7 md:p-9">
+      <h2 class="text-[18px] font-semibold">Perbandingan pre test dan post test</h2>
+      <div class="mt-7 space-y-5">
+        ${barRow('Pre test', pair.pre.nilai, 'rgba(255,255,255,.35)')}
+        ${barRow('Post test', pair.post.nilai, '#fff')}
+      </div>
+      <p class="mt-7 border-t border-white/10 pt-5 text-[15px] leading-[1.7] text-white/70">
+        Selisih <strong class="font-semibold ${pair.post.nilai - pair.pre.nilai > 0 ? 'text-emerald-400' : pair.post.nilai - pair.pre.nilai < 0 ? 'text-red-400' : 'text-white'}">${pair.post.nilai - pair.pre.nilai > 0 ? '+' : ''}${pair.post.nilai - pair.pre.nilai} poin</strong>,
+        waktu ${fmtDur(pair.pre.durasiMs)} → ${fmtDur(pair.post.durasiMs)}.
+      </p>
+    </div>` : `
+    <div class="glass mt-5 rounded-[2rem] p-7">
+      <p class="text-[15px] leading-[1.7] text-white/70">Kerjakan ${kind === 'pre' ? 'post test' : 'pre test'} untuk melihat perbandingan nilai sebelum dan sesudah.</p>
+      <button onclick="startQuiz('${kind === 'pre' ? 'post' : 'pre'}')" class="mt-5 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black">Mulai ${kind === 'pre' ? 'post test' : 'pre test'}</button>
+    </div>`}
+
+    <div class="mt-5 flex flex-wrap gap-3">
+      <button onclick="go('rank')" class="cta-glow rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black">Lihat peringkat nasional</button>
+      <button onclick="go('compare')" class="rounded-full border border-white/20 px-6 py-3 text-[14px] font-medium text-white/85 transition hover:bg-white/10">Grafik perbandingan</button>
+    </div>
+
+    ${detail ? `
+    <h2 class="mt-14 text-[20px] font-semibold tracking-[-0.01em]">Pembahasan</h2>
+    <p class="mt-2 text-[14px] text-white/60">Sesuai urutan soal dan urutan opsi yang Anda kerjakan.</p>
+    <div class="mt-6 space-y-4">
+      ${detail.map((dd, i) => {
+        const s = SOAL_BY_ID[dd.id];
+        if (!s) return '';
+        const benarTampil = dd.ord.indexOf(s.a);
+        const ok = dd.pick === benarTampil;
+        return `<div class="glass rounded-3xl p-6">
+          <div class="flex items-start gap-3">
+            <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-bold ${ok ? 'bg-emerald-400 text-black' : 'bg-red-400 text-black'}">${ok ? '✓' : '✕'}</span>
+            <div class="min-w-0 flex-1">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">Soal ${i + 1}</p>
+              <p class="mt-2 text-[15px] font-medium leading-[1.6]">${esc(s.q)}</p>
+              <div class="mt-4 space-y-2 text-[14px] leading-[1.6]">
+                <p class="${ok ? 'text-emerald-300' : 'text-red-300'}">Jawaban Anda: ${dd.pick >= 0 ? KEYS[dd.pick] + '. ' + esc(s.o[dd.ord[dd.pick]]) : '<em class="text-white/50">tidak dijawab</em>'}</p>
+                ${ok ? '' : `<p class="text-emerald-300">Kunci: ${KEYS[benarTampil]}. ${esc(s.o[s.a])}</p>`}
+              </div>
+              <p class="mt-4 rounded-2xl bg-white/[.06] px-4 py-3 text-[13px] leading-[1.65] text-white/65"><span class="font-semibold text-white/80">Dasar hukum:</span> ${esc(s.ref || '—')}</p>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : ''}`;
+
+  go('result');
+}
+
+function barRow(label, val, color) {
+  const ada = val !== null && val !== undefined;
+  const pct = ada ? (val / NILAI_MAX * 100) : 0;
+  return `<div>
+    <div class="flex items-baseline justify-between text-[13px]"><span class="text-white/65">${label}</span><span class="font-semibold tabular-nums ${ada ? '' : 'text-white/40'}">${ada ? val : 'belum dikerjakan'}</span></div>
+    <div class="mt-2 h-3 overflow-hidden rounded-full bg-white/12">
+      <div class="bar-anim h-full rounded-full" style="width:${pct}%;background:${color}"></div>
+    </div>
+  </div>`;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   12. PERINGKAT
+   Urutan: jumlah benar terbanyak → waktu penyelesaian tercepat.
+   ═══════════════════════════════════════════════════════════════ */
+async function daftarPeringkat(kind, paksa) {
+  const rows = await store.semuaHasil(paksa);
+  const grp = {};
+  rows.forEach(r => {
+    if (r.tw !== TW_AKTIF) return;
+    const g = grp[r.pid] || (grp[r.pid] = { pid: r.pid, nama: r.nama, prov: r.prov, kab: r.kab });
+    g[r.kind] = r;
+  });
+
+  const out = Object.values(grp).map(g => {
+    const p = g.pre, q = g.post;
+    return {
+      ...g,
+      preNilai: p ? p.nilai : null, preBenar: p ? p.benar : null, preDur: p ? p.durasiMs : null,
+      postNilai: q ? q.nilai : null, postBenar: q ? q.benar : null, postDur: q ? q.durasiMs : null,
+      delta: (p && q) ? q.nilai - p.nilai : null
+    };
+  });
+
+  if (kind === 'delta') {
+    return out.filter(x => x.delta !== null)
+              .sort((a, b) => b.delta - a.delta || a.postDur - b.postDur || a.nama.localeCompare(b.nama));
+  }
+  const kb = kind === 'pre' ? 'preBenar' : 'postBenar';
+  const kd = kind === 'pre' ? 'preDur'   : 'postDur';
+  return out.filter(x => x[kb] !== null)
+            .sort((a, b) => b[kb] - a[kb] || a[kd] - b[kd] || a.nama.localeCompare(b.nama));
+}
+
+async function refreshRank() { store.cacheHasil = null; await renderRank(true); toast('Data peringkat dimuat ulang.'); }
+
+async function renderRank(paksa) {
+  const kind = $('#rankKind').value, q = norm($('#rankQ').value);
+  const list = await daftarPeringkat(kind, paksa);
+  list.forEach((x, i) => x.pos = i + 1);
+  const view = q ? list.filter(x => norm(x.nama + ' ' + x.kab + ' ' + x.prov).includes(q)) : list;
+
+  const label = kind === 'pre' ? 'Pre test' : kind === 'post' ? 'Post test' : 'Peningkatan';
+  const nilaiUtama = x => kind === 'delta' ? (x.delta > 0 ? '+' : '') + x.delta : (kind === 'pre' ? x.preNilai : x.postNilai);
+  const benarUtama = x => kind === 'pre' ? x.preBenar : x.postBenar;
+  const durUtama   = x => kind === 'pre' ? x.preDur : x.postDur;
+
+  $('#rankPodium').innerHTML = list.slice(0, 3).map((x, i) => {
+    const medal = ['bg-white text-black', 'bg-white/70 text-black', 'bg-white/45 text-black'][i];
+    return `<div class="glass rounded-3xl p-6 ${ME && x.pid === ME.pid ? 'ring-1 ring-white/50' : ''}">
+      <div class="flex items-center gap-3">
+        <span class="flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-bold ${medal}">${i + 1}</span>
+        <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">${label}</span>
+      </div>
+      <p class="mt-4 truncate text-[17px] font-semibold">${esc(x.nama)}</p>
+      <p class="mt-1 truncate text-[13px] text-white/55">${esc(x.kab)}, ${esc(x.prov)}</p>
+      <p class="mt-5 text-[30px] font-semibold tabular-nums">${nilaiUtama(x)}</p>
+      <p class="mt-1 text-[12px] text-white/55">${benarUtama(x) ?? '—'} benar · ${fmtDur(durUtama(x))}</p>
+    </div>`;
+  }).join('') || '<p class="text-[14px] text-white/55">Belum ada data untuk filter ini.</p>';
+
+  $('#rankTable').innerHTML = `
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[760px] text-left text-[14px]">
+        <thead class="border-b border-white/10 text-[11px] uppercase tracking-[0.14em] text-white/45">
+          <tr>
+            <th class="px-5 py-4 font-semibold">#</th>
+            <th class="px-5 py-4 font-semibold">Peserta</th>
+            <th class="px-5 py-4 font-semibold">Daerah</th>
+            <th class="px-5 py-4 text-right font-semibold">Benar</th>
+            <th class="px-5 py-4 text-right font-semibold">Waktu</th>
+            <th class="px-5 py-4 text-right font-semibold">Nilai pre</th>
+            <th class="px-5 py-4 text-right font-semibold">Nilai post</th>
+            <th class="px-5 py-4 text-right font-semibold">${label}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${view.length ? view.map(x => {
+            const me = ME && x.pid === ME.pid;
+            return `<tr class="border-b border-white/[.06] ${me ? 'bg-white/[.10]' : ''}">
+              <td class="px-5 py-4 tabular-nums text-white/55">${x.pos}</td>
+              <td class="px-5 py-4 font-medium">${esc(x.nama)}${me ? ' <span class="ml-2 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-black">ANDA</span>' : ''}</td>
+              <td class="px-5 py-4 text-white/65">${esc(x.kab)}, ${esc(x.prov)}</td>
+              <td class="px-5 py-4 text-right tabular-nums text-white/70">${benarUtama(x) ?? '—'}${benarUtama(x) !== null ? '/' + ATURAN.jumlahSoal : ''}</td>
+              <td class="px-5 py-4 text-right tabular-nums text-white/70">${fmtDur(durUtama(x))}</td>
+              <td class="px-5 py-4 text-right tabular-nums text-white/70">${x.preNilai ?? '—'}</td>
+              <td class="px-5 py-4 text-right tabular-nums text-white/70">${x.postNilai ?? '—'}</td>
+              <td class="px-5 py-4 text-right text-[15px] font-semibold tabular-nums ${kind === 'delta' ? (x.delta > 0 ? 'text-emerald-400' : x.delta < 0 ? 'text-red-400' : '') : ''}">${nilaiUtama(x)}</td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="8" class="px-5 py-10 text-center text-white/50">Tidak ada peserta yang cocok.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+    <p class="border-t border-white/10 px-5 py-4 text-[12px] text-white/40">${list.length} peserta${store.mode === 'lokal' ? ' · mode lokal, sebagian merupakan data contoh' : ''}</p>`;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   13. PERBANDINGAN
+   ═══════════════════════════════════════════════════════════════ */
+async function renderCompare() {
+  const pre = hasilSaya('pre'), post = hasilSaya('post');
+
+  if (!pre && !post) {
+    $('#compareBody').innerHTML = `<div class="glass rounded-3xl p-8">
+      <p class="text-[15px] leading-[1.7] text-white/70">Belum ada nilai yang bisa dibandingkan. Selesaikan pre test terlebih dahulu.</p>
+      <button onclick="go('dashboard')" class="mt-5 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black">Ke dashboard</button>
+    </div>`;
+    return;
+  }
+
+  const rows = await store.semuaHasil();
+  const rata = kind => {
+    const a = rows.filter(r => r.tw === TW_AKTIF && r.kind === kind).map(r => r.nilai);
+    return a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : null;
+  };
+  const d = (pre && post) ? post.nilai - pre.nilai : null;
+
+  $('#compareBody').innerHTML = `<div class="glass rounded-[2rem] p-7 md:p-9">
+    <div class="flex flex-wrap items-baseline justify-between gap-3">
+      <div>
+        <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/50">${TW_META[TW_AKTIF].label}</p>
+        <h3 class="mt-2 text-[18px] font-semibold">${esc(TW_META[TW_AKTIF].focus)}</h3>
+      </div>
+      ${d !== null
+        ? `<span class="rounded-full px-4 py-1.5 text-[13px] font-semibold ${d > 0 ? 'bg-emerald-400/20 text-emerald-300' : d < 0 ? 'bg-red-400/20 text-red-300' : 'bg-white/10 text-white/70'}">${d > 0 ? '+' : ''}${d} poin</span>`
+        : '<span class="rounded-full border border-white/20 px-4 py-1.5 text-[12px] text-white/55">belum lengkap</span>'}
+    </div>
+    <div class="mt-7 space-y-5">
+      ${barRow('Pre test', pre ? pre.nilai : null, 'rgba(255,255,255,.35)')}
+      ${barRow('Post test', post ? post.nilai : null, '#fff')}
+    </div>
+    <div class="mt-7 grid grid-cols-2 gap-4 border-t border-white/10 pt-6 sm:grid-cols-4">
+      <div><p class="text-[11px] uppercase tracking-[0.14em] text-white/50">Benar pre</p><p class="mt-1.5 text-[14px] font-semibold tabular-nums">${pre ? pre.benar + '/' + pre.total : '—'}</p></div>
+      <div><p class="text-[11px] uppercase tracking-[0.14em] text-white/50">Benar post</p><p class="mt-1.5 text-[14px] font-semibold tabular-nums">${post ? post.benar + '/' + post.total : '—'}</p></div>
+      <div><p class="text-[11px] uppercase tracking-[0.14em] text-white/50">Waktu pre → post</p><p class="mt-1.5 text-[14px] font-semibold tabular-nums">${fmtDur(pre && pre.durasiMs)} → ${fmtDur(post && post.durasiMs)}</p></div>
+      <div><p class="text-[11px] uppercase tracking-[0.14em] text-white/50">Rata-rata nasional</p><p class="mt-1.5 text-[14px] font-semibold tabular-nums">${rata('pre') ?? '—'} → ${rata('post') ?? '—'}</p></div>
+    </div>
+    <div class="mt-7 grid grid-cols-2 gap-4 border-t border-white/10 pt-6">
+      <div><p class="text-[11px] uppercase tracking-[0.14em] text-white/50">Predikat awal</p><p class="mt-1.5 text-[14px] font-semibold">${pre ? predikat(pre.nilai) : '—'}</p></div>
+      <div><p class="text-[11px] uppercase tracking-[0.14em] text-white/50">Predikat akhir</p><p class="mt-1.5 text-[14px] font-semibold">${post ? predikat(post.nilai) : '—'}</p></div>
+    </div>
+  </div>`;
+}
+</script>
+</body>
+</html>
