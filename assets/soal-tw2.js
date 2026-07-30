@@ -19,7 +19,7 @@
    ══════════════════════════════════════════════════════════════════ */
 window.SOAL_TW2 = [
   { id:"tw2-01",
-    q:"Apa batas waktu (deadline) penyampaian laporan progres fisik dan keuangan DAK Fisik Bidang Jalan melalui eMonitoring DAK PU setiap triwulan?",
+    q:"Kapan batas waktu (deadline) penyampaian laporan progres fisik dan keuangan DAK Fisik Bidang Jalan melalui eMonitoring DAK PU setiap triwulan?",
     o:["Paling lambat 3 hari kerja sebelum triwulan berakhir",
        "Paling lambat 7 hari kerja setelah triwulan yang bersangkutan berakhir",
        "Paling lambat 14 hari kalender setelah triwulan berakhir",
@@ -147,7 +147,7 @@ window.SOAL_TW2 = [
   { id:"tw2-19",
     q:"Berita Acara Verifikasi Output dan Immediate Outcome DAK Fisik Bidang Jalan wajib ditandatangani oleh unsur:",
     o:["PFID Pusat, Verifikator Balai, dan Kepala Daerah",
-       "Verifikator I Pusat, Verifikator II Pusat, Petugas eMonitoring, dan Petugas Teknis Pemda",
+       "Verifikator I Pusat, Verifikator II Pusat, dan Petugas Teknis Pemda",
        "Kontraktor, Konsultan Pengawas, dan Camat",
        "Inspektur Daerah dan Auditor BPKP"], a:1,
     ref:"Lampiran II Bagian A Format Berita Acara Verifikasi (Halaman 49)." },

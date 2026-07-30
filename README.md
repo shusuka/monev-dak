@@ -148,9 +148,12 @@ Setelah itu masuk lewat tombol **Masuk Admin** di footer halaman depan memakai e
 - **Enam kartu ringkasan** — peserta terdaftar, sudah pre test, sudah post test, belum mengisi, rata-rata nilai pre → post, rata-rata peningkatan.
 - **Tabel seluruh peserta** dengan penyaring status, provinsi, pengurutan, dan pencarian. Tombol **Detail** menampilkan jawaban peserta butir demi butir beserta kuncinya.
 - **Analisis butir soal** — persentase jawaban benar tiap butir, diurutkan dari yang paling sering salah, untuk menentukan materi yang perlu diperkuat saat pendampingan.
+- **Menghapus peserta** — kotak centang tiap baris, kotak *pilih semua* di kepala tabel (mengikuti penyaring yang aktif), tombol **Hapus terpilih**, dan tombol **Hapus** per baris. Berguna membersihkan akun yang dibuat sembarangan.
 - **Unduh CSV** dan **Unduh Excel**, mengikuti penyaring yang sedang aktif. Berkas Excel dibuat dari tabel HTML agar kolomnya tidak bergantung pada pengaturan pemisah daftar di masing-masing komputer.
 
 > Gerbang admin mengatur akses ke tampilan rekap dan ekspor, bukan kerahasiaan data. Koleksi `hasil` memang berstatus baca-publik karena papan peringkat peserta memerlukannya.
+
+**Batas penghapusan.** Menghapus peserta membuang dokumen `peserta` dan seluruh dokumen `hasil` miliknya, sehingga hilang dari papan peringkat dan rekap. **Akun masuknya di Authentication tidak ikut terhapus** — penghapusan akun hanya mungkin dari Firebase Console (*Authentication → Users → ⋮ → Delete account*) atau lewat Admin SDK. Selama akunnya masih ada, orang itu tetap bisa masuk tetapi akan diberi tahu bahwa akunnya bukan akun peserta, dan tidak dapat mendaftar ulang dengan email yang sama.
 
 ---
 

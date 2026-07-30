@@ -99,6 +99,50 @@
   .opt[data-picked="1"] .opt-key { background: #0c0c0e; color: #fff; border-color: #0c0c0e; }
   .nav-cell { transition: all .15s ease; }
 
+  /* ---------- podium juara ---------- */
+  @keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 0 1px var(--tepi), 0 0 22px -4px var(--pendar), 0 18px 40px -22px rgba(0,0,0,.9); }
+    50%      { box-shadow: 0 0 0 1px var(--tepi), 0 0 46px -2px var(--pendar), 0 18px 40px -22px rgba(0,0,0,.9); }
+  }
+  @keyframes kilau { 0% { transform: translateX(-120%) skewX(-18deg); } 100% { transform: translateX(320%) skewX(-18deg); } }
+  @keyframes piala { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-4px) rotate(3deg); } }
+
+  .juara {
+    position: relative; overflow: hidden;
+    border: 1px solid var(--tepi);
+    background: linear-gradient(155deg, var(--isi1) 0%, rgba(255,255,255,.04) 45%, var(--isi2) 100%);
+    animation: glowPulse 3.4s ease-in-out infinite;
+  }
+  /* sapuan cahaya yang melintas, memberi kesan logam */
+  .juara::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 38%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+    animation: kilau 4.6s ease-in-out infinite;
+    animation-delay: var(--jeda, 0s);
+    pointer-events: none;
+  }
+  .juara-1 { --tepi: rgba(253,224,71,.75);  --pendar: rgba(250,204,21,.55); --isi1: rgba(250,204,21,.20); --isi2: rgba(180,120,10,.16); --jeda: 0s; }
+  .juara-2 { --tepi: rgba(226,232,240,.70); --pendar: rgba(203,213,225,.42); --isi1: rgba(226,232,240,.16); --isi2: rgba(100,116,139,.14); --jeda: .5s; }
+  .juara-3 { --tepi: rgba(251,146,60,.65);  --pendar: rgba(234,140,60,.40);  --isi1: rgba(234,140,60,.16);  --isi2: rgba(124,64,20,.16);  --jeda: 1s; }
+
+  .medali { box-shadow: 0 4px 14px -4px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.45); }
+  .medali-1 { background: linear-gradient(150deg, #fde68a, #f59e0b 55%, #b45309); color: #3b2600; }
+  .medali-2 { background: linear-gradient(150deg, #f8fafc, #cbd5e1 55%, #64748b); color: #1e293b; }
+  .medali-3 { background: linear-gradient(150deg, #fed7aa, #ea8c3c 55%, #92400e); color: #3b1d00; }
+
+  .piala-anim { animation: piala 2.8s ease-in-out infinite; transform-origin: 50% 90%; }
+  /* baris 1-3 pada tabel peringkat */
+  .baris-1 { background: linear-gradient(90deg, rgba(250,204,21,.14), transparent 60%); }
+  .baris-2 { background: linear-gradient(90deg, rgba(203,213,225,.12), transparent 60%); }
+  .baris-3 { background: linear-gradient(90deg, rgba(234,140,60,.12), transparent 60%); }
+  .teks-emas   { background: linear-gradient(100deg, #fef3c7, #fbbf24 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .teks-silver { background: linear-gradient(100deg, #ffffff, #e2e8f0 45%, #94a3b8); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .teks-perunggu { background: linear-gradient(100deg, #fed7aa, #f59e42 45%, #c2410c); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .juara, .juara::after, .piala-anim { animation: none; }
+  }
+
   /* ---------- misc ---------- */
   .sunset-text { background: linear-gradient(90deg, #FF512F, #F09819); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .ring-anim { animation: ringDraw 1.1s cubic-bezier(.22,.61,.36,1) forwards; }
@@ -494,6 +538,10 @@
         <input id="adQ" oninput="renderAdmin()" placeholder="Cari nama atau daerah" class="w-48 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
       </div>
       <div class="ml-auto flex flex-wrap gap-2">
+        <button id="adHapusBtn" onclick="hapusTerpilih()" disabled
+                class="rounded-full border border-red-400/50 bg-red-500/15 px-5 py-2.5 text-[13px] font-medium text-red-200 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40">
+          Hapus terpilih <span id="adHapusJml"></span>
+        </button>
         <button onclick="exportCSV()" class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 transition hover:bg-white/10">Unduh CSV</button>
         <button onclick="exportXLS()" class="cta-glow rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black">Unduh Excel</button>
       </div>
@@ -896,6 +944,26 @@ const store = {
     const cred = await this.authMod.signInWithEmailAndPassword(this.auth, email, pass);
     this.user = cred.user; this.uid = cred.user.uid; this.cacheHasil = null;
     return { email: cred.user.email, uid: cred.user.uid };
+  },
+
+  /** Hapus satu peserta beserta seluruh hasilnya. Hanya admin yang diizinkan
+      oleh rules. Akun Authentication-nya tidak ikut terhapus — penghapusan
+      akun hanya mungkin dari Firebase Console atau Admin SDK. */
+  async hapusPeserta(pid) {
+    if (this.mode === 'firebase') {
+      const { doc, deleteDoc } = this.fs;
+      for (const kind of ['pre', 'post']) {
+        try { await deleteDoc(doc(this.db, 'hasil', hasilId(pid, TW_AKTIF, kind))); }
+        catch (e) { if (!/not-found/.test(String(e.code))) throw e; }
+      }
+      await deleteDoc(doc(this.db, 'peserta', pid));
+    } else {
+      ['pre', 'post'].forEach(k => delete this.lokal.hasil[hasilId(pid, TW_AKTIF, k)]);
+      delete this.lokal.peserta[pid];
+      Object.keys(this.lokal.akun || {}).forEach(k => { if (this.lokal.akun[k].uid === pid) delete this.lokal.akun[k]; });
+      this.simpanLokal();
+    }
+    this.cacheHasil = null;
   },
 
   /** Daftar seluruh peserta terdaftar — hanya untuk admin.
@@ -1689,6 +1757,18 @@ function barRow(label, val, color) {
    12. PERINGKAT
    Urutan: jumlah benar terbanyak → waktu penyelesaian tercepat.
    ═══════════════════════════════════════════════════════════════ */
+/** Piala untuk tiga peringkat teratas. */
+function ikonPiala(j, ukuran) {
+  const warna = { 1: '#fbbf24', 2: '#cbd5e1', 3: '#ea8c3c' }[j];
+  if (!warna) return '';
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="${warna}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
+    class="piala-anim shrink-0 ${ukuran || 'ml-auto h-7 w-7'}" style="filter:drop-shadow(0 0 7px ${warna}99)" aria-hidden="true">
+    <path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/>
+    <path d="M17 5h2.4a1.6 1.6 0 0 1 0 5H17M7 5H4.6a1.6 1.6 0 0 0 0 5H7"/>
+    <path d="M12 17v4M8.5 21h7"/>
+  </svg>`;
+}
+
 async function daftarPeringkat(kind, paksa) {
   const rows = await store.semuaHasil(paksa);
   const grp = {};
@@ -1755,17 +1835,29 @@ async function renderRank(paksa) {
     return;
   }
 
+  /* Podium juara: emas, silver, perunggu — urutan tampil 2-1-3 pada layar
+     lebar supaya juara pertama berada di tengah dan sedikit lebih tinggi. */
   $('#rankPodium').innerHTML = list.slice(0, 3).map((x, i) => {
-    const medal = ['bg-white text-black', 'bg-white/70 text-black', 'bg-white/45 text-black'][i];
-    return `<div class="glass rounded-3xl p-6 ${ME && x.pid === ME.pid ? 'ring-1 ring-white/50' : ''}">
-      <div class="flex items-center gap-3">
-        <span class="flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-bold ${medal}">${i + 1}</span>
-        <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">${label}</span>
+    const j = i + 1;
+    const gelar   = ['Juara Pertama', 'Juara Kedua', 'Juara Ketiga'][i];
+    const teks    = ['teks-emas', 'teks-silver', 'teks-perunggu'][i];
+    const urutan  = ['sm:order-2', 'sm:order-1', 'sm:order-3'][i];
+    const tinggi  = i === 0 ? 'sm:-mt-3 sm:pb-8' : 'sm:mt-2';
+    return `<div class="juara juara-${j} ${urutan} ${tinggi} rounded-3xl p-6 ${ME && x.pid === ME.pid ? 'ring-2 ring-white/60' : ''}">
+      <div class="relative z-10">
+        <div class="flex items-center gap-3">
+          <span class="medali medali-${j} flex h-10 w-10 items-center justify-center rounded-full text-[15px] font-bold">${j}</span>
+          <div class="min-w-0">
+            <p class="truncate text-[12px] font-bold uppercase tracking-[0.14em] ${teks}">${gelar}</p>
+            <p class="mt-0.5 text-[11px] uppercase tracking-[0.12em] text-white/50">${label}</p>
+          </div>
+          ${ikonPiala(j)}
+        </div>
+        <p class="mt-5 truncate text-[18px] font-semibold">${esc(x.nama)}</p>
+        <p class="mt-1 truncate text-[13px] text-white/60">${esc(x.kab)}, ${esc(x.prov)}</p>
+        <p class="mt-5 text-[34px] font-semibold leading-none tabular-nums">${nilaiUtama(x)}</p>
+        <p class="mt-2 text-[12px] text-white/60">${benarUtama(x) ?? '—'} benar · ${fmtDur(durUtama(x))}</p>
       </div>
-      <p class="mt-4 truncate text-[17px] font-semibold">${esc(x.nama)}</p>
-      <p class="mt-1 truncate text-[13px] text-white/55">${esc(x.kab)}, ${esc(x.prov)}</p>
-      <p class="mt-5 text-[30px] font-semibold tabular-nums">${nilaiUtama(x)}</p>
-      <p class="mt-1 text-[12px] text-white/55">${benarUtama(x) ?? '—'} benar · ${fmtDur(durUtama(x))}</p>
     </div>`;
   }).join('') || `<div class="glass rounded-3xl p-6 sm:col-span-3">
       <p class="text-[15px] font-semibold">Belum ada nilai pada kategori ini</p>
@@ -1794,8 +1886,13 @@ async function renderRank(paksa) {
         <tbody>
           ${view.length ? view.map(x => {
             const me = ME && x.pid === ME.pid;
-            return `<tr class="border-b border-white/[.06] ${me ? 'bg-white/[.10]' : ''}">
-              <td class="px-5 py-4 tabular-nums text-white/55">${x.pos}</td>
+            return `<tr class="border-b border-white/[.06] ${me ? 'bg-white/[.10]' : x.pos <= 3 ? 'baris-' + x.pos : ''}">
+              <td class="px-5 py-4">${x.pos <= 3
+                ? `<span class="flex items-center gap-2">
+                     <span class="medali medali-${x.pos} flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold">${x.pos}</span>
+                     ${ikonPiala(x.pos, 'h-[18px] w-[18px]')}
+                   </span>`
+                : `<span class="tabular-nums text-white/55">${x.pos}</span>`}</td>
               <td class="px-5 py-4 font-medium">${esc(x.nama)}${me ? ' <span class="ml-2 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-black">ANDA</span>' : ''}</td>
               <td class="px-5 py-4 text-white/65">${esc(x.kab)}, ${esc(x.prov)}</td>
               <td class="px-5 py-4 text-right tabular-nums text-white/70">${benarUtama(x) ?? '—'}${benarUtama(x) !== null ? '/' + ATURAN.jumlahSoal : ''}</td>
@@ -2028,6 +2125,10 @@ function renderAdmin() {
       <table class="w-full min-w-[1080px] text-left text-[14px]">
         <thead class="border-b border-white/10 text-[11px] uppercase tracking-[0.14em] text-white/45">
           <tr>
+            <th class="px-5 py-4 font-semibold">
+              <input type="checkbox" id="adPilihSemua" onchange="pilihSemua(this.checked)" title="Pilih semua yang tampil"
+                     class="h-4 w-4 cursor-pointer rounded border-white/30 bg-transparent accent-red-500" />
+            </th>
             <th class="px-5 py-4 font-semibold">#</th>
             <th class="px-5 py-4 font-semibold">Peserta</th>
             <th class="px-5 py-4 font-semibold">Daerah</th>
@@ -2041,7 +2142,11 @@ function renderAdmin() {
         <tbody>
           ${rows.length ? rows.map((g, i) => {
             const d = (g.pre && g.post) ? g.post.nilai - g.pre.nilai : null;
-            return `<tr class="border-b border-white/[.06]">
+            return `<tr class="border-b border-white/[.06]" data-pid="${esc(g.pid)}">
+              <td class="px-5 py-4">
+                <input type="checkbox" class="adPilih h-4 w-4 cursor-pointer rounded border-white/30 bg-transparent accent-red-500"
+                       value="${esc(g.pid)}" onchange="perbaruiPilihan()" />
+              </td>
               <td class="px-5 py-4 tabular-nums text-white/50">${i + 1}</td>
               <td class="px-5 py-4"><p class="font-medium">${esc(g.nama)}</p>${g.email ? `<p class="text-[12px] text-white/45">${esc(g.email)}</p>` : ''}</td>
               <td class="px-5 py-4 text-white/65">${esc(g.kab || '—')}${g.prov ? '<br><span class="text-[12px] text-white/40">' + esc(g.prov) + '</span>' : ''}</td>
@@ -2049,15 +2154,27 @@ function renderAdmin() {
               <td class="px-5 py-4 text-right tabular-nums">${sel(g, 'pre', r => `<span class="font-semibold">${r.nilai}</span><br><span class="text-[11px] text-white/45">${r.benar}/${r.total} · ${fmtDur(r.durasiMs)}</span>`)}</td>
               <td class="px-5 py-4 text-right tabular-nums">${sel(g, 'post', r => `<span class="font-semibold">${r.nilai}</span><br><span class="text-[11px] text-white/45">${r.benar}/${r.total} · ${fmtDur(r.durasiMs)}</span>`)}</td>
               <td class="px-5 py-4 text-right tabular-nums ${d === null ? 'text-white/35' : d > 0 ? 'text-emerald-400' : d < 0 ? 'text-red-400' : 'text-white/60'}">${d === null ? '—' : (d > 0 ? '+' : '') + d}</td>
-              <td class="px-5 py-4 text-right">${(g.pre || g.post)
-                ? `<button onclick="bukaDetail('${esc(g.pid)}')" class="rounded-full border border-white/20 px-3.5 py-1.5 text-[12px] font-medium text-white/80 transition hover:bg-white/10">Detail</button>`
-                : '<span class="text-[12px] text-white/30">—</span>'}</td>
+              <td class="px-5 py-4 text-right">
+                <span class="inline-flex gap-2">
+                  ${(g.pre || g.post)
+                    ? `<button onclick="bukaDetail('${esc(g.pid)}')" class="rounded-full border border-white/20 px-3.5 py-1.5 text-[12px] font-medium text-white/80 transition hover:bg-white/10">Detail</button>`
+                    : ''}
+                  <button onclick="hapusSatu('${esc(g.pid)}')" title="Hapus peserta ini"
+                          class="rounded-full border border-red-400/40 px-3 py-1.5 text-[12px] font-medium text-red-300 transition hover:bg-red-500/20">Hapus</button>
+                </span>
+              </td>
             </tr>`;
-          }).join('') : '<tr><td colspan="8" class="px-5 py-12 text-center text-white/50">Tidak ada peserta yang cocok dengan penyaring.</td></tr>'}
+          }).join('') : '<tr><td colspan="9" class="px-5 py-12 text-center text-white/50">Tidak ada peserta yang cocok dengan penyaring.</td></tr>'}
         </tbody>
       </table>
     </div>
-    <p class="border-t border-white/10 px-5 py-4 text-[12px] text-white/40">Menampilkan ${rows.length} dari ${semua.length} peserta. Tombol unduh mengikuti penyaring yang sedang aktif.</p>`;
+    <p class="border-t border-white/10 px-5 py-4 text-[12px] leading-[1.7] text-white/40">
+      Menampilkan ${rows.length} dari ${semua.length} peserta. Tombol unduh dan pilih semua mengikuti penyaring yang sedang aktif.<br>
+      Menghapus peserta membuang identitas dan seluruh nilainya. Akun masuknya tetap ada di Authentication dan harus dihapus terpisah dari Firebase Console.
+    </p>`;
+
+  $('#adPilihSemua').checked = false;
+  perbaruiPilihan();
 
   /* analisis butir soal */
   const stat = {};
@@ -2099,6 +2216,71 @@ function renderAdmin() {
       </table>
     </div>
     <p class="border-t border-white/10 px-5 py-4 text-[12px] text-white/40">Diurutkan dari persentase benar terendah. Butir yang belum pernah muncul ditandai “—”.</p>`;
+}
+
+/* ── pilih dan hapus peserta ── */
+const pidTerpilih = () => $$('.adPilih').filter(c => c.checked).map(c => c.value);
+
+function perbaruiPilihan() {
+  const n = pidTerpilih().length;
+  const total = $$('.adPilih').length;
+  const btn = $('#adHapusBtn');
+  btn.disabled = n === 0;
+  $('#adHapusJml').textContent = n ? '(' + n + ')' : '';
+  const semua = $('#adPilihSemua');
+  semua.checked = total > 0 && n === total;
+  semua.indeterminate = n > 0 && n < total;
+}
+
+function pilihSemua(on) {
+  $$('.adPilih').forEach(c => c.checked = on);
+  perbaruiPilihan();
+}
+
+async function hapusSatu(pid) {
+  const g = ADATA.gabung.find(x => x.pid === pid);
+  if (!g) return;
+  await jalankanHapus([g]);
+}
+
+async function hapusTerpilih() {
+  const pids = pidTerpilih();
+  const daftar = ADATA.gabung.filter(g => pids.includes(g.pid));
+  if (!daftar.length) return;
+  await jalankanHapus(daftar);
+}
+
+async function jalankanHapus(daftar) {
+  const punyaNilai = daftar.filter(g => g.pre || g.post).length;
+  const contoh = daftar.slice(0, 6).map(g => '• ' + g.nama + ' — ' + (g.kab || '?')).join('\n');
+  const sisa = daftar.length > 6 ? '\n• … dan ' + (daftar.length - 6) + ' lainnya' : '';
+  const pesan =
+    'Hapus ' + daftar.length + ' peserta berikut?\n\n' + contoh + sisa +
+    (punyaNilai ? '\n\n' + punyaNilai + ' di antaranya sudah punya nilai. Nilai itu akan hilang dari papan peringkat dan TIDAK dapat dipulihkan.' : '') +
+    '\n\nAkun masuknya tetap ada di Firebase Authentication dan harus dihapus terpisah dari Console.';
+  if (!confirm(pesan)) return;
+
+  const btn = $('#adHapusBtn');
+  btn.disabled = true;
+  const gagal = [];
+  let sukses = 0;
+  for (const g of daftar) {
+    try { await store.hapusPeserta(g.pid); sukses++; }
+    catch (e) { console.error('gagal menghapus', g.pid, e); gagal.push({ nama: g.nama, kode: (e && e.code) || e.message }); }
+  }
+
+  await muatAdmin(true);
+
+  if (!gagal.length) {
+    toast(sukses + ' peserta dihapus.');
+  } else {
+    const izin = gagal.some(x => /permission/.test(String(x.kode)));
+    alert(
+      sukses + ' peserta dihapus, ' + gagal.length + ' gagal.\n\n' +
+      gagal.slice(0, 5).map(x => '• ' + x.nama + ' (' + x.kode + ')').join('\n') +
+      (izin ? '\n\nFirestore menolak penghapusan. Security rules yang aktif belum mengizinkan admin menghapus — publikasikan ulang firestore.rules versi terbaru dari repositori.' : '')
+    );
+  }
 }
 
 /* ── detail jawaban satu peserta ── */

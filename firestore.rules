@@ -51,7 +51,8 @@ service cloud.firestore {
         && request.resource.data.prov is string
         && request.resource.data.kab is string;
 
-      allow delete: if false;
+      // admin boleh membersihkan akun yang dibuat sembarangan
+      allow delete: if isAdmin();
     }
 
     match /hasil/{hid} {
@@ -73,8 +74,10 @@ service cloud.firestore {
         && request.resource.data.durasiMs > 0
         && request.resource.data.durasiMs <= 1200000;
 
-      // sekali kirim, nilai terkunci
-      allow update, delete: if false;
+      // sekali kirim, nilai terkunci bagi siapa pun
+      allow update: if false;
+      // hanya admin yang boleh menghapus, untuk membersihkan data sembarangan
+      allow delete: if isAdmin();
     }
 
     // tutup koleksi lain
