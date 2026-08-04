@@ -23,6 +23,42 @@ const CDN_DOCXTPL  = 'https://unpkg.com/docxtemplater@3.66.7/build/docxtemplater
    supaya hasilnya sama persis dengan notulensi terdahulu. */
 const CENTANG = '⩗';
 
+/* Penyedia AI yang bisa membaca gambar. Semuanya mengizinkan panggilan langsung
+   dari peramban (CORS terbuka), jadi tidak perlu server perantara.
+   `bentuk` menentukan susunan permintaannya — tiga saja yang berbeda. */
+const PENYEDIA = {
+  gemini: {
+    label: 'Google Gemini', bentuk: 'gemini', biaya: 'GRATIS',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    model: 'gemini-2.5-flash',
+    petunjuk: 'Paling mudah: kunci gratis dari Google AI Studio, tanpa kartu kredit, kuota harian jauh melebihi kebutuhan rapat.',
+    tautan: 'https://aistudio.google.com/apikey', namaTautan: 'Ambil kunci gratis di Google AI Studio'
+  },
+  openrouter: {
+    label: 'OpenRouter', bentuk: 'openai', biaya: 'ADA YANG GRATIS',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    model: 'meta-llama/llama-3.2-11b-vision-instruct:free',
+    petunjuk: 'Satu kunci untuk puluhan model. Yang berakhiran “:free” tidak dipungut biaya; sisanya bayar sesuai pemakaian dan jauh lebih murah daripada berlangganan.',
+    tautan: 'https://openrouter.ai/keys', namaTautan: 'Ambil kunci di OpenRouter'
+  },
+  anthropic: {
+    label: 'Anthropic (langsung)', bentuk: 'anthropic', biaya: 'BERBAYAR',
+    baseUrl: 'https://api.anthropic.com/v1',
+    model: 'claude-sonnet-5',
+    petunjuk: 'Bayar sesuai pemakaian, pembacaan tabel dari gambarnya paling teliti. Cocok bila hasil Gemini masih perlu banyak dikoreksi.',
+    tautan: 'https://console.anthropic.com/settings/keys', namaTautan: 'Ambil kunci di Anthropic Console'
+  },
+  openai: {
+    label: 'Gateway OpenAI-kompatibel lain', bentuk: 'openai', biaya: 'TERGANTUNG GATEWAY',
+    baseUrl: 'https://agentrouter.org/v1',
+    model: 'gpt-4o',
+    petunjuk: 'AgentRouter, OpenAI, atau gateway lain yang meniru /v1/chat/completions. Isi Base URL sesuai penyedianya.',
+    tautan: '', namaTautan: ''
+  }
+};
+
+const bentukAi = () => (PENYEDIA[AI.penyedia] || PENYEDIA.openai).bentuk;
+
 /* Pasangan notulis yang boleh dipilih (bagian ungu pada format). */
 const PASANGAN_NOTULIS = [
   ['Frandi Sahabat',   'Dyah Nurnaningtyas'],
@@ -145,7 +181,7 @@ let GALAT   = '';
 let KABAR   = '';                // pesan hijau, mis. hasil uji koneksi
 let FOTO    = [];                // { berkas, url, urlAi }
 let MODEL   = [];                // daftar model yang boleh dipakai kunci ini
-let AI      = { baseUrl: 'https://agentrouter.org/v1', model: 'gpt-4o', apiKey: '' };
+let AI      = { penyedia: 'gemini', baseUrl: PENYEDIA.gemini.baseUrl, model: PENYEDIA.gemini.model, apiKey: '' };
 let AI_DARI = 'lokal';           // 'bersama' bila kunci datang dari Firestore
 
 const kosongUmum = () => {
@@ -188,10 +224,14 @@ function kosong() {
    ═══════════════════════════════════════════════════════════════ */
 const LS_AI = 'monevdak_ai';
 
+/* Konfigurasi tersimpan sebelum ada pilihan penyedia selalu berupa gateway
+   OpenAI-kompatibel. Jangan diam-diam dipindah ke penyedia lain. */
+const rapikanKonfig = x => ({ ...x, penyedia: PENYEDIA[x.penyedia] ? x.penyedia : 'openai' });
+
 async function muatKonfigAi() {
   try {
     const lokal = JSON.parse(localStorage.getItem(LS_AI) || '{}');
-    AI = { ...AI, ...lokal };
+    if (lokal.apiKey || lokal.baseUrl) AI = { ...AI, ...rapikanKonfig(lokal) };
   } catch (e) { /* abaikan */ }
 
   if (store.mode !== 'firebase' || !store.db) return;
@@ -200,7 +240,7 @@ async function muatKonfigAi() {
     const d = await getDocFromServer(doc(store.db, 'konfigurasi', 'ai'));
     if (d.exists()) {
       const x = d.data();
-      if (x.apiKey) { AI = { ...AI, ...x }; AI_DARI = 'bersama'; }
+      if (x.apiKey) { AI = { ...AI, ...rapikanKonfig(x) }; AI_DARI = 'bersama'; }
     }
   } catch (e) {
     console.warn('[MonevDAK] konfigurasi AI bersama belum terbaca:', e);
@@ -212,7 +252,7 @@ async function simpanKonfigAi() {
   if (store.mode !== 'firebase' || !store.db) return false;
   const { doc, setDoc, serverTimestamp } = store.fs;
   await setDoc(doc(store.db, 'konfigurasi', 'ai'), {
-    baseUrl: AI.baseUrl, model: AI.model, apiKey: AI.apiKey,
+    penyedia: AI.penyedia, baseUrl: AI.baseUrl, model: AI.model, apiKey: AI.apiKey,
     diperbaruiOleh: (ME && ME.nama) || '', diperbaruiAt: serverTimestamp()
   });
   AI_DARI = 'bersama';
@@ -258,56 +298,164 @@ lb = Lebar bahu Jalan, jb = Jenis Bahu Jalan. Akhiran Eksisting/Rencana/Realisas
 mengikuti kolom tabel "Informasi Umum Kegiatan DAK". Kolom Keterangan diisi "Sesuai" bila
 realisasi sama dengan rencana.`;
 
-/** Satu panggilan chat completion. `isi` sudah berbentuk blok pesan OpenAI. */
-async function panggilGateway(isi, maksToken) {
-  const kunci = bersihkanKunci(AI.apiKey);
-  if (!kunci) throw new Error('Kunci API belum diisi.');
+const pangkal = () => AI.baseUrl.replace(/\/+$/, '');
+const belahDataUrl = url => {
+  const m = /^data:([^;]+);base64,(.*)$/.exec(url) || [];
+  return { mime: m[1] || 'image/jpeg', data: m[2] || '' };
+};
 
-  const alamat = AI.baseUrl.replace(/\/+$/, '') + '/chat/completions';
-  const res = await fetch(alamat, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + kunci },
-    body: JSON.stringify({
-      model: AI.model,
-      max_tokens: maksToken,
-      temperature: 0,
-      messages: [{ role: 'user', content: isi }]
-    })
-  });
+/** Ambil pesan galat yang berguna dari badan balasan penyedia mana pun. */
+function pesanGalat(res, data) {
+  const g = (data && (data.error || data.message)) || null;
+  const kode = g && (g.code || g.type || g.status);
+  let pesan = (g && (g.message || (typeof g === 'string' ? g : kode))) || ('HTTP ' + res.status);
+  if (typeof pesan !== 'string') pesan = JSON.stringify(pesan);
 
-  const data = await res.json().catch(() => null);
-  if (!res.ok || !data || data.error) {
-    const galat = data && data.error;
-    const kode = galat && (galat.code || galat.type);
-    let pesan = (galat && (galat.message || (typeof galat === 'string' ? galat : kode))) || ('HTTP ' + res.status);
-    if (String(kode) === 'content-blocked' || /content[-_ ]blocked/i.test(String(pesan))) {
-      pesan = 'content-blocked — biasanya karena model "' + AI.model + '" tidak termasuk '
-            + 'dalam paket kunci API ini, bukan karena isi tangkapan layarnya. '
-            + 'Klik “Muat daftar model”, pilih model lain yang mendukung gambar, lalu coba lagi. '
-            + 'Tombol “Uji koneksi” memastikan kunci dan modelnya sendiri sudah benar.';
-    }
-    throw new Error('Gateway menolak: ' + pesan);
+  if (/content[-_ ]blocked/i.test(String(kode) + pesan)) {
+    pesan = 'content-blocked — gateway ini menolak permintaannya, hampir selalu karena model "'
+          + AI.model + '" tidak termasuk paket kunci API tersebut, bukan karena isi tangkapan layarnya. '
+          + 'Pilih penyedia lain di atas, atau klik “Muat daftar model” untuk memilih model yang boleh dipakai.';
+  } else if (res.status === 401 || res.status === 403) {
+    pesan = 'kunci API ditolak (' + res.status + '). ' + pesan;
+  } else if (res.status === 404) {
+    pesan = 'model "' + AI.model + '" tidak dikenali penyedia ini (404). Klik “Muat daftar model” untuk melihat yang tersedia.';
+  } else if (res.status === 429) {
+    pesan = 'kuota atau batas laju terlampaui (429). Tunggu sebentar lalu coba lagi. ' + pesan;
   }
-  return data.choices && data.choices[0] && data.choices[0].message
-    ? (data.choices[0].message.content || '') : '';
+  return pesan;
+}
+
+/* ── tiga bentuk permintaan; semuanya menerima teks + daftar dataURL ── */
+const PANGGIL = {
+  async gemini(teks, gambar, maksToken) {
+    const parts = [{ text: teks }];
+    gambar.forEach(u => {
+      const { mime, data } = belahDataUrl(u);
+      parts.push({ inline_data: { mime_type: mime, data } });
+    });
+    const alamat = pangkal() + '/models/' + encodeURIComponent(AI.model) + ':generateContent';
+    const res = await fetch(alamat, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': bersihkanKunci(AI.apiKey) },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts }],
+        generationConfig: { temperature: 0, maxOutputTokens: maksToken }
+      })
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || data.error) throw new Error(pesanGalat(res, data));
+    const c = (data.candidates || [])[0];
+    if (!c) throw new Error('Gemini tidak mengembalikan jawaban. Kemungkinan permintaan tersaring.');
+    return ((c.content && c.content.parts) || []).map(p => p.text || '').join('');
+  },
+
+  async anthropic(teks, gambar, maksToken) {
+    const isi = gambar.map(u => {
+      const { mime, data } = belahDataUrl(u);
+      return { type: 'image', source: { type: 'base64', media_type: mime, data } };
+    });
+    isi.push({ type: 'text', text: teks });
+    const res = await fetch(pangkal() + '/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': bersihkanKunci(AI.apiKey),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: AI.model, max_tokens: maksToken, temperature: 0,
+        messages: [{ role: 'user', content: isi }]
+      })
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || data.type === 'error' || data.error) throw new Error(pesanGalat(res, data));
+    const blok = (data.content || []).find(b => b.type === 'text');
+    return blok ? blok.text : '';
+  },
+
+  async openai(teks, gambar, maksToken) {
+    const isi = [{ type: 'text', text: teks }];
+    gambar.forEach(u => isi.push({ type: 'image_url', image_url: { url: u } }));
+    const res = await fetch(pangkal() + '/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + bersihkanKunci(AI.apiKey) },
+      body: JSON.stringify({
+        model: AI.model, max_tokens: maksToken, temperature: 0,
+        messages: [{ role: 'user', content: isi }]
+      })
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || data.error) throw new Error(pesanGalat(res, data));
+    const p = (data.choices || [])[0];
+    return (p && p.message && p.message.content) || '';
+  }
+};
+
+async function panggilAi(teks, gambar, maksToken) {
+  if (!bersihkanKunci(AI.apiKey)) throw new Error('Kunci API belum diisi.');
+  const fn = PANGGIL[bentukAi()];
+  try {
+    return await fn(teks, gambar, maksToken);
+  } catch (e) {
+    /* fetch yang gagal total (jaringan/CORS) tidak membawa pesan yang berguna. */
+    if (e instanceof TypeError) {
+      throw new Error((PENYEDIA[AI.penyedia] || {}).label + ' tidak dapat dihubungi. Periksa Base URL dan koneksi internet.');
+    }
+    throw e;
+  }
 }
 
 /** Panggilan teks singkat untuk memastikan kunci dan model bisa dipakai. */
 async function ujiKoneksi() {
-  const teks = await panggilGateway([{ type: 'text', text: 'Balas satu kata: siap' }], 16);
+  const teks = await panggilAi('Balas satu kata: siap', [], 16);
   return String(teks).trim().slice(0, 80);
 }
 
 async function bacaDenganAi() {
   if (!FOTO.length) throw new Error('Belum ada screenshot yang ditempel.');
-
-  const isi = [{ type: 'text', text: PERINTAH }];
-  FOTO.forEach(f => isi.push({ type: 'image_url', image_url: { url: f.urlAi || f.url } }));
-
-  const teks = await panggilGateway(isi, 8192);
+  const teks = await panggilAi(PERINTAH, FOTO.map(f => f.urlAi || f.url), 8192);
   const hasil = jsonAman(typeof teks === 'string' ? teks : JSON.stringify(teks));
   if (!hasil) throw new Error('Balasan AI tidak berbentuk JSON: ' + String(teks).slice(0, 160));
   return hasil;
+}
+
+/** Daftar model yang boleh dipakai kunci ini. Setiap butir: { id, gratis }. */
+async function muatDaftarModel() {
+  const kunci = bersihkanKunci(AI.apiKey);
+  if (!kunci) throw new Error('Kunci API belum diisi.');
+
+  if (bentukAi() === 'gemini') {
+    const res = await fetch(pangkal() + '/models?pageSize=200', { headers: { 'x-goog-api-key': kunci } });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || data.error) throw new Error(pesanGalat(res, data));
+    return (data.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map(m => ({ id: String(m.name || '').replace(/^models\//, ''), gratis: true }))
+      .filter(m => m.id)
+      .sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  const kepala = bentukAi() === 'anthropic'
+    ? { 'x-api-key': kunci, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }
+    : { authorization: 'Bearer ' + kunci };
+  const res = await fetch(pangkal() + '/models', { headers: kepala });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data || data.error) throw new Error(pesanGalat(res, data));
+
+  let daftar = (data.data || []).map(m => ({
+    id: m.id,
+    /* OpenRouter menyertakan kemampuan dan harga tiap model; penyedia lain tidak. */
+    gambar: m.architecture ? (m.architecture.input_modalities || []).includes('image') : null,
+    gratis: m.pricing ? Number(m.pricing.prompt) === 0 : /:free$/.test(String(m.id))
+  })).filter(m => m.id);
+
+  /* Kalau kemampuannya diketahui, sisakan yang bisa membaca gambar saja —
+     memilih model tanpa kemampuan itu pasti berujung galat. */
+  if (daftar.some(m => m.gambar === true)) daftar = daftar.filter(m => m.gambar === true);
+
+  /* Yang gratis ditaruh paling atas. */
+  return daftar.sort((a, b) => (b.gratis - a.gratis) || a.id.localeCompare(b.id));
 }
 
 /** Salin hasil AI ke formulir, sambil menyelaraskan daftar ruas antar tabel. */
@@ -618,12 +766,34 @@ function viewTempel() {
     <div id="baGaleri" class="mt-4 flex flex-wrap gap-3">${galeri()}</div>
 
     <div class="mt-7 border-t border-white/10 pt-6">
-      <h3 class="text-[14px] font-semibold">Gateway AI</h3>
+      <h3 class="text-[14px] font-semibold">Penyedia AI</h3>
       <p class="mt-1 text-[12px] text-white/45">
         ${bersama
           ? 'Kunci ini tersimpan bersama — semua petugas PFID memakai kunci yang sama.'
           : 'Kunci belum tersimpan bersama. Simpan sekali supaya petugas PFID lain tidak perlu mengisinya lagi.'}
       </p>
+
+      <div class="mt-4 grid gap-2 sm:grid-cols-2">
+        ${Object.entries(PENYEDIA).map(([k, p]) => {
+          const on = k === AI.penyedia;
+          const warna = p.biaya === 'GRATIS' ? 'text-emerald-300'
+                      : p.biaya === 'ADA YANG GRATIS' ? 'text-sky-300' : 'text-white/45';
+          return `<button data-penyedia="${k}" class="rounded-2xl border px-4 py-3 text-left transition ${on ? 'border-white/60 bg-white/[0.10]' : 'border-white/12 hover:border-white/30 hover:bg-white/[0.05]'}">
+            <span class="flex items-center gap-2">
+              <span class="text-[13px] font-semibold">${aman(p.label)}</span>
+              <span class="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide ${warna}">${aman(p.biaya)}</span>
+            </span>
+            <span class="mt-1 block text-[11px] leading-relaxed text-white/45">${aman(p.petunjuk)}</span>
+          </button>`;
+        }).join('')}
+      </div>
+
+      ${PENYEDIA[AI.penyedia] && PENYEDIA[AI.penyedia].tautan ? `
+      <p class="mt-3 text-[12px] text-white/55">
+        <a href="${aman(PENYEDIA[AI.penyedia].tautan)}" target="_blank" rel="noopener"
+           class="font-semibold underline decoration-white/30 underline-offset-4 hover:text-white">${aman(PENYEDIA[AI.penyedia].namaTautan)} ↗</a>
+      </p>` : ''}
+
       <div class="mt-4 grid gap-3 md:grid-cols-3">
         <div>
           <label class="mb-1.5 block text-[12px] font-medium text-white/60">Base URL</label>
@@ -635,16 +805,18 @@ function viewTempel() {
         </div>
         <div>
           <label class="mb-1.5 block text-[12px] font-medium text-white/60">API key</label>
-          <input id="baKunci" type="password" value="${aman(AI.apiKey)}" placeholder="sk-..." class="${KELAS_INPUT}" />
+          <input id="baKunci" type="password" value="${aman(AI.apiKey)}" placeholder="tempel kunci di sini" class="${KELAS_INPUT}" />
         </div>
       </div>
 
       ${MODEL.length ? `
       <div class="mt-3">
-        <label class="mb-1.5 block text-[12px] font-medium text-white/60">${MODEL.length} model tersedia pada kunci ini — pilih yang mendukung gambar</label>
+        <label class="mb-1.5 block text-[12px] font-medium text-white/60">
+          ${MODEL.length} model bisa membaca gambar pada kunci ini${MODEL.some(m => m.gratis) ? ' — yang gratis ada di urutan atas' : ''}
+        </label>
         <select id="baModelPilih" class="${KELAS_SEL}">
           <option value="">— pilih model —</option>
-          ${MODEL.map(m => `<option${m === AI.model ? ' selected' : ''}>${aman(m)}</option>`).join('')}
+          ${MODEL.map(m => `<option value="${aman(m.id)}"${m.id === AI.model ? ' selected' : ''}>${m.gratis ? '★ gratis · ' : ''}${aman(m.id)}</option>`).join('')}
         </select>
       </div>` : ''}
 
@@ -739,6 +911,17 @@ function pasangTempel() {
     });
   }
 
+  els('#baIsi [data-penyedia]').forEach(t => t.onclick = () => {
+    const k = t.dataset.penyedia;
+    if (k === AI.penyedia) return;
+    const p = PENYEDIA[k];
+    /* Base URL dan model ikut berganti ke bawaan penyedia itu; kuncinya
+       dikosongkan karena kunci satu penyedia tidak berlaku di penyedia lain. */
+    AI = { penyedia: k, baseUrl: p.baseUrl, model: p.model, apiKey: '' };
+    MODEL = []; GALAT = ''; KABAR = '';
+    render();
+  });
+
   el('#baUrl').oninput   = e => { AI.baseUrl = e.target.value; };
   el('#baModel').oninput = e => { AI.model = e.target.value; };
   el('#baKunci').oninput = e => { AI.apiKey = e.target.value; };
@@ -766,17 +949,15 @@ function pasangTempel() {
     const tombol = el('#baMuatModel');
     tombol.disabled = true; tombol.textContent = 'Memuat…';
     try {
-      const res = await fetch(AI.baseUrl.replace(/\/+$/, '') + '/models', {
-        headers: { authorization: 'Bearer ' + bersihkanKunci(AI.apiKey) }
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok || !data || data.error) {
-        throw new Error((data && data.error && (data.error.message || data.error.code)) || ('HTTP ' + res.status));
-      }
-      MODEL = (data.data || []).map(m => m.id).filter(Boolean).sort();
-      GALAT = ''; KABAR = MODEL.length + ' model terbaca dari kunci ini. Pilih salah satu di bawah kolom Model.';
-      if (!MODEL.length) { KABAR = ''; GALAT = 'Kunci ini tidak mencantumkan satu pun model.'; }
+      MODEL = await muatDaftarModel();
+      const gratis = MODEL.filter(m => m.gratis).length;
+      GALAT = '';
+      KABAR = MODEL.length + ' model terbaca dari kunci ini'
+            + (gratis ? ', ' + gratis + ' di antaranya gratis' : '')
+            + '. Pilih salah satu di daftar bawah kolom Model.';
+      if (!MODEL.length) { KABAR = ''; GALAT = 'Kunci ini tidak mencantumkan satu pun model yang bisa membaca gambar.'; }
     } catch (e) {
+      MODEL = [];
       GALAT = 'Daftar model tidak terbaca: ' + e.message;
     }
     render();
@@ -787,7 +968,8 @@ function pasangTempel() {
     tombol.disabled = true; tombol.textContent = 'Menguji…';
     try {
       const balas = await ujiKoneksi();
-      GALAT = ''; KABAR = 'Koneksi baik — model "' + AI.model + '" membalas: ' + (balas || '(kosong)')
+      GALAT = ''; KABAR = 'Koneksi baik — ' + (PENYEDIA[AI.penyedia] || {}).label + ' model "' + AI.model
+            + '" membalas: ' + (balas || '(kosong)')
             + '. Kalau pembacaan gambar tetap ditolak, model ini kemungkinan tidak mendukung gambar.';
     } catch (e) {
       KABAR = ''; GALAT = e.message;
@@ -816,6 +998,7 @@ function viewBaca() {
     <div class="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
     <p class="mt-6 text-[15px] font-medium">Membaca ${FOTO.length} tangkapan layar…</p>
     <p class="mt-2 text-[13px] text-white/50">${aman(AI.model)} sedang menyalin angka progres, kelengkapan eMonitoring, dan informasi umum kegiatan.</p>
+    <p class="mt-1 text-[12px] text-white/35">Gambar besar bisa memakan waktu sampai satu menit.</p>
   </div>`;
 }
 

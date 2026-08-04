@@ -189,21 +189,34 @@ Alurnya empat langkah:
 4. **Periksa & unduh** — seluruh sel dapat dikoreksi sebelum dokumen dibuat, lalu
    diunduh sebagai `.docx`.
 
-**Kalau AI menolak.** Galat `content-blocked` dari AgentRouter hampir selalu berarti
-**model yang dipilih tidak termasuk paket kunci API itu**, bukan isi tangkapan layarnya
-yang bermasalah. Urutan memeriksanya: tekan **Uji koneksi** (kirim satu baris teks, tanpa
-gambar) — kalau lolos, kunci dan modelnya sah dan yang ditolak adalah bagian gambarnya,
-jadi ganti ke model yang mendukung gambar lewat **Muat daftar model**. Kalau uji koneksi
-pun gagal, masalahnya pada kunci atau nama modelnya. Tangkapan layar dikecilkan ke sisi
-terpanjang 1600 px dan dikirim sebagai JPEG, jadi ukuran muatan jarang jadi penyebab;
-yang tercetak di dokumen tetap gambar aslinya.
+**Penyedia AI.** Ada empat pilihan, semuanya dipanggil langsung dari peramban tanpa
+server perantara:
 
-**Gateway AI.** Bawaannya `https://agentrouter.org/v1` (kompatibel OpenAI). Kunci API
-diisi sekali lalu disimpan di dokumen Firestore `konfigurasi/ai` — petugas PFID lain
-tidak perlu mengisinya lagi di perangkat masing-masing. `firestore.rules` membatasi
-baca/tulis dokumen itu hanya untuk akun PFID dan admin; peserta biasa tidak bisa
-membacanya. Tetap perlu diingat bahwa **setiap petugas PFID dapat melihat kunci itu**,
-jadi pakailah kunci khusus aplikasi ini, bukan kunci pribadi.
+| Penyedia | Biaya | Catatan |
+|---|---|---|
+| **Google Gemini** *(bawaan)* | gratis | Kunci dari [Google AI Studio](https://aistudio.google.com/apikey), tanpa kartu kredit. Kuota harian jauh melebihi kebutuhan rapat. |
+| **OpenRouter** | ada yang gratis | Satu kunci untuk puluhan model; yang berakhiran `:free` tidak dipungut biaya. |
+| **Anthropic (langsung)** | berbayar | Pembacaan tabel dari gambar paling teliti. Pakai bila hasil Gemini masih banyak dikoreksi. |
+| **Gateway OpenAI-kompatibel lain** | tergantung gateway | AgentRouter, OpenAI, dan sejenisnya. |
+
+Mengganti penyedia ikut mengganti Base URL dan model ke bawaannya, serta mengosongkan
+kunci — kunci satu penyedia tidak berlaku di penyedia lain.
+
+**Kalau AI menolak.** Tekan **Uji koneksi**: satu baris teks dikirim tanpa gambar. Kalau
+lolos, kunci dan modelnya sah dan yang ditolak adalah bagian gambarnya — ganti model lewat
+**Muat daftar model**, yang hanya menampilkan model berkemampuan gambar dan menaruh yang
+gratis di urutan atas. Kalau uji koneksi pun gagal, masalahnya di kunci atau nama modelnya.
+
+Galat `content-blocked` khas AgentRouter hampir selalu berarti **model itu tidak termasuk
+paket kunci API tersebut**, bukan isi tangkapan layarnya yang bermasalah. Tangkapan layar
+dikecilkan ke sisi terpanjang 1600 px dan dikirim sebagai JPEG, jadi ukuran muatan jarang
+jadi penyebab; yang tercetak di dokumen tetap gambar aslinya.
+
+**Kunci dipakai bersama.** Diisi sekali lalu disimpan di dokumen Firestore
+`konfigurasi/ai` — petugas PFID lain tidak perlu mengisinya lagi di perangkat
+masing-masing. `firestore.rules` membatasi baca/tulis dokumen itu hanya untuk akun PFID
+dan admin; peserta biasa tidak bisa membacanya. Tetap perlu diingat bahwa **setiap petugas
+PFID dapat melihat kunci itu**, jadi pakailah kunci khusus aplikasi ini, bukan kunci pribadi.
 
 **Template.** `assets/ba-template.docx` adalah notulensi asli yang teksnya diganti
 penanda docxtemplater (`{daerah}`, `{#progres}…{/progres}`, dan seterusnya). Kop,
