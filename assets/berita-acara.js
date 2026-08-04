@@ -37,7 +37,7 @@ const PENYEDIA = {
   openrouter: {
     label: 'OpenRouter', bentuk: 'openai', biaya: 'ADA YANG GRATIS',
     baseUrl: 'https://openrouter.ai/api/v1',
-    model: 'meta-llama/llama-3.2-11b-vision-instruct:free',
+    model: 'google/gemma-4-31b-it:free',
     petunjuk: 'Satu kunci untuk puluhan model. Yang berakhiran “:free” tidak dipungut biaya; sisanya bayar sesuai pemakaian dan jauh lebih murah daripada berlangganan.',
     tautan: 'https://openrouter.ai/keys', namaTautan: 'Ambil kunci di OpenRouter'
   },
