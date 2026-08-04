@@ -142,7 +142,9 @@ function muatSkrip(url) {
    ═══════════════════════════════════════════════════════════════ */
 let LANGKAH = 'identitas';       // identitas · tempel · baca · periksa
 let GALAT   = '';
-let FOTO    = [];                // { berkas, url }
+let KABAR   = '';                // pesan hijau, mis. hasil uji koneksi
+let FOTO    = [];                // { berkas, url, urlAi }
+let MODEL   = [];                // daftar model yang boleh dipakai kunci ini
 let AI      = { baseUrl: 'https://agentrouter.org/v1', model: 'gpt-4o', apiKey: '' };
 let AI_DARI = 'lokal';           // 'bersama' bila kunci datang dari Firestore
 
@@ -256,13 +258,10 @@ lb = Lebar bahu Jalan, jb = Jenis Bahu Jalan. Akhiran Eksisting/Rencana/Realisas
 mengikuti kolom tabel "Informasi Umum Kegiatan DAK". Kolom Keterangan diisi "Sesuai" bila
 realisasi sama dengan rencana.`;
 
-async function bacaDenganAi() {
+/** Satu panggilan chat completion. `isi` sudah berbentuk blok pesan OpenAI. */
+async function panggilGateway(isi, maksToken) {
   const kunci = bersihkanKunci(AI.apiKey);
   if (!kunci) throw new Error('Kunci API belum diisi.');
-  if (!FOTO.length) throw new Error('Belum ada screenshot yang ditempel.');
-
-  const isi = [{ type: 'text', text: PERINTAH }];
-  FOTO.forEach(f => isi.push({ type: 'image_url', image_url: { url: f.url } }));
 
   const alamat = AI.baseUrl.replace(/\/+$/, '') + '/chat/completions';
   const res = await fetch(alamat, {
@@ -270,7 +269,7 @@ async function bacaDenganAi() {
     headers: { 'content-type': 'application/json', authorization: 'Bearer ' + kunci },
     body: JSON.stringify({
       model: AI.model,
-      max_tokens: 8192,
+      max_tokens: maksToken,
       temperature: 0,
       messages: [{ role: 'user', content: isi }]
     })
@@ -278,11 +277,34 @@ async function bacaDenganAi() {
 
   const data = await res.json().catch(() => null);
   if (!res.ok || !data || data.error) {
-    const pesan = (data && data.error && (data.error.message || data.error)) || ('HTTP ' + res.status);
+    const galat = data && data.error;
+    const kode = galat && (galat.code || galat.type);
+    let pesan = (galat && (galat.message || (typeof galat === 'string' ? galat : kode))) || ('HTTP ' + res.status);
+    if (String(kode) === 'content-blocked' || /content[-_ ]blocked/i.test(String(pesan))) {
+      pesan = 'content-blocked — biasanya karena model "' + AI.model + '" tidak termasuk '
+            + 'dalam paket kunci API ini, bukan karena isi tangkapan layarnya. '
+            + 'Klik “Muat daftar model”, pilih model lain yang mendukung gambar, lalu coba lagi. '
+            + 'Tombol “Uji koneksi” memastikan kunci dan modelnya sendiri sudah benar.';
+    }
     throw new Error('Gateway menolak: ' + pesan);
   }
-  const teks = data.choices && data.choices[0] && data.choices[0].message
+  return data.choices && data.choices[0] && data.choices[0].message
     ? (data.choices[0].message.content || '') : '';
+}
+
+/** Panggilan teks singkat untuk memastikan kunci dan model bisa dipakai. */
+async function ujiKoneksi() {
+  const teks = await panggilGateway([{ type: 'text', text: 'Balas satu kata: siap' }], 16);
+  return String(teks).trim().slice(0, 80);
+}
+
+async function bacaDenganAi() {
+  if (!FOTO.length) throw new Error('Belum ada screenshot yang ditempel.');
+
+  const isi = [{ type: 'text', text: PERINTAH }];
+  FOTO.forEach(f => isi.push({ type: 'image_url', image_url: { url: f.urlAi || f.url } }));
+
+  const teks = await panggilGateway(isi, 8192);
   const hasil = jsonAman(typeof teks === 'string' ? teks : JSON.stringify(teks));
   if (!hasil) throw new Error('Balasan AI tidak berbentuk JSON: ' + String(teks).slice(0, 160));
   return hasil;
@@ -467,7 +489,8 @@ function render() {
       }).join('')}
     </div>
 
-    ${GALAT ? `<div class="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] text-rose-200">${aman(GALAT)}</div>` : ''}
+    ${GALAT ? `<div class="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] leading-relaxed text-rose-200">${aman(GALAT)}</div>` : ''}
+    ${KABAR ? `<div class="mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-5 py-4 text-[13px] leading-relaxed text-emerald-200">${aman(KABAR)}</div>` : ''}
 
     <div id="baIsi" class="mt-7"></div>`;
 
@@ -569,7 +592,7 @@ function pasangIdentitas() {
   el('#baNot2').oninput = e => { D.notulis2 = e.target.value; };
   el('#baKeTempel').onclick = () => {
     if (!D.daerah.trim()) { GALAT = 'Daerah belum diisi.'; return render(); }
-    GALAT = ''; LANGKAH = 'tempel'; render();
+    GALAT = ''; KABAR = ''; LANGKAH = 'tempel'; render();
   };
 }
 
@@ -608,17 +631,27 @@ function viewTempel() {
         </div>
         <div>
           <label class="mb-1.5 block text-[12px] font-medium text-white/60">Model</label>
-          <input id="baModel" value="${aman(AI.model)}" list="baModelList" class="${KELAS_INPUT}" />
-          <datalist id="baModelList"></datalist>
+          <input id="baModel" value="${aman(AI.model)}" class="${KELAS_INPUT}" />
         </div>
         <div>
           <label class="mb-1.5 block text-[12px] font-medium text-white/60">API key</label>
           <input id="baKunci" type="password" value="${aman(AI.apiKey)}" placeholder="sk-..." class="${KELAS_INPUT}" />
         </div>
       </div>
+
+      ${MODEL.length ? `
+      <div class="mt-3">
+        <label class="mb-1.5 block text-[12px] font-medium text-white/60">${MODEL.length} model tersedia pada kunci ini — pilih yang mendukung gambar</label>
+        <select id="baModelPilih" class="${KELAS_SEL}">
+          <option value="">— pilih model —</option>
+          ${MODEL.map(m => `<option${m === AI.model ? ' selected' : ''}>${aman(m)}</option>`).join('')}
+        </select>
+      </div>` : ''}
+
       <div class="mt-3 flex flex-wrap gap-2">
         <button id="baSimpanKunci" class="${KELAS_TOMBOL}">Simpan untuk semua petugas</button>
         <button id="baMuatModel" class="${KELAS_TOMBOL}">Muat daftar model</button>
+        <button id="baUji" class="${KELAS_TOMBOL}">Uji koneksi</button>
       </div>
     </div>
 
@@ -653,11 +686,29 @@ function segarkanGaleri() {
   });
 }
 
+/** Versi ramping untuk dikirim ke AI. Tangkapan layar mentah bisa beberapa MB
+    per gambar; delapan sekaligus mudah melampaui batas ukuran gateway. Yang
+    tercetak di dokumen tetap gambar aslinya. */
+async function kecilkanUntukAi(dataUrl) {
+  const im = await muatGambar(dataUrl);
+  const maks = 1600;
+  const s = Math.min(1, maks / Math.max(im.width, im.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(im.width * s);
+  c.height = Math.round(im.height * s);
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(im, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.85);
+}
+
 async function tambahBerkas(daftar) {
   const gambar = Array.from(daftar).filter(f => f.type.startsWith('image/'));
   for (const f of gambar) {
     if (FOTO.length >= MAKS_FOTO) break;
-    FOTO.push({ berkas: f, url: await bacaBerkas(f) });
+    const url = await bacaBerkas(f);
+    FOTO.push({ berkas: f, url, urlAi: await kecilkanUntukAi(url) });
   }
   segarkanGaleri();
 }
@@ -704,23 +755,49 @@ function pasangTempel() {
     }
   };
 
+  const pilih = el('#baModelPilih');
+  if (pilih) pilih.onchange = e => {
+    if (!e.target.value) return;
+    AI.model = e.target.value;
+    el('#baModel').value = AI.model;
+  };
+
   el('#baMuatModel').onclick = async () => {
+    const tombol = el('#baMuatModel');
+    tombol.disabled = true; tombol.textContent = 'Memuat…';
     try {
       const res = await fetch(AI.baseUrl.replace(/\/+$/, '') + '/models', {
         headers: { authorization: 'Bearer ' + bersihkanKunci(AI.apiKey) }
       });
-      const data = await res.json();
-      const daftar = (data.data || []).map(m => m.id).filter(Boolean).sort();
-      el('#baModelList').innerHTML = daftar.map(m => `<option value="${aman(m)}"></option>`).join('');
-      toast(daftar.length + ' model tersedia — ketik di kolom Model untuk memilih.');
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || data.error) {
+        throw new Error((data && data.error && (data.error.message || data.error.code)) || ('HTTP ' + res.status));
+      }
+      MODEL = (data.data || []).map(m => m.id).filter(Boolean).sort();
+      GALAT = ''; KABAR = MODEL.length + ' model terbaca dari kunci ini. Pilih salah satu di bawah kolom Model.';
+      if (!MODEL.length) { KABAR = ''; GALAT = 'Kunci ini tidak mencantumkan satu pun model.'; }
     } catch (e) {
-      toast('Daftar model tidak terbaca: ' + e.message);
+      GALAT = 'Daftar model tidak terbaca: ' + e.message;
     }
+    render();
   };
 
-  el('#baKeIdentitas').onclick = () => { GALAT = ''; LANGKAH = 'identitas'; render(); };
+  el('#baUji').onclick = async () => {
+    const tombol = el('#baUji');
+    tombol.disabled = true; tombol.textContent = 'Menguji…';
+    try {
+      const balas = await ujiKoneksi();
+      GALAT = ''; KABAR = 'Koneksi baik — model "' + AI.model + '" membalas: ' + (balas || '(kosong)')
+            + '. Kalau pembacaan gambar tetap ditolak, model ini kemungkinan tidak mendukung gambar.';
+    } catch (e) {
+      KABAR = ''; GALAT = e.message;
+    }
+    render();
+  };
+
+  el('#baKeIdentitas').onclick = () => { GALAT = ''; KABAR = ''; LANGKAH = 'identitas'; render(); };
   el('#baAnalisa').onclick = async () => {
-    GALAT = ''; LANGKAH = 'baca'; render();
+    GALAT = ''; KABAR = ''; LANGKAH = 'baca'; render();
     try {
       terapkanHasil(await bacaDenganAi());
       LANGKAH = 'periksa';
@@ -953,9 +1030,9 @@ function pasangPeriksa() {
     render();
   });
 
-  el('#baKeTempel2').onclick = () => { GALAT = ''; LANGKAH = 'tempel'; render(); };
+  el('#baKeTempel2').onclick = () => { GALAT = ''; KABAR = ''; LANGKAH = 'tempel'; render(); };
   el('#baUlangAi').onclick = async () => {
-    GALAT = ''; LANGKAH = 'baca'; render();
+    GALAT = ''; KABAR = ''; LANGKAH = 'baca'; render();
     try { terapkanHasil(await bacaDenganAi()); LANGKAH = 'periksa'; }
     catch (e) { GALAT = e.message; LANGKAH = 'tempel'; }
     render();
@@ -996,7 +1073,7 @@ window.BA = {
 
   /** Formulir dikosongkan saat berganti akun. */
   reset() {
-    D = kosong(); FOTO = []; LANGKAH = 'identitas'; GALAT = '';
+    D = kosong(); FOTO = []; LANGKAH = 'identitas'; GALAT = ''; KABAR = '';
   }
 };
 

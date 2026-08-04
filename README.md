@@ -189,6 +189,15 @@ Alurnya empat langkah:
 4. **Periksa & unduh** — seluruh sel dapat dikoreksi sebelum dokumen dibuat, lalu
    diunduh sebagai `.docx`.
 
+**Kalau AI menolak.** Galat `content-blocked` dari AgentRouter hampir selalu berarti
+**model yang dipilih tidak termasuk paket kunci API itu**, bukan isi tangkapan layarnya
+yang bermasalah. Urutan memeriksanya: tekan **Uji koneksi** (kirim satu baris teks, tanpa
+gambar) — kalau lolos, kunci dan modelnya sah dan yang ditolak adalah bagian gambarnya,
+jadi ganti ke model yang mendukung gambar lewat **Muat daftar model**. Kalau uji koneksi
+pun gagal, masalahnya pada kunci atau nama modelnya. Tangkapan layar dikecilkan ke sisi
+terpanjang 1600 px dan dikirim sebagai JPEG, jadi ukuran muatan jarang jadi penyebab;
+yang tercetak di dokumen tetap gambar aslinya.
+
 **Gateway AI.** Bawaannya `https://agentrouter.org/v1` (kompatibel OpenAI). Kunci API
 diisi sekali lalu disimpan di dokumen Firestore `konfigurasi/ai` — petugas PFID lain
 tidak perlu mengisinya lagi di perangkat masing-masing. `firestore.rules` membatasi
