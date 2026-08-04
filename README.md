@@ -38,6 +38,8 @@ monev-dak/
 │   ├── wilayah.js             38 provinsi + kabupaten/kota (autocomplete)
 │   ├── soal-tw2.js            bank soal TW II + aturan penilaian
 │   ├── firebase-config.js     konfigurasi Firebase
+│   ├── berita-acara.js        menu Berita Acara eMonitoring (khusus akun PFID)
+│   ├── ba-template.docx       template notulensi — JANGAN diedit di Word
 │   └── logo-pu.png            logo Kementerian PU — LETAKKAN BERKASNYA DI SINI
 ├── firestore.rules            security rules, tempel di Firebase Console
 ├── vercel.json                konfigurasi hosting statis
@@ -157,7 +159,48 @@ Setelah itu masuk lewat tombol **Masuk Admin** di footer halaman depan memakai e
 
 ---
 
-## 5. Deploy ke GitHub + Vercel
+## 5. Berita Acara eMonitoring (akun PFID)
+
+Akun yang **user id-nya memuat kata “jalan”** — bagian email sebelum `@`, misalnya
+`ahmadjalan@…` atau `yolan_jalan@…` — otomatis dikenali sebagai petugas PFID:
+
+- menu **Berita Acara eMonitoring** muncul di bilah atas, dan hanya untuk akun ini;
+- pre test dan post test **tidak wajib** — setelah masuk, akun langsung diarahkan ke menu tersebut;
+- namanya tercatat sebagai **penyusun laporan** pada menu itu.
+
+Alurnya empat langkah:
+
+1. **Identitas rapat** — tanggal terisi otomatis dari tanggal hari ini (bagian kuning),
+   daerah dipilih dari daftar provinsi/kabupaten, notulis dipilih dari empat pasangan
+   yang tersedia (bagian ungu). Ketiganya masih bisa disunting manual.
+2. **Tempel screenshot** — `Ctrl+V`, klik, atau seret berkas. Maksimal 8 gambar;
+   tiga gambar pertama sekaligus dipasang di halaman **Foto Dokumentasi**.
+3. **AI membaca** — tabel progres, kelengkapan eMonitoring (bagian merah), dan
+   informasi umum kegiatan (bagian hijau) diisi dari gambar.
+4. **Periksa & unduh** — seluruh sel dapat dikoreksi sebelum dokumen dibuat, lalu
+   diunduh sebagai `.docx`.
+
+**Gateway AI.** Bawaannya `https://agentrouter.org/v1` (kompatibel OpenAI). Kunci API
+diisi sekali lalu disimpan di dokumen Firestore `konfigurasi/ai` — petugas PFID lain
+tidak perlu mengisinya lagi di perangkat masing-masing. `firestore.rules` membatasi
+baca/tulis dokumen itu hanya untuk akun PFID dan admin; peserta biasa tidak bisa
+membacanya. Tetap perlu diingat bahwa **setiap petugas PFID dapat melihat kunci itu**,
+jadi pakailah kunci khusus aplikasi ini, bukan kunci pribadi.
+
+**Template.** `assets/ba-template.docx` adalah notulensi asli yang teksnya diganti
+penanda docxtemplater (`{daerah}`, `{#progres}…{/progres}`, dan seterusnya). Kop,
+warna, penomoran huruf, dan seluruh gaya paragrafnya tidak diubah, sehingga hasil
+unduhan berformat persis sama dengan notulensi terdahulu. **Jangan membuka lalu
+menyimpan ulang berkas ini dari Word** — Word memecah penanda menjadi beberapa run
+dan template akan berhenti bekerja. Bila format notulensi berubah, siapkan ulang
+template dari dokumen baru dengan cara yang sama.
+
+Pustaka `pizzip` dan `docxtemplater` diambil dari unpkg saat menu ini pertama dibuka,
+jadi pembuatan dokumen memerlukan koneksi internet.
+
+---
+
+## 6. Deploy ke GitHub + Vercel
 
 ```bash
 git init

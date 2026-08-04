@@ -39,6 +39,15 @@ service cloud.firestore {
         && request.auth.token.email in adminEmail();
     }
 
+    // Petugas PFID: user id-nya (bagian email sebelum @) memuat kata "jalan",
+    // misalnya ahmadjalan@... atau yolan_jalan@... Mereka penyusun berita acara
+    // eMonitoring, bukan peserta yang dinilai.
+    function isPfid() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email.lower().matches('^[^@]*jalan[^@]*@.*');
+    }
+
     match /peserta/{uid} {
       // pemilik akun boleh membaca profilnya sendiri; admin boleh membaca semua
       allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
@@ -78,6 +87,13 @@ service cloud.firestore {
       allow update: if false;
       // hanya admin yang boleh menghapus, untuk membersihkan data sembarangan
       allow delete: if isAdmin();
+    }
+
+    // Konfigurasi gateway AI untuk berita acara eMonitoring. Kunci diisi sekali
+    // oleh salah satu petugas PFID, lalu terpakai oleh semua petugas PFID di
+    // perangkat mana pun. Peserta biasa tidak boleh membacanya.
+    match /konfigurasi/{id} {
+      allow read, write: if isPfid() || isAdmin();
     }
 
     // tutup koleksi lain
