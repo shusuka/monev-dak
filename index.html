@@ -364,8 +364,8 @@
         <div class="field flex items-center gap-3">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m3 6 9 7 9-7"/></svg>
           <div class="min-w-0 flex-1 py-1">
-            <label for="mkEmail" class="block text-[11px] font-medium text-gray-500">Email</label>
-            <input id="mkEmail" type="email" autocomplete="username" placeholder="nama@dinaspu.go.id" class="text-[15px] text-gray-900" />
+            <label for="mkEmail" class="block text-[11px] font-medium text-gray-500">Email <span class="text-gray-400">— petugas PFID cukup user id</span></label>
+            <input id="mkEmail" type="text" autocomplete="username" placeholder="nama@dinaspu.go.id atau ahmadjalan" class="text-[15px] text-gray-900" />
           </div>
         </div>
 
@@ -409,7 +409,14 @@
           </div>
         </div>
 
-        <div class="relative">
+        <!-- Muncul begitu nama memuat kata "jalan": akun PFID, cukup nama + kata sandi. -->
+        <div id="pfidNote" class="hidden rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-[12px] leading-relaxed text-sky-800">
+          <span class="font-semibold">Akun petugas PFID terdeteksi.</span>
+          Provinsi, kabupaten/kota, dan email tidak perlu diisi — cukup tentukan kata sandi.
+          Nanti masuk cukup dengan user id <span id="pfidId" class="font-mono font-semibold"></span>.
+        </div>
+
+        <div id="grpProv" class="relative">
           <div class="field flex items-center gap-3">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.6"/></svg>
             <div class="min-w-0 flex-1 py-1">
@@ -421,7 +428,7 @@
           <div id="acProv" class="ac-panel hidden" role="listbox"></div>
         </div>
 
-        <div class="relative">
+        <div id="grpKab" class="relative">
           <div class="field flex items-center gap-3">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M2 22h20"/><path d="M10 7h4M10 11h4M10 15h4"/></svg>
             <div class="min-w-0 flex-1 py-1">
@@ -433,7 +440,7 @@
           <div id="acKab" class="ac-panel hidden" role="listbox"></div>
         </div>
 
-        <div class="field flex items-center gap-3">
+        <div id="grpEmail" class="field flex items-center gap-3">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m3 6 9 7 9-7"/></svg>
           <div class="min-w-0 flex-1 py-1">
             <label for="inEmail" class="block text-[11px] font-medium text-gray-500">Email Dinas</label>
@@ -1153,6 +1160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderTwGrid();
   bindAutocomplete();
   setTabLogin('masuk');
+  $('#inNama').addEventListener('input', sesuaikanFormDaftar);
   $('#formDaftar').addEventListener('submit', doDaftar);
   $('#formMasuk').addEventListener('submit', doMasuk);
   $('#adminForm').addEventListener('submit', doAdminLogin);
@@ -1299,6 +1307,7 @@ function setTabLogin(tab) {
   $('#tabMasuk').className  = daftar ? nonaktif : aktif;
   $('#tabDaftar').className = daftar ? aktif : nonaktif;
   ['#errMasuk', '#okMasuk', '#loginErr'].forEach(s => $(s).classList.add('hidden'));
+  if (daftar) sesuaikanFormDaftar();
 }
 
 /** Terjemahkan kode galat Firebase Auth ke bahasa yang bisa dipahami peserta. */
@@ -1318,6 +1327,29 @@ function pesanAuth(ex) {
   return 'Terjadi kesalahan: ' + c;
 }
 
+/* ── Akun petugas PFID ──────────────────────────────────────────
+   Petugas PFID mendaftar cukup dengan user id dan kata sandi: provinsi,
+   kabupaten, dan email tidak relevan bagi mereka. Firebase Authentication
+   tetap memerlukan alamat email, jadi alamatnya dibentuk dari user id pada
+   domain khusus di bawah — tidak pernah dikirimi surat, hanya penanda akun. */
+const DOMAIN_PFID = 'pfid.monevdak.id';
+const PROV_PFID   = 'Pusat Fasilitasi Infrastruktur Daerah';
+const KAB_PFID    = 'Kementerian PU';
+
+const namaPfid  = nama => /jalan/i.test(String(nama || ''));
+const idPfid    = nama => slug(nama).replace(/-/g, '');
+const emailPfid = nama => idPfid(nama) + '@' + DOMAIN_PFID;
+const emailIniPfid = email => String(email || '').toLowerCase().endsWith('@' + DOMAIN_PFID);
+
+/** Sesuaikan form daftar begitu nama diketik: akun PFID hanya butuh kata sandi. */
+function sesuaikanFormDaftar() {
+  const nama = $('#inNama').value.trim();
+  const pfidan = namaPfid(nama);
+  ['grpProv', 'grpKab', 'grpEmail'].forEach(id => $('#' + id).classList.toggle('hidden', pfidan));
+  $('#pfidNote').classList.toggle('hidden', !pfidan);
+  if (pfidan) $('#pfidId').textContent = idPfid(nama) || '—';
+}
+
 /** Lanjutan setelah identitas peserta didapat. */
 async function mulaiSesiPeserta(profil, sapaan) {
   ME = profil;
@@ -1331,19 +1363,27 @@ async function mulaiSesiPeserta(profil, sapaan) {
 async function doDaftar(e) {
   e.preventDefault();
   const nama  = $('#inNama').value.trim().replace(/\s+/g, ' ');
-  const prov  = $('#inProv').value.trim();
-  const kab   = $('#inKab').value.trim();
-  const email = $('#inEmail').value.trim();
   const sandi = $('#inSandi').value;
   const err   = $('#loginErr');
   const fail  = m => { err.textContent = m; err.classList.remove('hidden'); };
   err.classList.add('hidden');
 
-  if (nama.length < 3)                     return fail('Nama lengkap wajib diisi.');
-  if (!PROVINSI.includes(prov))             return fail('Provinsi belum sesuai daftar. Pilih dari saran yang muncul.');
-  if (!KAB_OF(prov).includes(kab))          return fail('Kabupaten/Kota tidak terdaftar pada ' + prov + '.');
-  if (!/^\S+@\S+\.\S+$/.test(email))        return fail('Email wajib diisi dan formatnya harus benar.');
-  if (sandi.length < 6)                     return fail('Kata sandi minimal 6 karakter.');
+  const pfidan = namaPfid(nama);
+  let prov = $('#inProv').value.trim();
+  let kab  = $('#inKab').value.trim();
+  let email = $('#inEmail').value.trim();
+
+  if (nama.length < 3) return fail('Nama lengkap wajib diisi.');
+  if (pfidan) {
+    /* Petugas PFID: wilayah dan email diturunkan dari user id-nya. */
+    prov = PROV_PFID; kab = KAB_PFID; email = emailPfid(nama);
+    if (idPfid(nama).length < 3) return fail('User id terlalu pendek.');
+  } else {
+    if (!PROVINSI.includes(prov))    return fail('Provinsi belum sesuai daftar. Pilih dari saran yang muncul.');
+    if (!KAB_OF(prov).includes(kab)) return fail('Kabupaten/Kota tidak terdaftar pada ' + prov + '.');
+    if (!/^\S+@\S+\.\S+$/.test(email)) return fail('Email wajib diisi dan formatnya harus benar.');
+  }
+  if (sandi.length < 6) return fail('Kata sandi minimal 6 karakter.');
 
   const btn = $('#loginBtn');
   btn.disabled = true;
@@ -1362,13 +1402,16 @@ async function doDaftar(e) {
 
 async function doMasuk(e) {
   e.preventDefault();
-  const email = $('#mkEmail').value.trim();
+  const masukan = $('#mkEmail').value.trim();
   const sandi = $('#mkSandi').value;
   const err   = $('#errMasuk');
   const fail  = m => { err.textContent = m; err.classList.remove('hidden'); };
   err.classList.add('hidden'); $('#okMasuk').classList.add('hidden');
 
-  if (!/^\S+@\S+\.\S+$/.test(email)) return fail('Masukkan email yang terdaftar.');
+  /* Tanpa tanda @ berarti user id petugas PFID, bukan alamat email. */
+  const email = masukan.includes('@') ? masukan : emailPfid(masukan);
+
+  if (!/^\S+@\S+\.\S+$/.test(email)) return fail('Masukkan email atau user id yang terdaftar.');
   if (!sandi)                        return fail('Kata sandi wajib diisi.');
 
   const btn = $('#mkBtn');
@@ -1396,9 +1439,16 @@ async function doMasuk(e) {
 }
 
 async function lupaSandi() {
-  const email = $('#mkEmail').value.trim();
+  const masukan = $('#mkEmail').value.trim();
+  const email = masukan.includes('@') ? masukan : emailPfid(masukan);
   const err = $('#errMasuk'), ok = $('#okMasuk');
   err.classList.add('hidden'); ok.classList.add('hidden');
+  if (!masukan.includes('@') || emailIniPfid(email)) {
+    /* Akun PFID memakai user id, bukan alamat surat yang bisa dikirimi tautan. */
+    err.textContent = 'Akun petugas PFID memakai user id, bukan email, sehingga tautan pengaturan ulang tidak dapat dikirim. Hubungi admin untuk mengatur ulang kata sandi.';
+    err.classList.remove('hidden');
+    return;
+  }
   if (!/^\S+@\S+\.\S+$/.test(email)) {
     err.textContent = 'Isi kolom email lebih dahulu, tautan pengaturan ulang akan dikirim ke sana.';
     err.classList.remove('hidden');
@@ -1422,6 +1472,7 @@ async function logout() {
   if (window.BA) window.BA.reset();
   try { await store.keluarAkun(); } catch (e) { console.warn(e); }
   ['inNama', 'inProv', 'inKab', 'inEmail', 'inSandi', 'mkEmail', 'mkSandi'].forEach(id => { const el = $('#' + id); if (el) el.value = ''; });
+  sesuaikanFormDaftar();
   setTabLogin('masuk');
   go('landing');
 }
@@ -1443,7 +1494,7 @@ async function renderDashboard() {
   const jam = new Date().getHours();
   const sapa = jam < 11 ? 'Selamat pagi' : jam < 15 ? 'Selamat siang' : jam < 19 ? 'Selamat sore' : 'Selamat malam';
   $('#dashHello').textContent  = sapa + ', ' + ME.nama.split(' ')[0] + '.';
-  $('#dashRegion').textContent = ME.kab + ' · Provinsi ' + ME.prov;
+  $('#dashRegion').textContent = pfid() ? PROV_PFID + ' · ' + KAB_PFID : ME.kab + ' · Provinsi ' + ME.prov;
 
   /* Petugas PFID hadir sebagai penyusun berita acara, bukan peserta yang dinilai. */
   const bannerPfid = $('#dashPfid');

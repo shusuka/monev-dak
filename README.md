@@ -161,12 +161,21 @@ Setelah itu masuk lewat tombol **Masuk Admin** di footer halaman depan memakai e
 
 ## 5. Berita Acara eMonitoring (akun PFID)
 
-Akun yang **user id-nya memuat kata “jalan”** — bagian email sebelum `@`, misalnya
-`ahmadjalan@…` atau `yolan_jalan@…` — otomatis dikenali sebagai petugas PFID:
+Akun yang **namanya memuat kata “jalan”** — misalnya `ahmadjalan` atau `yolan_jalan` —
+otomatis dikenali sebagai petugas PFID:
 
+- **pendaftarannya cukup nama dan kata sandi.** Begitu kata “jalan” terketik di kolom
+  nama, kolom provinsi, kabupaten/kota, dan email langsung hilang;
 - menu **Berita Acara eMonitoring** muncul di bilah atas, dan hanya untuk akun ini;
 - pre test dan post test **tidak wajib** — setelah masuk, akun langsung diarahkan ke menu tersebut;
 - namanya tercatat sebagai **penyusun laporan** pada menu itu.
+
+**Masuknya cukup dengan user id**, tanpa `@`. Firebase Authentication tetap memerlukan
+alamat email, jadi alamatnya dibentuk sendiri dari user id pada domain penanda
+`@pfid.monevdak.id` — domain ini tidak pernah dikirimi surat. Konsekuensinya,
+**“Lupa kata sandi?” tidak berlaku untuk akun PFID**; pengaturan ulang harus lewat
+Firebase Console (*Authentication → Users*). Provinsi dan kabupaten akun ini diisi
+otomatis “Pusat Fasilitasi Infrastruktur Daerah” dan “Kementerian PU”.
 
 Alurnya empat langkah:
 
