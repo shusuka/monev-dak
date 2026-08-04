@@ -35,6 +35,7 @@ const PENYEDIA = {
        hari. Kalau alias ini pun ditolak, tombol "Muat daftar model" menampilkan
        yang masih hidup untuk kunci tersebut. */
     model: 'gemini-flash-latest',
+    maksKeluaran: 32000,
     petunjuk: 'Paling mudah: kunci gratis dari Google AI Studio, tanpa kartu kredit, kuota harian jauh melebihi kebutuhan rapat.',
     tautan: 'https://aistudio.google.com/apikey', namaTautan: 'Ambil kunci gratis di Google AI Studio'
   },
@@ -42,6 +43,7 @@ const PENYEDIA = {
     label: 'OpenRouter', bentuk: 'openai', biaya: 'ADA YANG GRATIS',
     baseUrl: 'https://openrouter.ai/api/v1',
     model: 'google/gemma-4-26b-a4b-it:free',
+    maksKeluaran: 32000,
     petunjuk: 'Satu kunci untuk puluhan model. Yang berakhiran “:free” tidak dipungut biaya; sisanya bayar sesuai pemakaian dan jauh lebih murah daripada berlangganan.',
     tautan: 'https://openrouter.ai/keys', namaTautan: 'Ambil kunci di OpenRouter'
   },
@@ -49,6 +51,7 @@ const PENYEDIA = {
     label: 'Anthropic (langsung)', bentuk: 'anthropic', biaya: 'BERBAYAR',
     baseUrl: 'https://api.anthropic.com/v1',
     model: 'claude-sonnet-5',
+    maksKeluaran: 32000,
     petunjuk: 'Bayar sesuai pemakaian, pembacaan tabel dari gambarnya paling teliti. Cocok bila hasil Gemini masih perlu banyak dikoreksi.',
     tautan: 'https://console.anthropic.com/settings/keys', namaTautan: 'Ambil kunci di Anthropic Console'
   },
@@ -62,6 +65,12 @@ const PENYEDIA = {
 };
 
 const bentukAi = () => (PENYEDIA[AI.penyedia] || PENYEDIA.openai).bentuk;
+
+/* Notulensi dengan belasan ruas gampang melewati 8.000 token, dan balasan yang
+   terpotong bukan JSON lagi — parsernya menyerah dan petugas melihat galat yang
+   membingungkan. Plafonnya dinaikkan sampai mendekati batas tiap penyedia.
+   Gateway pihak ketiga dibiarkan 16.000 karena gpt-4o menolak lebih dari itu. */
+const maksKeluaran = () => (PENYEDIA[AI.penyedia] || PENYEDIA.openai).maksKeluaran || 16000;
 
 /* Pasangan notulis yang boleh dipilih (bagian ungu pada format). */
 const PASANGAN_NOTULIS = [
@@ -128,9 +137,10 @@ const isoHariIni = () => {
 /** Kunci API sering terbawa spasi tak kasatmata saat disalin — fetch menolaknya. */
 const bersihkanKunci = k => String(k || '').trim().replace(/[^\x21-\x7E]/g, '');
 
-/** Balasan model kadang dibungkus ```json, kadang berisi kalimat pengantar. */
+/** Balasan model kadang dibungkus ```json, kadang berisi kalimat pengantar.
+    Pagar penutupnya kadang tidak ikut tercetak, jadi ujung teks pun diterima. */
 function jsonAman(teks) {
-  const blok = teks.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  const blok = teks.match(/```(?:json)?\s*([\s\S]*?)\s*(?:```|$)/);
   if (blok) { try { return JSON.parse(blok[1].trim()); } catch (e) { /* lanjut */ } }
   const awal = teks.indexOf('{');
   if (awal < 0) return null;
@@ -329,6 +339,11 @@ function pesanGalat(res, data) {
   return pesan;
 }
 
+/* Diisi ulang tiap panggilan: true bila model berhenti karena kehabisan jatah
+   token, bukan karena jawabannya memang sudah selesai. Balasan begini selalu
+   gagal diurai, dan penyebabnya perlu disebut terang-terangan. */
+let TERPOTONG = false;
+
 /* ── tiga bentuk permintaan; semuanya menerima teks + daftar dataURL ── */
 const PANGGIL = {
   async gemini(teks, gambar, maksToken) {
@@ -350,6 +365,7 @@ const PANGGIL = {
     if (!res.ok || !data || data.error) throw new Error(pesanGalat(res, data));
     const c = (data.candidates || [])[0];
     if (!c) throw new Error('Gemini tidak mengembalikan jawaban. Kemungkinan permintaan tersaring.');
+    if (c.finishReason === 'MAX_TOKENS') TERPOTONG = true;
     return ((c.content && c.content.parts) || []).map(p => p.text || '').join('');
   },
 
@@ -374,6 +390,7 @@ const PANGGIL = {
     });
     const data = await res.json().catch(() => null);
     if (!res.ok || !data || data.type === 'error' || data.error) throw new Error(pesanGalat(res, data));
+    if (data.stop_reason === 'max_tokens') TERPOTONG = true;
     const blok = (data.content || []).find(b => b.type === 'text');
     return blok ? blok.text : '';
   },
@@ -392,6 +409,7 @@ const PANGGIL = {
     const data = await res.json().catch(() => null);
     if (!res.ok || !data || data.error) throw new Error(pesanGalat(res, data));
     const p = (data.choices || [])[0];
+    if (p && p.finish_reason === 'length') TERPOTONG = true;
     return (p && p.message && p.message.content) || '';
   }
 };
@@ -399,6 +417,7 @@ const PANGGIL = {
 async function panggilAi(teks, gambar, maksToken) {
   if (!bersihkanKunci(AI.apiKey)) throw new Error('Kunci API belum diisi.');
   const fn = PANGGIL[bentukAi()];
+  TERPOTONG = false;
   try {
     return await fn(teks, gambar, maksToken);
   } catch (e) {
@@ -418,9 +437,23 @@ async function ujiKoneksi() {
 
 async function bacaDenganAi() {
   if (!FOTO.length) throw new Error('Belum ada screenshot yang ditempel.');
-  const teks = await panggilAi(PERINTAH, FOTO.map(f => f.urlAi || f.url), 8192);
+  const teks = await panggilAi(PERINTAH, FOTO.map(f => f.urlAi || f.url), maksKeluaran());
   const hasil = jsonAman(typeof teks === 'string' ? teks : JSON.stringify(teks));
-  if (!hasil) throw new Error('Balasan AI tidak berbentuk JSON: ' + String(teks).slice(0, 160));
+  if (!hasil) {
+    /* Balasan yang berhenti di tengah kalimat memang mustahil diurai; menyebutnya
+       "tidak berbentuk JSON" hanya menyesatkan petugas ke arah yang salah. */
+    if (TERPOTONG) {
+      throw new Error('Balasan AI terputus karena kepanjangan. Kurangi jumlah screenshot, '
+        + 'atau pakai model dengan jatah keluaran lebih besar.');
+    }
+    throw new Error('Balasan AI tidak berbentuk JSON: ' + String(teks).slice(0, 160));
+  }
+  /* Terurai tetapi terpotong berarti ada ruas yang hilang diam-diam — dokumen
+     dinas tidak boleh kehilangan baris tanpa ada yang tahu. */
+  if (TERPOTONG) {
+    throw new Error('Balasan AI terputus karena kepanjangan, sebagian ruas kemungkinan hilang. '
+      + 'Kurangi jumlah screenshot lalu ulangi.');
+  }
   return hasil;
 }
 
