@@ -30,14 +30,18 @@ const PENYEDIA = {
   gemini: {
     label: 'Google Gemini', bentuk: 'gemini', biaya: 'GRATIS',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    model: 'gemini-2.5-flash',
+    /* Alias bergulir, bukan versi tetap: Google memensiunkan nomor versi lama
+       (2.5 sudah hilang) sehingga bawaan yang dipatok pasti membalas 404 suatu
+       hari. Kalau alias ini pun ditolak, tombol "Muat daftar model" menampilkan
+       yang masih hidup untuk kunci tersebut. */
+    model: 'gemini-flash-latest',
     petunjuk: 'Paling mudah: kunci gratis dari Google AI Studio, tanpa kartu kredit, kuota harian jauh melebihi kebutuhan rapat.',
     tautan: 'https://aistudio.google.com/apikey', namaTautan: 'Ambil kunci gratis di Google AI Studio'
   },
   openrouter: {
     label: 'OpenRouter', bentuk: 'openai', biaya: 'ADA YANG GRATIS',
     baseUrl: 'https://openrouter.ai/api/v1',
-    model: 'google/gemma-4-31b-it:free',
+    model: 'google/gemma-4-26b-a4b-it:free',
     petunjuk: 'Satu kunci untuk puluhan model. Yang berakhiran “:free” tidak dipungut biaya; sisanya bayar sesuai pemakaian dan jauh lebih murah daripada berlangganan.',
     tautan: 'https://openrouter.ai/keys', namaTautan: 'Ambil kunci di OpenRouter'
   },
