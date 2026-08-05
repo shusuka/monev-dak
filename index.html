@@ -556,6 +556,10 @@
 
     <div id="adTable" class="glass mt-6 overflow-hidden rounded-3xl"></div>
 
+    <h2 class="mt-14 text-[20px] font-semibold tracking-[-0.01em]">Survei kepuasan pemerintah daerah</h2>
+    <p class="mt-2 max-w-[720px] text-[14px] leading-[1.7] text-white/60">Penilaian pemda atas pelayanan Rapat Koordinasi TW II, diisi langsung di aplikasi. Indeks kepuasan dihitung dari tujuh unsur pelayanan (nilai rata-rata × 25) mengikuti cara hitung IKM.</p>
+    <div id="adSurvei" class="mt-6"></div>
+
     <h2 class="mt-14 text-[20px] font-semibold tracking-[-0.01em]">Analisis butir soal</h2>
     <p class="mt-2 max-w-[640px] text-[14px] leading-[1.7] text-white/60">Persentase jawaban benar tiap butir, dihitung dari seluruh sesi yang tersimpan. Butir dengan persentase rendah menandakan materi yang perlu diperkuat saat pendampingan.</p>
     <div id="adSoal" class="glass mt-6 overflow-hidden rounded-3xl"></div>
@@ -602,6 +606,7 @@
         <button data-nav="compare"   onclick="go('compare')"   class="whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Perbandingan</button>
         <button data-nav="berita"    onclick="go('berita')"    class="hidden whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Berita Acara eMonitoring</button>
         <button data-nav="arsip"     onclick="go('arsip')"     class="hidden whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Arsip Berita Acara</button>
+        <button data-nav="survei"    onclick="go('survei')"    class="hidden whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Survei Kepuasan</button>
       </nav>
 
       <div class="flex items-center gap-3">
@@ -713,6 +718,9 @@
 
   <!-- ─── ARSIP BERITA ACARA — daftar milik semua petugas PFID ─── -->
   <section id="view-arsip" data-view class="mx-auto max-w-6xl px-5 py-10 md:px-10 md:py-14"></section>
+
+  <!-- ─── SURVEI KEPUASAN — akun pemda, isinya dibangun assets/survei.js ─── -->
+  <section id="view-survei" data-view class="mx-auto max-w-4xl px-5 py-10 md:px-10 md:py-14"></section>
 
   <footer class="border-t border-white/10 bg-black/50 backdrop-blur-xl">
     <div class="mx-auto flex max-w-7xl flex-col gap-2 px-5 py-8 text-[12px] text-white/45 md:flex-row md:items-center md:justify-between md:px-10">
@@ -1094,7 +1102,7 @@ async function muatHasilSaya() {
 /* ═══════════════════════════════════════════════════════════════
    5. ROUTER
    ═══════════════════════════════════════════════════════════════ */
-const APP_VIEWS   = ['dashboard', 'quiz', 'result', 'rank', 'compare', 'berita', 'arsip'];
+const APP_VIEWS   = ['dashboard', 'quiz', 'result', 'rank', 'compare', 'berita', 'arsip', 'survei'];
 const ADMIN_VIEWS = ['admin'];
 
 /** Akun PFID — user id-nya memuat kata "jalan". Lihat assets/berita-acara.js. */
@@ -1102,8 +1110,10 @@ const pfid = () => !!(window.BA && window.BA.akunPfid(ME));
 
 async function go(view) {
   if (APP_VIEWS.includes(view) && !ME) view = 'login';
-  /* Menu arsip terbuka untuk semua akun; isinya yang dibatasi per daerah. */
+  /* Menu arsip terbuka untuk semua akun; isinya yang dibatasi per daerah.
+     Survei kepuasan sebaliknya: respondennya pemda, bukan petugas PFID. */
   if (view === 'berita' && !pfid()) view = 'dashboard';
+  if (view === 'survei' && pfid())  view = 'berita';
   if (ADMIN_VIEWS.includes(view) && !ADMIN) view = 'adminlogin';
 
   $$('[data-view]').forEach(v => v.classList.add('hidden'));
@@ -1128,6 +1138,7 @@ async function go(view) {
   if (view === 'compare')   renderCompare();
   if (view === 'berita')    await window.BA.render();
   if (view === 'arsip')     await window.BA.renderArsip();
+  if (view === 'survei')    await window.SURVEI.render();
   if (view === 'admin')     await muatAdmin();
 }
 
@@ -1488,6 +1499,7 @@ async function logout() {
   ME = null; HASIL_SAYA = [];
   SEL = { prov: '', kab: '' };
   if (window.BA) window.BA.reset();
+  if (window.SURVEI) window.SURVEI.reset();
   try { await store.keluarAkun(); } catch (e) { console.warn(e); }
   ['inNama', 'inProv', 'inKab', 'inEmail', 'inSandi', 'mkEmail', 'mkSandi'].forEach(id => { const el = $('#' + id); if (el) el.value = ''; });
   sesuaikanFormDaftar();
@@ -1501,6 +1513,7 @@ function syncChip() {
   $('#chipRegion').textContent = pfid() ? 'Petugas PFID' : ME.kab + ', ' + ME.prov;
   $('#chipAvatar').textContent = initials(ME.nama);
   if (window.BA) window.BA.syncNav();
+  if (window.SURVEI) window.SURVEI.syncNav();
 }
 
 
@@ -2135,6 +2148,7 @@ async function muatAdmin(paksa) {
   ADATA = { peserta, hasil: hasil.filter(h => h.tw === TW_AKTIF), gabung: Object.values(map), galatPeserta };
   isiProvinsiAdmin();
   renderAdmin();
+  if (window.SURVEI) window.SURVEI.renderAdmin();
   if (paksa) toast('Data admin dimuat ulang.');
 }
 
@@ -2492,5 +2506,6 @@ function exportXLS() {
 }
 </script>
 <script src="assets/berita-acara.js"></script>
+<script src="assets/survei.js"></script>
 </body>
 </html>

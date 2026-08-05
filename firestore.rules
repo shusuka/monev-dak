@@ -171,6 +171,18 @@ service cloud.firestore {
       allow write: if isPfid() || isAdmin();
     }
 
+    // Survei kepuasan pemerintah daerah. Satu dokumen per akun, dinamai uid
+    // pemiliknya: pemda hanya bisa menulis dan membaca penilaiannya sendiri,
+    // sedangkan admin membaca semuanya untuk direkap dan diunduh ke Excel.
+    // Penilaian tidak bisa saling dilihat antar pemda.
+    match /survei/{uid} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid;
+      allow delete: if isAdmin();
+    }
+
     // tutup koleksi lain
     match /{document=**} {
       allow read, write: if false;
