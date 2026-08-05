@@ -671,6 +671,178 @@ async function buatWord() {
 
 
 /* ═══════════════════════════════════════════════════════════════
+   5b. ARSIP BERITA ACARA — dipakai bersama semua petugas
+   Sekali AI membaca screenshot, hasilnya disimpan. Daerah yang sudah
+   diperiksa pagi tadi bisa dibuka lagi sore hari untuk diperbaiki tanpa
+   memanggil AI sekali lagi, dan petugas lain bisa ikut memeriksanya.
+   ═══════════════════════════════════════════════════════════════ */
+const LS_ARSIP   = 'monevdak_arsip';   // dipakai bila Firebase tidak aktif
+const BATAS_FOTO = 900000;             // satu dokumen Firestore maksimal 1 MB
+
+let ARSIP        = [];        // daftar ringkas untuk menu arsip
+let ARSIP_DIMUAT = false;
+let ARSIP_GALAT  = '';
+let ARSIP_CARI   = '';
+let ARSIP_STATUS = '';        // keterangan simpan terakhir pada langkah periksa
+
+const idArsip = () => (window.slug ? window.slug(D.daerah || 'daerah') : String(D.daerah || 'daerah')
+  .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')) + '__' + D.tanggalIso;
+
+const pakaiFirebase = () => store.mode === 'firebase' && !!store.db;
+
+const bacaLokal = () => { try { return JSON.parse(localStorage.getItem(LS_ARSIP) || '{}'); } catch (e) { return {}; } };
+const tulisLokal = x => { try { localStorage.setItem(LS_ARSIP, JSON.stringify(x)); return true; } catch (e) { return false; } };
+
+const waktuArsip = t => {
+  const d = t && typeof t.toDate === 'function' ? t.toDate() : (t ? new Date(t) : null);
+  if (!d || isNaN(d.getTime())) return '';
+  const jam = String(d.getHours()).padStart(2, '0') + '.' + String(d.getMinutes()).padStart(2, '0');
+  return `${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()}, ${jam}`;
+};
+
+/** Foto disimpan sebagai JPEG yang sudah dikecilkan; yang tetap terlalu besar
+    dilewati supaya penyimpanan tidak menolak seluruh berita acaranya. */
+async function fotoArsip(dataUrl) {
+  const im = await muatGambar(dataUrl);
+  const maks = 1500;
+  const s = Math.min(1, maks / Math.max(im.width, im.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(im.width * s);
+  c.height = Math.round(im.height * s);
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(im, 0, 0, c.width, c.height);
+  for (const mutu of [0.82, 0.65, 0.5, 0.38]) {
+    const u = c.toDataURL('image/jpeg', mutu);
+    if (u.length <= BATAS_FOTO) return u;
+  }
+  return null;
+}
+
+function ringkasArsip() {
+  return {
+    daerah: D.daerah || '(tanpa daerah)',
+    tanggalIso: D.tanggalIso,
+    tanggalTeks: tanggalIndo(D.tanggalIso),
+    notulis1: D.notulis1,
+    notulis2: D.notulis2,
+    penyusun: (ME && ME.nama) || '',
+    jumlahRuas: D.progres.length
+  };
+}
+
+/** Simpan berita acara yang sedang dikerjakan. `diam` untuk simpan otomatis. */
+async function simpanArsip(diam) {
+  if (!D.daerah.trim()) {
+    if (!diam) throw new Error('Daerah belum diisi, arsip perlu nama daerah.');
+    return null;
+  }
+  const id = idArsip();
+  const ringkas = ringkasArsip();
+  /* Tiga foto pertama saja: hanya itu yang tercetak di halaman dokumentasi. */
+  const foto = [];
+  for (const f of FOTO.slice(0, 3)) {
+    try { const u = await fotoArsip(f.url); if (u) foto.push(u); } catch (e) { /* lewati */ }
+  }
+
+  if (pakaiFirebase()) {
+    const { doc, setDoc, deleteDoc, collection, getDocs, serverTimestamp } = store.fs;
+    await setDoc(doc(store.db, 'beritaAcara', id), {
+      ...ringkas,
+      uid: store.uid || '',
+      jumlahFoto: foto.length,
+      data: D,
+      diperbaruiAt: serverTimestamp()
+    });
+    /* Foto ditaruh satu per dokumen; satu dokumen Firestore tidak muat tiga. */
+    const lama = await getDocs(collection(store.db, 'beritaAcara', id, 'foto'));
+    await Promise.all(lama.docs.map(d => deleteDoc(d.ref)));
+    await Promise.all(foto.map((url, i) =>
+      setDoc(doc(store.db, 'beritaAcara', id, 'foto', String(i)), { url })));
+  } else {
+    const semua = bacaLokal();
+    semua[id] = { ...ringkas, jumlahFoto: foto.length, data: D, foto, diperbaruiAt: Date.now() };
+    if (!tulisLokal(semua)) {
+      /* Ruang localStorage habis: simpan tanpa foto daripada gagal seluruhnya. */
+      semua[id] = { ...semua[id], foto: [], jumlahFoto: 0 };
+      tulisLokal(semua);
+    }
+  }
+
+  ARSIP_DIMUAT = false;
+  ARSIP_STATUS = 'Tersimpan di arsip ' + waktuArsip(Date.now())
+               + (foto.length < Math.min(FOTO.length, 3) ? ' (sebagian foto terlalu besar, tidak ikut tersimpan)' : '');
+  return id;
+}
+
+async function muatArsip() {
+  ARSIP_GALAT = '';
+  if (pakaiFirebase()) {
+    const { collection, getDocs, query, orderBy } = store.fs;
+    const snap = await getDocs(query(collection(store.db, 'beritaAcara'), orderBy('diperbaruiAt', 'desc')));
+    ARSIP = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } else {
+    ARSIP = Object.entries(bacaLokal())
+      .map(([id, x]) => ({ id, ...x }))
+      .sort((a, b) => (b.diperbaruiAt || 0) - (a.diperbaruiAt || 0));
+  }
+  ARSIP_DIMUAT = true;
+}
+
+/** Pindahkan satu berita acara tersimpan ke formulir yang sedang dibuka. */
+async function bukaArsip(id) {
+  let rekaman = null, foto = [];
+  if (pakaiFirebase()) {
+    const { doc, getDoc, collection, getDocs } = store.fs;
+    const d = await getDoc(doc(store.db, 'beritaAcara', id));
+    if (!d.exists()) throw new Error('Berita acara itu sudah tidak ada di arsip.');
+    rekaman = d.data();
+    const snap = await getDocs(collection(store.db, 'beritaAcara', id, 'foto'));
+    foto = snap.docs
+      .sort((a, b) => Number(a.id) - Number(b.id))
+      .map(x => x.data().url)
+      .filter(Boolean);
+  } else {
+    rekaman = bacaLokal()[id];
+    if (!rekaman) throw new Error('Berita acara itu sudah tidak ada di arsip.');
+    foto = rekaman.foto || [];
+  }
+
+  D = Object.assign(kosong(), rekaman.data || {});
+  FOTO = foto.map(url => ({ url, urlAi: url }));
+  ARSIP_STATUS = 'Dibuka dari arsip, terakhir disimpan ' + waktuArsip(rekaman.diperbaruiAt) + '.';
+  LANGKAH = 'periksa';
+  GALAT = ''; KABAR = '';
+}
+
+async function hapusArsip(id) {
+  if (pakaiFirebase()) {
+    const { doc, deleteDoc, collection, getDocs } = store.fs;
+    const snap = await getDocs(collection(store.db, 'beritaAcara', id, 'foto'));
+    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+    await deleteDoc(doc(store.db, 'beritaAcara', id));
+  } else {
+    const semua = bacaLokal();
+    delete semua[id];
+    tulisLokal(semua);
+  }
+  ARSIP_DIMUAT = false;
+}
+
+/** Simpan otomatis sesudah AI selesai membaca; kegagalannya tidak menghentikan
+    pekerjaan, cukup dicatat supaya petugas tahu arsipnya belum tersimpan. */
+async function simpanDiam() {
+  try {
+    await simpanArsip(true);
+  } catch (e) {
+    console.warn('[MonevDAK] arsip tidak tersimpan:', e);
+    ARSIP_STATUS = 'Belum tersimpan di arsip: ' + (e.code || e.message);
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
    6. TAMPILAN
    ═══════════════════════════════════════════════════════════════ */
 const KELAS_INPUT = 'w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-[13px] text-white outline-none transition placeholder:text-white/30 focus:border-white/40';
@@ -1057,6 +1229,9 @@ function pasangTempel() {
     GALAT = ''; KABAR = ''; LANGKAH = 'baca'; render();
     try {
       terapkanHasil(await bacaDenganAi());
+      /* Langsung diarsipkan: bacaan AI berbayar, jangan sampai hilang hanya
+         karena petugas berpindah daerah lalu ingin kembali ke yang tadi. */
+      await simpanDiam();
       LANGKAH = 'periksa';
     } catch (e) {
       GALAT = e.message;
@@ -1252,9 +1427,11 @@ function viewPeriksa() {
       <button id="baKeTempel2" class="${KELAS_TOMBOL}">Kembali ke screenshot</button>
       <div class="flex flex-wrap gap-3">
         <button id="baUlangAi" class="${KELAS_TOMBOL}">Baca ulang dengan AI</button>
+        <button id="baSimpanArsip" class="${KELAS_TOMBOL}">Simpan ke arsip</button>
         <button id="baUnduh" class="${KELAS_UTAMA}">Unduh Word</button>
       </div>
     </div>
+    ${ARSIP_STATUS ? `<p class="pb-6 text-right text-[12px] text-white/45">${aman(ARSIP_STATUS)}</p>` : ''}
   </div>`;
 }
 
@@ -1291,15 +1468,30 @@ function pasangPeriksa() {
   el('#baKeTempel2').onclick = () => { GALAT = ''; KABAR = ''; LANGKAH = 'tempel'; render(); };
   el('#baUlangAi').onclick = async () => {
     GALAT = ''; KABAR = ''; LANGKAH = 'baca'; render();
-    try { terapkanHasil(await bacaDenganAi()); LANGKAH = 'periksa'; }
+    try { terapkanHasil(await bacaDenganAi()); await simpanDiam(); LANGKAH = 'periksa'; }
     catch (e) { GALAT = e.message; LANGKAH = 'tempel'; }
     render();
   };
+
+  el('#baSimpanArsip').onclick = async () => {
+    const tombol = el('#baSimpanArsip');
+    tombol.disabled = true; tombol.textContent = 'Menyimpan…';
+    try {
+      await simpanArsip(false);
+      toast('Berita acara ' + D.daerah + ' tersimpan di arsip.');
+    } catch (e) {
+      ARSIP_STATUS = 'Gagal menyimpan: ' + (e.code || e.message);
+    }
+    render();
+  };
+
   el('#baUnduh').onclick = async () => {
     const tombol = el('#baUnduh');
     tombol.disabled = true; tombol.textContent = 'Menyusun dokumen…';
     try {
       toast('Berkas ' + (await buatWord()) + ' diunduh.');
+      /* Yang tersimpan di arsip selalu sama dengan yang barusan diunduh. */
+      await simpanDiam();
     } catch (e) {
       GALAT = 'Gagal membuat dokumen: ' + e.message;
       render();
@@ -1311,6 +1503,130 @@ function pasangPeriksa() {
 
 
 /* ═══════════════════════════════════════════════════════════════
+   6b. MENU ARSIP — daftar berita acara seluruh petugas
+   ═══════════════════════════════════════════════════════════════ */
+function kartuArsip(r) {
+  const foto = r.jumlahFoto || 0;
+  return `
+  <div class="glass rounded-3xl p-5 md:p-6">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div class="min-w-0">
+        <h3 class="text-[16px] font-semibold">${aman(r.daerah)}</h3>
+        <p class="mt-1 text-[13px] text-white/55">${aman(r.tanggalTeks || tanggalIndo(r.tanggalIso))}</p>
+        <p class="mt-2 text-[12px] text-white/40">
+          ${r.jumlahRuas || 0} ruas · ${foto} foto · notulis ${aman(r.notulis1 || '—')} &amp; ${aman(r.notulis2 || '—')}
+        </p>
+        <p class="mt-1 text-[12px] text-white/35">
+          Disusun ${aman(r.penyusun || '—')}${r.diperbaruiAt ? ' · diperbarui ' + aman(waktuArsip(r.diperbaruiAt)) : ''}
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button data-buka="${aman(r.id)}" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">Buka &amp; edit</button>
+        <button data-unduh="${aman(r.id)}" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">Unduh Word</button>
+        <button data-hapus-arsip="${aman(r.id)}" class="rounded-full border border-white/12 px-3 py-1.5 text-[12px] text-white/45 transition hover:border-rose-400/40 hover:text-rose-300">Hapus</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderArsip() {
+  const wadah = el('#view-arsip');
+  if (!wadah) return;
+  if (!akunPfid(ME)) { wadah.innerHTML = ''; return; }
+
+  const cari = ARSIP_CARI.trim().toLowerCase();
+  const daftar = cari
+    ? ARSIP.filter(r => (r.daerah + ' ' + (r.penyusun || '') + ' ' + (r.tanggalTeks || '')).toLowerCase().includes(cari))
+    : ARSIP;
+
+  wadah.innerHTML = `
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Petugas PFID</p>
+    <h1 class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[40px]">Arsip berita acara</h1>
+    <p class="mt-3 max-w-[640px] text-[15px] text-white/65">
+      Setiap berita acara yang selesai dibaca AI tersimpan di sini dan terlihat oleh semua petugas.
+      Membukanya kembali tidak memanggil AI lagi, jadi tidak ada token yang terpakai untuk perbaikan.
+    </p>
+
+    <div class="mt-8 flex flex-wrap items-center gap-3">
+      <div class="glass flex items-center gap-2 rounded-full px-5 py-2.5">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4 text-white/50"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="baArsipCari" value="${aman(ARSIP_CARI)}" placeholder="Cari daerah, tanggal, atau penyusun" class="w-56 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
+      </div>
+      <button id="baArsipMuat" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Muat ulang</button>
+      <button id="baArsipBaru" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Buat berita acara baru</button>
+    </div>
+
+    ${ARSIP_GALAT ? `<div class="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] text-rose-200">${aman(ARSIP_GALAT)}</div>` : ''}
+
+    <div class="mt-7 space-y-4">
+      ${daftar.length ? daftar.map(kartuArsip).join('') : `
+        <div class="glass rounded-3xl px-6 py-14 text-center">
+          <p class="text-[15px] font-medium text-white/75">${ARSIP.length ? 'Tidak ada yang cocok dengan pencarian itu.' : 'Arsip masih kosong.'}</p>
+          <p class="mt-2 text-[13px] text-white/45">${ARSIP.length ? 'Coba kata kunci lain.' : 'Berita acara tersimpan sendiri begitu AI selesai membaca screenshot.'}</p>
+        </div>`}
+    </div>`;
+
+  el('#baArsipCari').oninput = e => {
+    ARSIP_CARI = e.target.value;
+    const posisi = e.target.selectionStart;
+    renderArsip();
+    const baru = el('#baArsipCari');
+    baru.focus();
+    baru.setSelectionRange(posisi, posisi);
+  };
+
+  el('#baArsipMuat').onclick = async () => {
+    ARSIP_DIMUAT = false;
+    await window.BA.renderArsip();
+  };
+
+  el('#baArsipBaru').onclick = () => {
+    window.BA.reset();
+    go('berita');
+  };
+
+  els('#view-arsip [data-buka]').forEach(t => t.onclick = async () => {
+    t.disabled = true; t.textContent = 'Membuka…';
+    try {
+      await bukaArsip(t.dataset.buka);
+      go('berita');
+      toast('Berita acara ' + D.daerah + ' dibuka. Perbaiki lalu unduh ulang.');
+    } catch (e) {
+      ARSIP_GALAT = e.message;
+      renderArsip();
+    }
+  });
+
+  els('#view-arsip [data-unduh]').forEach(t => t.onclick = async () => {
+    t.disabled = true; t.textContent = 'Menyusun…';
+    try {
+      await bukaArsip(t.dataset.unduh);
+      toast('Berkas ' + (await buatWord()) + ' diunduh.');
+      renderArsip();
+    } catch (e) {
+      ARSIP_GALAT = 'Gagal membuat dokumen: ' + e.message;
+      renderArsip();
+    }
+  });
+
+  els('#view-arsip [data-hapus-arsip]').forEach(t => t.onclick = async () => {
+    const id = t.dataset.hapusArsip;
+    const r = ARSIP.find(x => x.id === id) || {};
+    if (!confirm('Hapus berita acara ' + (r.daerah || id) + ' dari arsip? Semua petugas akan kehilangan salinan ini.')) return;
+    t.disabled = true; t.textContent = 'Menghapus…';
+    try {
+      await hapusArsip(id);
+      await window.BA.renderArsip();
+      toast('Berita acara dihapus dari arsip.');
+    } catch (e) {
+      ARSIP_GALAT = 'Gagal menghapus: ' + (e.code || e.message);
+      renderArsip();
+    }
+  });
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
    7. TITIK MASUK — dipanggil dari index.html
    ═══════════════════════════════════════════════════════════════ */
 window.BA = {
@@ -1318,8 +1634,10 @@ window.BA = {
 
   /** Tampilkan tombol menu hanya untuk akun PFID. */
   syncNav() {
-    const b = el('[data-nav="berita"]');
-    if (b) b.classList.toggle('hidden', !akunPfid(ME));
+    ['berita', 'arsip'].forEach(nama => {
+      const b = el(`[data-nav="${nama}"]`);
+      if (b) b.classList.toggle('hidden', !akunPfid(ME));
+    });
   },
 
   /** Dipanggil router saat berpindah ke tampilan berita acara. */
@@ -1329,11 +1647,30 @@ window.BA = {
     render();
   },
 
+  /** Dipanggil router saat berpindah ke menu arsip. */
+  async renderArsip() {
+    if (!akunPfid(ME)) return;
+    if (!ARSIP_DIMUAT) {
+      renderArsip();          // tampilkan kerangkanya dulu supaya tidak kosong
+      try {
+        await muatArsip();
+      } catch (e) {
+        console.warn('[MonevDAK] arsip gagal dibaca:', e);
+        ARSIP = [];
+        ARSIP_DIMUAT = true;
+        ARSIP_GALAT = 'Arsip tidak terbaca (' + (e.code || e.message)
+                    + '). Pastikan aturan Firestore untuk koleksi beritaAcara sudah dipasang.';
+      }
+    }
+    renderArsip();
+  },
+
   /** Formulir dikosongkan saat berganti akun; kunci bersama diambil lagi
       supaya akun berikutnya tidak memakai sisa kunci akun sebelumnya. */
   reset() {
     D = kosong(); FOTO = []; LANGKAH = 'identitas'; GALAT = ''; KABAR = '';
-    konfigDicoba = false; AI_GALAT = '';
+    konfigDicoba = false; AI_GALAT = ''; ARSIP_STATUS = '';
+    ARSIP = []; ARSIP_DIMUAT = false; ARSIP_GALAT = ''; ARSIP_CARI = '';
   }
 };
 

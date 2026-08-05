@@ -111,6 +111,20 @@ service cloud.firestore {
       allow read, write: if isPfid() || isAdmin();
     }
 
+    // Arsip berita acara eMonitoring. Satu dokumen per daerah per tanggal,
+    // isinya seluruh isian formulir; foto dokumentasinya ditaruh di subkoleksi
+    // `foto` karena satu dokumen Firestore hanya muat 1 MB. Sengaja dipakai
+    // bersama: petugas mana pun boleh membuka, memperbaiki, dan mengunduh
+    // ulang berita acara daerah yang sudah pernah dibaca AI, tanpa memanggil
+    // AI lagi. Peserta biasa tidak boleh menyentuhnya sama sekali.
+    match /beritaAcara/{id} {
+      allow read, write: if isPfid() || isAdmin();
+
+      match /foto/{nomor} {
+        allow read, write: if isPfid() || isAdmin();
+      }
+    }
+
     // tutup koleksi lain
     match /{document=**} {
       allow read, write: if false;

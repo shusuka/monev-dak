@@ -240,7 +240,7 @@
       </div>
 
       <div id="heroMeta" class="anim-fade mt-8">
-        <p class="text-[13px] font-semibold uppercase tracking-[0.2em] text-white/80">Pusat Fasilitasi Infrastruktur</p>
+        <p class="text-[13px] font-semibold uppercase tracking-[0.2em] text-white/80">Pusat Fasilitasi Infrastruktur Daerah</p>
         <p class="mt-1.5 text-[12px] font-medium uppercase tracking-[0.24em] text-white/55">Kementerian PU</p>
       </div>
     </div>
@@ -319,7 +319,7 @@
 
     <footer class="border-t border-white/10">
       <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-10 text-[13px] text-white/50 md:flex-row md:items-center md:justify-between md:px-16">
-        <p>MonevDAK · Pusat Fasilitasi Infrastruktur, Kementerian PU</p>
+        <p>MonevDAK · Pusat Fasilitasi Infrastruktur Daerah, Kementerian PU</p>
         <div class="flex flex-wrap items-center gap-4">
           <p id="footMode">Memeriksa koneksi basis data…</p>
           <button onclick="go('adminlogin')" class="rounded-full border border-white/15 px-4 py-1.5 text-[12px] font-medium text-white/60 transition hover:bg-white/10 hover:text-white">Masuk Admin</button>
@@ -576,7 +576,7 @@
 
   <footer class="border-t border-white/10 bg-black/50 backdrop-blur-xl">
     <div class="mx-auto px-5 py-8 text-[12px] text-white/45 md:px-10">
-      <p>MonevDAK · Pusat Fasilitasi Infrastruktur, Kementerian PU</p>
+      <p>MonevDAK · Pusat Fasilitasi Infrastruktur Daerah, Kementerian PU</p>
     </div>
   </footer>
 </div>
@@ -601,6 +601,7 @@
         <button data-nav="rank"      onclick="go('rank')"      class="whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Peringkat</button>
         <button data-nav="compare"   onclick="go('compare')"   class="whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Perbandingan</button>
         <button data-nav="berita"    onclick="go('berita')"    class="hidden whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Berita Acara eMonitoring</button>
+        <button data-nav="arsip"     onclick="go('arsip')"     class="hidden whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Arsip Berita Acara</button>
       </nav>
 
       <div class="flex items-center gap-3">
@@ -626,7 +627,9 @@
       <p class="text-[13px] font-semibold text-sky-100">Akun petugas PFID</p>
       <p class="mt-1 text-[13px] leading-relaxed text-sky-100/75">
         Pre test dan post test tidak wajib untuk akun ini. Tugas Anda ada di menu
-        <button onclick="go('berita')" class="font-semibold underline decoration-sky-200/40 underline-offset-4 hover:text-white">Berita Acara eMonitoring</button>.
+        <button onclick="go('berita')" class="font-semibold underline decoration-sky-200/40 underline-offset-4 hover:text-white">Berita Acara eMonitoring</button>,
+        dan berita acara yang sudah pernah dibaca AI tersimpan di
+        <button onclick="go('arsip')" class="font-semibold underline decoration-sky-200/40 underline-offset-4 hover:text-white">Arsip Berita Acara</button>.
       </p>
     </div>
 
@@ -707,6 +710,9 @@
 
   <!-- ─── BERITA ACARA eMONITORING — hanya akun PFID, isinya dibangun assets/berita-acara.js ─── -->
   <section id="view-berita" data-view class="mx-auto max-w-6xl px-5 py-10 md:px-10 md:py-14"></section>
+
+  <!-- ─── ARSIP BERITA ACARA — daftar milik semua petugas PFID ─── -->
+  <section id="view-arsip" data-view class="mx-auto max-w-6xl px-5 py-10 md:px-10 md:py-14"></section>
 
   <footer class="border-t border-white/10 bg-black/50 backdrop-blur-xl">
     <div class="mx-auto flex max-w-7xl flex-col gap-2 px-5 py-8 text-[12px] text-white/45 md:flex-row md:items-center md:justify-between md:px-10">
@@ -1078,7 +1084,7 @@ async function muatHasilSaya() {
 /* ═══════════════════════════════════════════════════════════════
    5. ROUTER
    ═══════════════════════════════════════════════════════════════ */
-const APP_VIEWS   = ['dashboard', 'quiz', 'result', 'rank', 'compare', 'berita'];
+const APP_VIEWS   = ['dashboard', 'quiz', 'result', 'rank', 'compare', 'berita', 'arsip'];
 const ADMIN_VIEWS = ['admin'];
 
 /** Akun PFID — user id-nya memuat kata "jalan". Lihat assets/berita-acara.js. */
@@ -1086,7 +1092,7 @@ const pfid = () => !!(window.BA && window.BA.akunPfid(ME));
 
 async function go(view) {
   if (APP_VIEWS.includes(view) && !ME) view = 'login';
-  if (view === 'berita' && !pfid()) view = 'dashboard';
+  if ((view === 'berita' || view === 'arsip') && !pfid()) view = 'dashboard';
   if (ADMIN_VIEWS.includes(view) && !ADMIN) view = 'adminlogin';
 
   $$('[data-view]').forEach(v => v.classList.add('hidden'));
@@ -1110,6 +1116,7 @@ async function go(view) {
   if (view === 'rank')      await renderRank();
   if (view === 'compare')   renderCompare();
   if (view === 'berita')    await window.BA.render();
+  if (view === 'arsip')     await window.BA.renderArsip();
   if (view === 'admin')     await muatAdmin();
 }
 
