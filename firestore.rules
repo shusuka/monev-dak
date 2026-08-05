@@ -63,6 +63,21 @@ service cloud.firestore {
       return idPfid() || namaPfid();
     }
 
+    // Kunci daerah peserta yang sedang masuk, mis. "magelang" atau
+    // "kota-magelang". Diisi aplikasi saat mendaftar dan saat masuk.
+    function kunciPeserta() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/peserta/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/peserta/$(request.auth.uid)).data.get('kunciKab', '')
+        : '';
+    }
+
+    // Berita acara milik daerah pengguna sendiri. Keduanya harus terisi:
+    // kunci kosong tidak boleh dianggap cocok dengan kunci kosong.
+    function daerahSendiri(kunci) {
+      return kunci is string && kunci != '' && kunci == kunciPeserta();
+    }
+
     match /peserta/{uid} {
       // pemilik akun boleh membaca profilnya sendiri; admin boleh membaca semua
       allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
@@ -113,15 +128,21 @@ service cloud.firestore {
 
     // Arsip berita acara eMonitoring. Satu dokumen per daerah per tanggal,
     // isinya seluruh isian formulir; foto dokumentasinya ditaruh di subkoleksi
-    // `foto` karena satu dokumen Firestore hanya muat 1 MB. Sengaja dipakai
-    // bersama: petugas mana pun boleh membuka, memperbaiki, dan mengunduh
-    // ulang berita acara daerah yang sudah pernah dibaca AI, tanpa memanggil
-    // AI lagi. Peserta biasa tidak boleh menyentuhnya sama sekali.
+    // `foto` karena satu dokumen Firestore hanya muat 1 MB.
+    //
+    // Petugas PFID menyusun dan mengubah semuanya. Pemda hanya boleh MEMBACA,
+    // dan hanya berita acara daerahnya sendiri — pemda Magelang tidak dapat
+    // menyentuh dokumen Kabupaten Malang. Karena itu aplikasi selalu menyaring
+    // kuerinya dengan where('kunciDaerah','==',...); kueri yang lebih luas
+    // daripada izinnya akan ditolak Firestore seluruhnya.
     match /beritaAcara/{id} {
-      allow read, write: if isPfid() || isAdmin();
+      allow read: if isPfid() || isAdmin() || daerahSendiri(resource.data.get('kunciDaerah', ''));
+      allow write: if isPfid() || isAdmin();
 
       match /foto/{nomor} {
-        allow read, write: if isPfid() || isAdmin();
+        allow read: if isPfid() || isAdmin()
+          || daerahSendiri(get(/databases/$(database)/documents/beritaAcara/$(id)).data.get('kunciDaerah', ''));
+        allow write: if isPfid() || isAdmin();
       }
     }
 

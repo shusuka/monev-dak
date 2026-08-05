@@ -77,7 +77,8 @@ const maksKeluaran = () => (PENYEDIA[AI.penyedia] || PENYEDIA.openai).maksKeluar
 const PASANGAN_NOTULIS = [
   ['Akram Yonda Putra', 'Amiruddin Yusuf'],
   ['Sinta Nur Indah',   'Yusrel Ikhsan Wibawa'],
-  ['Robby Hidayat',     'Brigitta Yolanda']
+  ['Robby Hidayat',     'Brigitta Yolanda'],
+  ['Frandi Sahabat',    'Dyah Nurnaningtyas']
 ];
 
 /* Tiga slot foto pada halaman dokumentasi. Ukurannya diambil dari template
@@ -604,35 +605,39 @@ function namaBerkas() {
   return (daerah ? daerah + ' - ' : '') + 'Notulensi Rakor PE DAK Jalan TA 2026 TW II.docx';
 }
 
-function dataTemplate() {
-  const tgl = tanggalIndo(D.tanggalIso);
+function dataTemplate(d, foto) {
+  d = d || D; foto = foto || FOTO;
+  const catatan = (d.catatan || []).filter(Boolean);
+  const tindakLanjut = d.tindakLanjut || [];
   return {
-    hariTanggal: tgl,
-    daerah: D.daerah,
-    notulis1: D.notulis1,
-    notulis2: D.notulis2,
-    progres: D.progres,
-    emon: D.emon,
-    infoUmum: D.infoUmum,
-    catatan: D.catatan.filter(Boolean),
-    fisikRata: D.fisikRata,
-    keuanganRata: D.keuanganRata,
-    evaluasiPoin: D.evaluasiPoin,
-    permasalahanUtama: D.permasalahanUtama,
-    tindakLanjut: D.tindakLanjut,
-    kesimpulan: D.kesimpulan,
-    butir: D.butir.filter(Boolean),
+    hariTanggal: tanggalIndo(d.tanggalIso),
+    daerah: d.daerah,
+    notulis1: d.notulis1,
+    notulis2: d.notulis2,
+    progres: d.progres || [],
+    emon: d.emon || [],
+    infoUmum: d.infoUmum || [],
+    catatan,
+    fisikRata: d.fisikRata,
+    keuanganRata: d.keuanganRata,
+    evaluasiPoin: d.evaluasiPoin || [],
+    permasalahanUtama: d.permasalahanUtama,
+    tindakLanjut,
+    kesimpulan: d.kesimpulan || [],
+    butir: (d.butir || []).filter(Boolean),
     /* Bagian yang kosong dibuang seluruhnya — judul tanpa isi membuat
        susunan paragraf dokumen terlihat berantakan. */
-    adaCatatan: D.catatan.filter(Boolean).length > 0,
-    adaTindakLanjut: D.tindakLanjut.length > 0,
-    adaFoto1: FOTO.length > 0,
-    adaFoto2: FOTO.length > 1,
-    adaFoto3: FOTO.length > 2
+    adaCatatan: catatan.length > 0,
+    adaTindakLanjut: tindakLanjut.length > 0,
+    adaFoto1: foto.length > 0,
+    adaFoto2: foto.length > 1,
+    adaFoto3: foto.length > 2
   };
 }
 
-async function buatWord() {
+/** Susun berkas Word-nya saja; pengunduhan dan pratinjau memakai ini bersama. */
+async function susunBlob(d, foto) {
+  d = d || D; foto = foto || FOTO;
   await Promise.all([muatSkrip(CDN_PIZZIP), muatSkrip(CDN_DOCXTPL)]);
 
   const res = await fetch(TEMPLATE_URL);
@@ -643,23 +648,26 @@ async function buatWord() {
   const doc = new window.docxtemplater(zip, {
     paragraphLoop: true, linebreaks: true, nullGetter: () => ''
   });
-  doc.render(dataTemplate());
+  doc.render(dataTemplate(d, foto));
 
   /* Slot foto dokumentasi diisi dengan menukar byte gambar bawaan template —
      cara ini tidak butuh modul gambar docxtemplater yang berbayar. */
   const keluar = doc.getZip();
   for (let i = 0; i < SLOT_FOTO.length; i++) {
-    if (!FOTO[i]) continue;
-    const bit = await bingkaiFoto(FOTO[i].url, SLOT_FOTO[i].rasio);
+    if (!foto[i]) continue;
+    const bit = await bingkaiFoto(foto[i].url, SLOT_FOTO[i].rasio);
     keluar.file(SLOT_FOTO[i].berkas, bit, { binary: true });
   }
 
-  const blob = keluar.generate({
+  return keluar.generate({
     type: 'blob',
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     compression: 'DEFLATE'
   });
+}
 
+async function buatWord() {
+  const blob = await susunBlob(D, FOTO);
   const nama = namaBerkas();
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -678,6 +686,19 @@ async function buatWord() {
    ═══════════════════════════════════════════════════════════════ */
 const LS_ARSIP   = 'monevdak_arsip';   // dipakai bila Firebase tidak aktif
 const BATAS_FOTO = 900000;             // satu dokumen Firestore maksimal 1 MB
+const CDN_MAMMOTH = 'https://unpkg.com/mammoth@1.11.0/mammoth.browser.min.js';
+
+/* Sama persis dengan slug() di index.html supaya kunci daerah pada arsip dan
+   kunciKab pada profil peserta bisa dibandingkan langsung oleh firestore.rules. */
+const slugKunci = s => String(s == null ? '' : s).toLowerCase()
+  .replace(/[^a-z0-9 ]/g, '').trim().replace(/\s+/g, '-');
+
+/* "Kab Magelang" dan "Magelang" harus menghasilkan kunci yang sama, sedangkan
+   "Kota Magelang" tetap terpisah — di daftar wilayah keduanya daerah berbeda. */
+const kunciDaerah = teks => slugKunci(String(teks || '').replace(/^\s*(kabupaten|kab\.?)\s+/i, ''));
+
+/** Daerah milik pengguna yang sedang masuk; petugas PFID tidak terikat daerah. */
+const kunciSaya = () => (ME ? kunciDaerah(ME.kab) : '');
 
 let ARSIP        = [];        // daftar ringkas untuk menu arsip
 let ARSIP_DIMUAT = false;
@@ -723,6 +744,11 @@ async function fotoArsip(dataUrl) {
 function ringkasArsip() {
   return {
     daerah: D.daerah || '(tanpa daerah)',
+    /* Kunci inilah yang dipakai firestore.rules untuk menentukan pemda mana
+       yang boleh melihat berita acara ini. */
+    kunciDaerah: kunciDaerah(D.daerah || D._kab),
+    prov: D._prov || '',
+    kab: D._kab || '',
     tanggalIso: D.tanggalIso,
     tanggalTeks: tanggalIndo(D.tanggalIso),
     notulis1: D.notulis1,
@@ -776,39 +802,53 @@ async function simpanArsip(diam) {
   return id;
 }
 
+const waktuAngka = t => (t && typeof t.toMillis === 'function') ? t.toMillis() : Number(t || 0);
+
 async function muatArsip() {
   ARSIP_GALAT = '';
+  const pfid = akunPfid(ME);
+  const kunci = kunciSaya();
+
   if (pakaiFirebase()) {
-    const { collection, getDocs, query, orderBy } = store.fs;
-    const snap = await getDocs(query(collection(store.db, 'beritaAcara'), orderBy('diperbaruiAt', 'desc')));
+    const { collection, getDocs, query, orderBy, where } = store.fs;
+    /* Pemda hanya boleh menarik berita acara daerahnya sendiri: kalau
+       kuerinya lebih luas dari izinnya, Firestore menolak seluruh kueri.
+       Pengurutan dilakukan di peramban supaya tidak perlu indeks gabungan. */
+    const q = pfid
+      ? query(collection(store.db, 'beritaAcara'), orderBy('diperbaruiAt', 'desc'))
+      : query(collection(store.db, 'beritaAcara'), where('kunciDaerah', '==', kunci));
+    const snap = await getDocs(q);
     ARSIP = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } else {
     ARSIP = Object.entries(bacaLokal())
       .map(([id, x]) => ({ id, ...x }))
-      .sort((a, b) => (b.diperbaruiAt || 0) - (a.diperbaruiAt || 0));
+      .filter(x => pfid || x.kunciDaerah === kunci);
   }
+  ARSIP.sort((a, b) => waktuAngka(b.diperbaruiAt) - waktuAngka(a.diperbaruiAt));
   ARSIP_DIMUAT = true;
 }
 
-/** Pindahkan satu berita acara tersimpan ke formulir yang sedang dibuka. */
-async function bukaArsip(id) {
-  let rekaman = null, foto = [];
+/** Isi satu berita acara tersimpan, tanpa menyentuh formulir yang terbuka. */
+async function ambilArsip(id) {
   if (pakaiFirebase()) {
     const { doc, getDoc, collection, getDocs } = store.fs;
     const d = await getDoc(doc(store.db, 'beritaAcara', id));
     if (!d.exists()) throw new Error('Berita acara itu sudah tidak ada di arsip.');
-    rekaman = d.data();
     const snap = await getDocs(collection(store.db, 'beritaAcara', id, 'foto'));
-    foto = snap.docs
+    const foto = snap.docs
       .sort((a, b) => Number(a.id) - Number(b.id))
       .map(x => x.data().url)
       .filter(Boolean);
-  } else {
-    rekaman = bacaLokal()[id];
-    if (!rekaman) throw new Error('Berita acara itu sudah tidak ada di arsip.');
-    foto = rekaman.foto || [];
+    return { rekaman: d.data(), foto };
   }
+  const rekaman = bacaLokal()[id];
+  if (!rekaman) throw new Error('Berita acara itu sudah tidak ada di arsip.');
+  return { rekaman, foto: rekaman.foto || [] };
+}
 
+/** Pindahkan satu berita acara tersimpan ke formulir yang sedang dibuka. */
+async function bukaArsip(id) {
+  const { rekaman, foto } = await ambilArsip(id);
   D = Object.assign(kosong(), rekaman.data || {});
   FOTO = foto.map(url => ({ url, urlAi: url }));
   ARSIP_STATUS = 'Dibuka dari arsip, terakhir disimpan ' + waktuArsip(rekaman.diperbaruiAt) + '.';
@@ -828,6 +868,83 @@ async function hapusArsip(id) {
     tulisLokal(semua);
   }
   ARSIP_DIMUAT = false;
+}
+
+/* ── pratinjau dokumen ──────────────────────────────────────────
+   Pemda hanya boleh melihat, bukan mengubah. Berkas Word-nya tetap disusun
+   seperti biasa lalu diubah menjadi HTML oleh mammoth, jadi yang terbaca di
+   layar benar-benar isi dokumen yang sama, bukan tiruan yang dibuat ulang. */
+function tutupPratinjau() {
+  const m = el('#baPratinjau');
+  if (m) m.remove();
+  document.removeEventListener('keydown', tombolEscPratinjau);
+}
+
+function tombolEscPratinjau(e) {
+  if (e.key === 'Escape') tutupPratinjau();
+}
+
+function bingkaiPratinjau(judul, isi) {
+  tutupPratinjau();
+  const m = document.createElement('div');
+  m.id = 'baPratinjau';
+  m.className = 'fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm md:p-8';
+  m.innerHTML = `
+    <div class="w-full max-w-[900px] overflow-hidden rounded-3xl border border-white/15 bg-ink shadow-2xl">
+      <div class="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-4">
+        <div class="min-w-0">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">Pratinjau dokumen</p>
+          <p class="truncate text-[15px] font-semibold text-white">${aman(judul)}</p>
+        </div>
+        <button data-tutup class="rounded-full border border-white/20 p-2 text-white/70 transition hover:bg-white/10 hover:text-white" title="Tutup (Esc)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-4 w-4"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div id="baPratinjauIsi" class="max-h-[76vh] overflow-y-auto bg-white/[0.04] p-4 md:p-6">${isi}</div>
+    </div>`;
+  document.body.appendChild(m);
+  m.querySelector('[data-tutup]').onclick = tutupPratinjau;
+  m.onclick = e => { if (e.target === m) tutupPratinjau(); };
+  document.addEventListener('keydown', tombolEscPratinjau);
+  return m;
+}
+
+const MEMUAT_PRATINJAU = `
+  <div class="px-6 py-16 text-center">
+    <div class="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
+    <p class="mt-5 text-[14px] text-white/70">Menyusun dokumen…</p>
+  </div>`;
+
+/* Kertas putih dengan huruf hitam supaya terbaca seperti dokumen aslinya. */
+const GAYA_KERTAS = `
+  <style>
+    #baKertas { background:#fff; color:#111; font-family:Cambria,Georgia,serif; font-size:13px; line-height:1.6;
+                padding:36px 40px; border-radius:14px; }
+    #baKertas h1,#baKertas h2,#baKertas h3 { font-weight:700; margin:14px 0 8px; }
+    #baKertas h1 { font-size:17px; text-align:center; }
+    #baKertas p { margin:0 0 8px; }
+    #baKertas table { border-collapse:collapse; width:100%; margin:10px 0 16px; font-size:12px; }
+    #baKertas td,#baKertas th { border:1px solid #999; padding:5px 7px; vertical-align:top; }
+    #baKertas img { max-width:100%; height:auto; margin:6px 0; }
+    #baKertas ol,#baKertas ul { margin:0 0 10px 22px; }
+  </style>`;
+
+async function pratinjauArsip(id, judul) {
+  bingkaiPratinjau(judul, MEMUAT_PRATINJAU);
+  try {
+    const { rekaman, foto } = await ambilArsip(id);
+    const blob = await susunBlob(
+      Object.assign(kosong(), rekaman.data || {}),
+      foto.map(url => ({ url, urlAi: url }))
+    );
+    await muatSkrip(CDN_MAMMOTH);
+    const hasil = await window.mammoth.convertToHtml({ arrayBuffer: await blob.arrayBuffer() });
+    const wadah = el('#baPratinjauIsi');
+    if (wadah) wadah.innerHTML = GAYA_KERTAS + '<div id="baKertas">' + hasil.value + '</div>';
+  } catch (e) {
+    const wadah = el('#baPratinjauIsi');
+    if (wadah) wadah.innerHTML = `<div class="px-6 py-14 text-center text-[13px] text-rose-200">Dokumen tidak dapat ditampilkan: ${aman(e.message)}</div>`;
+  }
 }
 
 /** Simpan otomatis sesudah AI selesai membaca; kegagalannya tidak menghentikan
@@ -850,12 +967,72 @@ const KELAS_SEL   = KELAS_INPUT + ' [&>option]:bg-ink';
 const KELAS_TOMBOL= 'rounded-full border border-white/20 px-4 py-2 text-[13px] font-medium text-white/80 transition hover:bg-white/10';
 const KELAS_UTAMA = 'cta-glow rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black transition disabled:opacity-40';
 
+/* Penunjuk alur: tiap langkah punya lambang sendiri dan bisa diklik untuk
+   melompat mundur atau maju, selama syarat langkahnya sudah terpenuhi. */
+const IKON = {
+  identitas: '<path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1z"/><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M9 11h6M9 15h4"/>',
+  tempel:    '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="m21 15-4.35-4.35a2 2 0 0 0-2.83 0L4 20"/>',
+  baca:      '<path d="M12 3.5 13.7 8l4.5 1.7-4.5 1.7L12 16l-1.7-4.6L5.8 9.7 10.3 8 12 3.5z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z"/>',
+  periksa:   '<path d="M14 3v5h5"/><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="m9 14 2 2 4-4"/>'
+};
+
 const LANGKAH_JUDUL = [
   ['identitas', 'Identitas rapat'],
   ['tempel',    'Tempel screenshot'],
   ['baca',      'AI membaca'],
   ['periksa',   'Periksa & unduh']
 ];
+
+const urutanLangkah = k => LANGKAH_JUDUL.findIndex(([x]) => x === k);
+
+/** Sudah ada isian hasil bacaan AI atau arsip yang dibuka. */
+const adaIsi = () => D.progres.length > 0 || D.emon.length > 0 || D.evaluasiPoin.length > 0;
+
+/** Alasan sebuah langkah belum boleh dibuka; string kosong berarti boleh. */
+function halanganLangkah(k) {
+  if (LANGKAH === 'baca') return 'Tunggu sampai AI selesai membaca.';
+  if (k === 'baca')       return 'Langkah ini berjalan sendiri saat AI membaca.';
+  if (k === 'tempel'  && !D.daerah.trim()) return 'Isi daerahnya dulu di langkah 1.';
+  if (k === 'periksa' && !adaIsi())        return 'Belum ada isian; baca screenshot dengan AI dulu.';
+  return '';
+}
+
+function penunjukLangkah() {
+  const kini = urutanLangkah(LANGKAH);
+  return `
+    <div class="mt-8 flex flex-wrap items-center gap-1.5">
+      ${LANGKAH_JUDUL.map(([k, t], i) => {
+        const aktif = k === LANGKAH;
+        const lewat = i < kini;
+        const halangan = halanganLangkah(k);
+        const warnaBulat = aktif ? 'bg-white text-black'
+                         : lewat ? 'bg-emerald-400/20 text-emerald-200 ring-1 ring-emerald-300/30'
+                         : 'bg-white/10 text-white/50';
+        const warnaTeks = aktif ? 'font-semibold text-white' : lewat ? 'text-white/70' : 'text-white/40';
+        return `<div class="flex items-center gap-1.5">
+          <button data-langkah="${k}"${halangan ? ` disabled title="${aman(halangan)}"` : ` title="Ke langkah ${i + 1}: ${aman(t)}"`}
+                  class="group flex items-center gap-2 rounded-full px-2.5 py-1.5 transition ${halangan ? 'cursor-not-allowed opacity-45' : 'hover:bg-white/10'}">
+            <span class="flex h-8 w-8 items-center justify-center rounded-full transition ${warnaBulat}">
+              ${lewat
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="m5 13 4 4L19 7"/></svg>'
+                : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px]">${IKON[k]}</svg>`}
+            </span>
+            <span class="text-[13px] ${warnaTeks}">${t}</span>
+          </button>
+          ${i < 3 ? '<span class="text-white/20">›</span>' : ''}
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function pasangPenunjuk() {
+  els('#view-berita [data-langkah]').forEach(t => t.onclick = () => {
+    const k = t.dataset.langkah;
+    if (k === LANGKAH || halanganLangkah(k)) return;
+    GALAT = ''; KABAR = ''; LANGKAH = k;
+    render();
+  });
+}
 
 function render() {
   const wadah = el('#view-berita');
@@ -871,16 +1048,7 @@ function render() {
     </p>
     <p class="mt-2 text-[13px] text-white/45">Penyusun laporan: <span class="font-semibold text-white/80">${aman(ME.nama)}</span></p>
 
-    <div class="mt-8 flex flex-wrap items-center gap-2">
-      ${LANGKAH_JUDUL.map(([k, t], i) => {
-        const aktif = k === LANGKAH;
-        return `<div class="flex items-center gap-2">
-          <span class="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold ${aktif ? 'bg-white text-black' : 'bg-white/12 text-white/55'}">${i + 1}</span>
-          <span class="text-[13px] ${aktif ? 'font-semibold text-white' : 'text-white/45'}">${t}</span>
-          ${i < 3 ? '<span class="mx-1 text-white/20">›</span>' : ''}
-        </div>`;
-      }).join('')}
-    </div>
+    ${penunjukLangkah()}
 
     ${GALAT ? `<div class="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] leading-relaxed text-rose-200">${aman(GALAT)}</div>` : ''}
     ${KABAR ? `<div class="mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-5 py-4 text-[13px] leading-relaxed text-emerald-200">${aman(KABAR)}</div>` : ''}
@@ -893,6 +1061,7 @@ function render() {
   else if (LANGKAH === 'baca')    isi.innerHTML = viewBaca();
   else                            isi.innerHTML = viewPeriksa();
 
+  pasangPenunjuk();
   if (LANGKAH === 'identitas') pasangIdentitas();
   if (LANGKAH === 'tempel')    pasangTempel();
   if (LANGKAH === 'periksa')   pasangPeriksa();
@@ -1505,7 +1674,7 @@ function pasangPeriksa() {
 /* ═══════════════════════════════════════════════════════════════
    6b. MENU ARSIP — daftar berita acara seluruh petugas
    ═══════════════════════════════════════════════════════════════ */
-function kartuArsip(r) {
+function kartuArsip(r, pfid) {
   const foto = r.jumlahFoto || 0;
   return `
   <div class="glass rounded-3xl p-5 md:p-6">
@@ -1521,9 +1690,11 @@ function kartuArsip(r) {
         </p>
       </div>
       <div class="flex flex-wrap gap-2">
+        <button data-pratinjau="${aman(r.id)}" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">Lihat dokumen</button>
+        ${pfid ? `
         <button data-buka="${aman(r.id)}" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">Buka &amp; edit</button>
         <button data-unduh="${aman(r.id)}" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">Unduh Word</button>
-        <button data-hapus-arsip="${aman(r.id)}" class="rounded-full border border-white/12 px-3 py-1.5 text-[12px] text-white/45 transition hover:border-rose-400/40 hover:text-rose-300">Hapus</button>
+        <button data-hapus-arsip="${aman(r.id)}" class="rounded-full border border-white/12 px-3 py-1.5 text-[12px] text-white/45 transition hover:border-rose-400/40 hover:text-rose-300">Hapus</button>` : ''}
       </div>
     </div>
   </div>`;
@@ -1532,19 +1703,22 @@ function kartuArsip(r) {
 function renderArsip() {
   const wadah = el('#view-arsip');
   if (!wadah) return;
-  if (!akunPfid(ME)) { wadah.innerHTML = ''; return; }
+  if (!ME) { wadah.innerHTML = ''; return; }
 
+  /* Petugas PFID menyusun dan mengubah; pemda hanya membaca dokumen daerahnya. */
+  const pfid = akunPfid(ME);
   const cari = ARSIP_CARI.trim().toLowerCase();
   const daftar = cari
     ? ARSIP.filter(r => (r.daerah + ' ' + (r.penyusun || '') + ' ' + (r.tanggalTeks || '')).toLowerCase().includes(cari))
     : ARSIP;
 
   wadah.innerHTML = `
-    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Petugas PFID</p>
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">${pfid ? 'Petugas PFID' : 'Pemerintah daerah'}</p>
     <h1 class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[40px]">Arsip berita acara</h1>
     <p class="mt-3 max-w-[640px] text-[15px] text-white/65">
-      Setiap berita acara yang selesai dibaca AI tersimpan di sini dan terlihat oleh semua petugas.
-      Membukanya kembali tidak memanggil AI lagi, jadi tidak ada token yang terpakai untuk perbaikan.
+      ${pfid
+        ? 'Setiap berita acara yang selesai dibaca AI tersimpan di sini dan terlihat oleh semua petugas. Membukanya kembali tidak memanggil AI lagi, jadi tidak ada token yang terpakai untuk perbaikan.'
+        : 'Notulensi rapat pemantauan dan evaluasi DAK Fisik Sub Bidang Jalan untuk ' + aman(ME.kab) + '. Dokumennya dapat dibaca di sini; perubahan isi dilakukan oleh petugas PFID.'}
     </p>
 
     <div class="mt-8 flex flex-wrap items-center gap-3">
@@ -1553,16 +1727,19 @@ function renderArsip() {
         <input id="baArsipCari" value="${aman(ARSIP_CARI)}" placeholder="Cari daerah, tanggal, atau penyusun" class="w-56 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
       </div>
       <button id="baArsipMuat" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Muat ulang</button>
-      <button id="baArsipBaru" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Buat berita acara baru</button>
+      ${pfid ? '<button id="baArsipBaru" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Buat berita acara baru</button>' : ''}
     </div>
 
     ${ARSIP_GALAT ? `<div class="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] text-rose-200">${aman(ARSIP_GALAT)}</div>` : ''}
 
     <div class="mt-7 space-y-4">
-      ${daftar.length ? daftar.map(kartuArsip).join('') : `
+      ${daftar.length ? daftar.map(r => kartuArsip(r, pfid)).join('') : `
         <div class="glass rounded-3xl px-6 py-14 text-center">
-          <p class="text-[15px] font-medium text-white/75">${ARSIP.length ? 'Tidak ada yang cocok dengan pencarian itu.' : 'Arsip masih kosong.'}</p>
-          <p class="mt-2 text-[13px] text-white/45">${ARSIP.length ? 'Coba kata kunci lain.' : 'Berita acara tersimpan sendiri begitu AI selesai membaca screenshot.'}</p>
+          <p class="text-[15px] font-medium text-white/75">${ARSIP.length ? 'Tidak ada yang cocok dengan pencarian itu.'
+            : pfid ? 'Arsip masih kosong.' : 'Belum ada berita acara untuk ' + aman(ME.kab) + '.'}</p>
+          <p class="mt-2 text-[13px] text-white/45">${ARSIP.length ? 'Coba kata kunci lain.'
+            : pfid ? 'Berita acara tersimpan sendiri begitu AI selesai membaca screenshot.'
+                   : 'Dokumennya muncul di sini setelah petugas PFID menyusun notulensi rapat daerah Anda.'}</p>
         </div>`}
     </div>`;
 
@@ -1580,10 +1757,15 @@ function renderArsip() {
     await window.BA.renderArsip();
   };
 
-  el('#baArsipBaru').onclick = () => {
+  if (el('#baArsipBaru')) el('#baArsipBaru').onclick = () => {
     window.BA.reset();
     go('berita');
   };
+
+  els('#view-arsip [data-pratinjau]').forEach(t => t.onclick = () => {
+    const r = ARSIP.find(x => x.id === t.dataset.pratinjau) || {};
+    pratinjauArsip(t.dataset.pratinjau, (r.daerah || '') + ' · ' + (r.tanggalTeks || ''));
+  });
 
   els('#view-arsip [data-buka]').forEach(t => t.onclick = async () => {
     t.disabled = true; t.textContent = 'Membuka…';
@@ -1632,12 +1814,13 @@ function renderArsip() {
 window.BA = {
   akunPfid,
 
-  /** Tampilkan tombol menu hanya untuk akun PFID. */
+  /** Menu penyusunan hanya untuk petugas PFID; arsip terbuka juga bagi pemda,
+      isinya dibatasi ke daerah masing-masing. */
   syncNav() {
-    ['berita', 'arsip'].forEach(nama => {
-      const b = el(`[data-nav="${nama}"]`);
-      if (b) b.classList.toggle('hidden', !akunPfid(ME));
-    });
+    const b = el('[data-nav="berita"]');
+    if (b) b.classList.toggle('hidden', !akunPfid(ME));
+    const a = el('[data-nav="arsip"]');
+    if (a) a.classList.toggle('hidden', !ME);
   },
 
   /** Dipanggil router saat berpindah ke tampilan berita acara. */
@@ -1649,7 +1832,7 @@ window.BA = {
 
   /** Dipanggil router saat berpindah ke menu arsip. */
   async renderArsip() {
-    if (!akunPfid(ME)) return;
+    if (!ME) return;
     if (!ARSIP_DIMUAT) {
       renderArsip();          // tampilkan kerangkanya dulu supaya tidak kosong
       try {

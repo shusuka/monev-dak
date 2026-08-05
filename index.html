@@ -866,6 +866,9 @@ const store = {
       const { doc, setDoc, serverTimestamp } = this.fs;
       await setDoc(doc(this.db, 'peserta', p.pid), {
         nama: p.nama, prov: p.prov, kab: p.kab, email: p.email || '',
+        /* Kunci daerah dipakai firestore.rules untuk menentukan berita acara
+           mana yang boleh dibaca pemda ini. Lihat assets/berita-acara.js. */
+        kunciKab: slug(p.kab || ''),
         uid: this.uid, updatedAt: serverTimestamp()
       }, { merge: true });
     } else {
@@ -913,7 +916,11 @@ const store = {
     if (this.mode !== 'firebase') return this.masukLokal(email);
     const cred = await this.authMod.signInWithEmailAndPassword(this.auth, email, pass);
     this.user = cred.user; this.uid = cred.user.uid; this.cacheHasil = null;
-    return await this.profilSaya();
+    const p = await this.profilSaya();
+    /* Akun lama belum punya kunciKab; dilengkapi diam-diam saat masuk supaya
+       arsip berita acara daerahnya langsung terbaca. */
+    if (p && !p.kunciKab) { try { await this.simpanPeserta(p); } catch (e) { console.warn(e); } }
+    return p;
   },
 
   /** Identitas peserta yang sedang masuk, dibaca dari koleksi `peserta`. */
@@ -928,7 +935,7 @@ const store = {
     const x = d.data();
     return {
       pid: this.uid, uid: this.uid,
-      nama: x.nama, prov: x.prov, kab: x.kab,
+      nama: x.nama, prov: x.prov, kab: x.kab, kunciKab: x.kunciKab || '',
       email: x.email || (this.user && this.user.email) || ''
     };
   },
@@ -1092,7 +1099,8 @@ const pfid = () => !!(window.BA && window.BA.akunPfid(ME));
 
 async function go(view) {
   if (APP_VIEWS.includes(view) && !ME) view = 'login';
-  if ((view === 'berita' || view === 'arsip') && !pfid()) view = 'dashboard';
+  /* Menu arsip terbuka untuk semua akun; isinya yang dibatasi per daerah. */
+  if (view === 'berita' && !pfid()) view = 'dashboard';
   if (ADMIN_VIEWS.includes(view) && !ADMIN) view = 'adminlogin';
 
   $$('[data-view]').forEach(v => v.classList.add('hidden'));
