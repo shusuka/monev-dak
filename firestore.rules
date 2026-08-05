@@ -42,10 +42,25 @@ service cloud.firestore {
     // Petugas PFID: user id-nya (bagian email sebelum @) memuat kata "jalan",
     // misalnya ahmadjalan@... atau yolan_jalan@... Mereka penyusun berita acara
     // eMonitoring, bukan peserta yang dinilai.
-    function isPfid() {
+    function idPfid() {
       return request.auth != null
         && request.auth.token.email != null
         && request.auth.token.email.lower().matches('^[^@]*jalan[^@]*@.*');
+    }
+
+    // Sebagian petugas mendaftar dengan alamat kantor yang tidak memuat
+    // "jalan", padahal namanya memuat. Aplikasi sudah menampilkan menunya
+    // berdasarkan nama, jadi aturan ini mengikutinya: nama pada profil ikut
+    // diperiksa supaya kunci API yang sama terpakai oleh mereka juga.
+    function namaPfid() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/peserta/$(request.auth.uid))
+        && get(/databases/$(database)/documents/peserta/$(request.auth.uid))
+             .data.nama.lower().matches('.*jalan.*');
+    }
+
+    function isPfid() {
+      return idPfid() || namaPfid();
     }
 
     match /peserta/{uid} {

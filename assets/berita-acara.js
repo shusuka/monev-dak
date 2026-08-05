@@ -72,12 +72,12 @@ const bentukAi = () => (PENYEDIA[AI.penyedia] || PENYEDIA.openai).bentuk;
    Gateway pihak ketiga dibiarkan 16.000 karena gpt-4o menolak lebih dari itu. */
 const maksKeluaran = () => (PENYEDIA[AI.penyedia] || PENYEDIA.openai).maksKeluaran || 16000;
 
-/* Pasangan notulis yang boleh dipilih (bagian ungu pada format). */
+/* Pasangan notulis yang boleh dipilih. Kolomnya tetap bisa diketik manual
+   bila susunan pasangannya berbeda pada rapat tertentu. */
 const PASANGAN_NOTULIS = [
-  ['Frandi Sahabat',   'Dyah Nurnaningtyas'],
-  ['Brigitta Yolanda', 'Roby Hidayat'],
-  ['Akram',            'Yusuf'],
-  ['Sinta',            'Yusrel']
+  ['Akram Yonda Putra', 'Amiruddin Yusuf'],
+  ['Sinta Nur Indah',   'Yusrel Ikhsan Wibawa'],
+  ['Robby Hidayat',     'Brigitta Yolanda']
 ];
 
 /* Tiga slot foto pada halaman dokumentasi. Ukurannya diambil dari template
@@ -197,6 +197,8 @@ let FOTO    = [];                // { berkas, url, urlAi }
 let MODEL   = [];                // daftar model yang boleh dipakai kunci ini
 let AI      = { penyedia: 'gemini', baseUrl: PENYEDIA.gemini.baseUrl, model: PENYEDIA.gemini.model, apiKey: '' };
 let AI_DARI = 'lokal';           // 'bersama' bila kunci datang dari Firestore
+let AI_OLEH = '';                // petugas yang terakhir menyimpan kunci bersama
+let AI_GALAT = '';               // sebab kunci bersama gagal terbaca, bila ada
 
 const kosongUmum = () => {
   const o = { namaRuas: '' };
@@ -242,7 +244,14 @@ const LS_AI = 'monevdak_ai';
    OpenAI-kompatibel. Jangan diam-diam dipindah ke penyedia lain. */
 const rapikanKonfig = x => ({ ...x, penyedia: PENYEDIA[x.penyedia] ? x.penyedia : 'openai' });
 
-async function muatKonfigAi() {
+let konfigDicoba = false;   // kunci bersama cukup diambil sekali per sesi
+
+/** Kunci bersama selalu diutamakan: satu orang mengisinya, semua petugas
+    yang namanya memuat "jalan" langsung memakainya tanpa mengisi ulang. */
+async function muatKonfigAi(paksa) {
+  if (konfigDicoba && !paksa) return;
+  konfigDicoba = true;
+
   try {
     const lokal = JSON.parse(localStorage.getItem(LS_AI) || '{}');
     if (lokal.apiKey || lokal.baseUrl) AI = { ...AI, ...rapikanKonfig(lokal) };
@@ -254,10 +263,18 @@ async function muatKonfigAi() {
     const d = await getDocFromServer(doc(store.db, 'konfigurasi', 'ai'));
     if (d.exists()) {
       const x = d.data();
-      if (x.apiKey) { AI = { ...AI, ...rapikanKonfig(x) }; AI_DARI = 'bersama'; }
+      if (x.apiKey) {
+        AI = { ...AI, ...rapikanKonfig(x) };
+        AI_DARI = 'bersama';
+        AI_OLEH = String(x.diperbaruiOleh || '');
+        /* Supaya tetap ada bila lain kali dibuka tanpa jaringan. */
+        localStorage.setItem(LS_AI, JSON.stringify(AI));
+      }
     }
   } catch (e) {
     console.warn('[MonevDAK] konfigurasi AI bersama belum terbaca:', e);
+    AI_GALAT = 'Kunci bersama tidak terbaca dari server (' + (e.code || e.message) + '). '
+             + 'Isi kunci di bawah, atau minta admin memperbarui aturan Firestore.';
   }
 }
 
@@ -270,6 +287,8 @@ async function simpanKonfigAi() {
     diperbaruiOleh: (ME && ME.nama) || '', diperbaruiAt: serverTimestamp()
   });
   AI_DARI = 'bersama';
+  AI_OLEH = (ME && ME.nama) || '';
+  AI_GALAT = '';
   return true;
 }
 
@@ -571,6 +590,20 @@ async function bingkaiFoto(dataUrl, rasio) {
   return new Uint8Array(await blob.arrayBuffer());
 }
 
+/** Nama daerah, dibersihkan dari karakter yang tidak boleh ada di nama berkas.
+    Kalau kolom daerah dikosongkan, pilihan kabupaten/kota yang dipakai. */
+function daerahBersih() {
+  const asal = (D.daerah || D._kab || '').replace(/[\\/:*?"<>|]/g, ' ');
+  return asal.replace(/\s+/g, ' ').trim();
+}
+
+/** Berkas Word diberi nama daerahnya, supaya berkas dari banyak daerah
+    tidak saling tertimpa di folder unduhan. */
+function namaBerkas() {
+  const daerah = daerahBersih();
+  return (daerah ? daerah + ' - ' : '') + 'Notulensi Rakor PE DAK Jalan TA 2026 TW II.docx';
+}
+
 function dataTemplate() {
   const tgl = tanggalIndo(D.tanggalIso);
   return {
@@ -581,7 +614,7 @@ function dataTemplate() {
     progres: D.progres,
     emon: D.emon,
     infoUmum: D.infoUmum,
-    catatan: D.catatan,
+    catatan: D.catatan.filter(Boolean),
     fisikRata: D.fisikRata,
     keuanganRata: D.keuanganRata,
     evaluasiPoin: D.evaluasiPoin,
@@ -589,6 +622,10 @@ function dataTemplate() {
     tindakLanjut: D.tindakLanjut,
     kesimpulan: D.kesimpulan,
     butir: D.butir.filter(Boolean),
+    /* Bagian yang kosong dibuang seluruhnya — judul tanpa isi membuat
+       susunan paragraf dokumen terlihat berantakan. */
+    adaCatatan: D.catatan.filter(Boolean).length > 0,
+    adaTindakLanjut: D.tindakLanjut.length > 0,
     adaFoto1: FOTO.length > 0,
     adaFoto2: FOTO.length > 1,
     adaFoto3: FOTO.length > 2
@@ -623,8 +660,7 @@ async function buatWord() {
     compression: 'DEFLATE'
   });
 
-  const daerah = (D.daerah || 'Daerah').replace(/[\\/:*?"<>|]/g, '').trim();
-  const nama = `Notulensi Rakor PE DAK Jalan TA 2026 TW II - ${daerah}.docx`;
+  const nama = namaBerkas();
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = nama;
@@ -806,9 +842,11 @@ function viewTempel() {
       <h3 class="text-[14px] font-semibold">Penyedia AI</h3>
       <p class="mt-1 text-[12px] text-white/45">
         ${bersama
-          ? 'Kunci ini tersimpan bersama — semua petugas PFID memakai kunci yang sama.'
+          ? 'Kunci ini tersimpan bersama — semua petugas yang namanya memuat “jalan” memakai kunci yang sama'
+            + (AI_OLEH ? ', terakhir disimpan oleh ' + aman(AI_OLEH) : '') + '.'
           : 'Kunci belum tersimpan bersama. Simpan sekali supaya petugas PFID lain tidak perlu mengisinya lagi.'}
       </p>
+      ${AI_GALAT ? `<p class="mt-2 text-[12px] text-amber-300/80">${aman(AI_GALAT)}</p>` : ''}
 
       <div class="mt-4 grid gap-2 sm:grid-cols-2">
         ${Object.entries(PENYEDIA).map(([k, p]) => {
@@ -1287,13 +1325,15 @@ window.BA = {
   /** Dipanggil router saat berpindah ke tampilan berita acara. */
   async render() {
     if (!akunPfid(ME)) return;
-    if (!AI.apiKey) await muatKonfigAi();
+    await muatKonfigAi();
     render();
   },
 
-  /** Formulir dikosongkan saat berganti akun. */
+  /** Formulir dikosongkan saat berganti akun; kunci bersama diambil lagi
+      supaya akun berikutnya tidak memakai sisa kunci akun sebelumnya. */
   reset() {
     D = kosong(); FOTO = []; LANGKAH = 'identitas'; GALAT = ''; KABAR = '';
+    konfigDicoba = false; AI_GALAT = '';
   }
 };
 
