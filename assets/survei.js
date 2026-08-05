@@ -585,6 +585,11 @@ function renderAdminSurvei() {
   const wadah = el('#adSurvei');
   if (!wadah) return;
 
+  /* Jumlah responden ikut tercetak di tabnya, supaya admin tahu ada isinya
+     tanpa perlu membuka tab itu dulu. */
+  const jml = el('#adTabSurveiJml');
+  if (jml) jml.textContent = REKAP.length ? ' · ' + REKAP.length : '';
+
   const rata = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length * 10) / 10 : null;
   const ikmSemua = rata(REKAP.map(r => r.indeks).filter(n => typeof n === 'number'));
   const skorPetugas = rata(REKAP.flatMap(r => [Number((r.jawaban || {}).skorWilayah), Number((r.jawaban || {}).skorVerifikator)].filter(n => n >= 1)));

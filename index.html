@@ -39,6 +39,32 @@
   .anim-fade { opacity: 0; animation: fadeIn .9s ease forwards; }
   .pin-shadow { filter: drop-shadow(0 8px 22px rgba(0,0,0,.55)); }
 
+  /* ---------- tab menu berwarna ----------
+     Tiap menu punya warnanya sendiri lewat --tab, jadi pengguna mengenali
+     tujuannya dari warna, bukan cuma membaca tulisannya. Warnanya ditulis
+     sebagai variabel CSS supaya tidak bergantung pada kelas Tailwind yang
+     dibentuk saat berjalan. */
+  /* display dipasang lewat :not(.hidden) supaya kelas `hidden` milik Tailwind
+     tetap berlaku untuk menu yang disembunyikan menurut peran akun */
+  .tabnav:not(.hidden) { display: inline-flex; }
+  .tabnav {
+    align-items: center; gap: .5rem;
+    white-space: nowrap; border-radius: 9999px; padding: .5rem 1rem;
+    font-weight: 500; color: rgb(var(--tab) / .8);
+    transition: background-color .2s ease, color .2s ease, box-shadow .25s ease;
+  }
+  .tabnav:hover { background: rgb(var(--tab) / .14); color: rgb(var(--tab)); }
+  .tabnav .tabdot {
+    height: .45rem; width: .45rem; border-radius: 9999px;
+    background: rgb(var(--tab)); opacity: .8;
+    transition: transform .2s ease, opacity .2s ease;
+  }
+  .tabnav.on {
+    background: rgb(var(--tab)); color: #07080a; font-weight: 600;
+    box-shadow: 0 8px 24px rgb(var(--tab) / .35);
+  }
+  .tabnav.on .tabdot { background: #07080a; opacity: .85; transform: scale(1.15); }
+
   /* ---------- CTA glow ---------- */
   .cta-glow { transition: box-shadow .35s ease, transform .35s ease; }
   .cta-glow:hover { box-shadow: 0 0 0 1px rgba(255,255,255,.7), 0 0 28px rgba(255,255,255,.55), 0 0 70px rgba(255,255,255,.28); transform: translateY(-1px); }
@@ -519,8 +545,15 @@
 
   <section id="view-admin" data-view class="mx-auto max-w-[1400px] px-5 py-10 md:px-10 md:py-12">
     <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Rekapitulasi · Triwulan II</p>
-    <h1 class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[38px]">Progres pengisian seluruh pemda</h1>
+    <h1 id="adJudul" class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[38px]">Progres pengisian seluruh pemda</h1>
 
+    <!-- dua kelompok hasil, dipilih dari tab di atas -->
+    <div class="mt-7 flex flex-wrap gap-2">
+      <button data-atab="test"   onclick="setTabAdmin('test')"   style="--tab:56 189 248"  class="tabnav on text-[13px]"><span class="tabdot"></span>Hasil Pre &amp; Post Test</button>
+      <button data-atab="survei" onclick="setTabAdmin('survei')" style="--tab:232 121 249" class="tabnav text-[13px]"><span class="tabdot"></span>Survei Kepuasan Pemda<span id="adTabSurveiJml" class="opacity-70"></span></button>
+    </div>
+
+    <div id="adPanelTest">
     <div id="adNotice" class="mt-6 hidden"></div>
     <div id="adStats" class="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"></div>
 
@@ -556,13 +589,15 @@
 
     <div id="adTable" class="glass mt-6 overflow-hidden rounded-3xl"></div>
 
-    <h2 class="mt-14 text-[20px] font-semibold tracking-[-0.01em]">Survei kepuasan pemerintah daerah</h2>
-    <p class="mt-2 max-w-[720px] text-[14px] leading-[1.7] text-white/60">Penilaian pemda atas pelayanan Rapat Koordinasi TW II, diisi langsung di aplikasi. Indeks kepuasan dihitung dari tujuh unsur pelayanan (nilai rata-rata × 25) mengikuti cara hitung IKM.</p>
-    <div id="adSurvei" class="mt-6"></div>
-
     <h2 class="mt-14 text-[20px] font-semibold tracking-[-0.01em]">Analisis butir soal</h2>
     <p class="mt-2 max-w-[640px] text-[14px] leading-[1.7] text-white/60">Persentase jawaban benar tiap butir, dihitung dari seluruh sesi yang tersimpan. Butir dengan persentase rendah menandakan materi yang perlu diperkuat saat pendampingan.</p>
     <div id="adSoal" class="glass mt-6 overflow-hidden rounded-3xl"></div>
+    </div><!-- /adPanelTest -->
+
+    <div id="adPanelSurvei" class="hidden">
+      <p class="mt-7 max-w-[720px] text-[14px] leading-[1.7] text-white/60">Penilaian pemda atas pelayanan Rapat Koordinasi TW II, diisi langsung di aplikasi. Indeks kepuasan dihitung dari tujuh unsur pelayanan (nilai rata-rata × 25) mengikuti cara hitung IKM.</p>
+      <div id="adSurvei" class="mt-7"></div>
+    </div>
   </section>
 
   <!-- panel detail jawaban -->
@@ -601,12 +636,12 @@
       </button>
 
       <nav class="no-scrollbar ml-2 flex flex-1 items-center gap-1 overflow-x-auto text-[13px] font-medium">
-        <button data-nav="dashboard" onclick="go('dashboard')" class="whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Dashboard</button>
-        <button data-nav="rank"      onclick="go('rank')"      class="whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Peringkat</button>
-        <button data-nav="compare"   onclick="go('compare')"   class="whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Perbandingan</button>
-        <button data-nav="berita"    onclick="go('berita')"    class="hidden whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Berita Acara eMonitoring</button>
-        <button data-nav="arsip"     onclick="go('arsip')"     class="hidden whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Arsip Berita Acara</button>
-        <button data-nav="survei"    onclick="go('survei')"    class="hidden whitespace-nowrap rounded-full px-4 py-2 text-white/70 transition hover:bg-white/10 hover:text-white">Survei Kepuasan</button>
+        <button data-nav="dashboard" onclick="go('dashboard')" style="--tab:56 189 248"  class="tabnav"><span class="tabdot"></span>Dashboard</button>
+        <button data-nav="rank"      onclick="go('rank')"      style="--tab:251 191 36"  class="tabnav"><span class="tabdot"></span>Peringkat</button>
+        <button data-nav="compare"   onclick="go('compare')"   style="--tab:167 139 250" class="tabnav"><span class="tabdot"></span>Perbandingan</button>
+        <button data-nav="berita"    onclick="go('berita')"    style="--tab:251 113 133" class="tabnav hidden"><span class="tabdot"></span>Berita Acara eMonitoring</button>
+        <button data-nav="arsip"     onclick="go('arsip')"     style="--tab:52 211 153"  class="tabnav hidden"><span class="tabdot"></span>Arsip Berita Acara</button>
+        <button data-nav="survei"    onclick="go('survei')"    style="--tab:232 121 249" class="tabnav hidden"><span class="tabdot"></span>Survei Kepuasan</button>
       </nav>
 
       <div class="flex items-center gap-3">
@@ -1128,7 +1163,10 @@ async function go(view) {
 
   $$('[data-nav]').forEach(b => {
     const on = b.dataset.nav === view;
-    b.classList.toggle('bg-white', on); b.classList.toggle('text-black', on); b.classList.toggle('text-white/70', !on);
+    b.classList.toggle('on', on);
+    /* Di layar sempit deretan menu bisa digulir; menu yang sedang dibuka
+       ditarik ke tengah supaya tidak tersembunyi di luar layar. */
+    if (on && b.scrollIntoView) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
   });
 
   window.scrollTo({ top: 0 });
@@ -2123,6 +2161,18 @@ async function keluarAdmin() {
   $('#adEmail').value = ''; $('#adPass').value = '';
   try { await store.keluarAkun(); } catch (e) { console.warn(e); }
   go('landing');
+}
+
+/* Dua kelompok hasil di panel admin: nilai pre/post test dan survei kepuasan.
+   Keduanya di atas, tinggal ditukar lewat tab, tidak perlu digulir jauh. */
+function setTabAdmin(tab) {
+  $$('[data-atab]').forEach(b => b.classList.toggle('on', b.dataset.atab === tab));
+  $('#adPanelTest').classList.toggle('hidden', tab !== 'test');
+  $('#adPanelSurvei').classList.toggle('hidden', tab !== 'survei');
+  $('#adJudul').textContent = tab === 'survei'
+    ? 'Hasil survei kepuasan pemda'
+    : 'Progres pengisian seluruh pemda';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 async function muatAdmin(paksa) {
