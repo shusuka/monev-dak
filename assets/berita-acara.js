@@ -786,6 +786,7 @@ async function simpanArsip(diam) {
     await Promise.all(lama.docs.map(d => deleteDoc(d.ref)));
     await Promise.all(foto.map((url, i) =>
       setDoc(doc(store.db, 'beritaAcara', id, 'foto', String(i)), { url })));
+    await tulisIndeks(id, { ...ringkas, jumlahFoto: foto.length });
   } else {
     const semua = bacaLokal();
     semua[id] = { ...ringkas, jumlahFoto: foto.length, data: D, foto, diperbaruiAt: Date.now() };
@@ -804,21 +805,79 @@ async function simpanArsip(diam) {
 
 const waktuAngka = t => (t && typeof t.toMillis === 'function') ? t.toMillis() : Number(t || 0);
 
+/* ── indeks per daerah ──────────────────────────────────────────
+   Pemda tidak boleh menelusuri seluruh koleksi `beritaAcara`, dan kueri
+   bersyarat pun ditolak Firestore karena aturannya bergantung pada isi
+   dokumen. Jadi tiap daerah punya satu dokumen indeks yang isinya ringkasan
+   berita acara daerah itu saja: pemda cukup MEMBACA SATU dokumen yang nama
+   dokumennya sama dengan kunci daerahnya sendiri — tidak ada penelusuran
+   koleksi sama sekali, sehingga izinnya jelas dan tidak bisa bocor. */
+const ringkasIndeks = (id, r) => ({
+  id,
+  daerah: r.daerah, tanggalIso: r.tanggalIso, tanggalTeks: r.tanggalTeks,
+  notulis1: r.notulis1, notulis2: r.notulis2, penyusun: r.penyusun,
+  jumlahRuas: r.jumlahRuas || 0, jumlahFoto: r.jumlahFoto || 0,
+  diperbaruiAt: Date.now()
+});
+
+async function tulisIndeks(id, ringkas) {
+  const kunci = ringkas.kunciDaerah || kunciDaerah(ringkas.daerah);
+  if (!kunci) return;
+  const { doc, setDoc } = store.fs;
+  try {
+    await setDoc(doc(store.db, 'indeksDaerah', kunci),
+      { daftar: { [id]: ringkasIndeks(id, ringkas) } }, { merge: true });
+  } catch (e) {
+    /* Berita acaranya sudah tersimpan; yang gagal hanya daftar untuk pemda. */
+    console.warn('[MonevDAK] indeks daerah tidak tersimpan:', e);
+    ARSIP_STATUS = 'Tersimpan, tetapi daftar untuk pemda belum diperbarui ('
+                 + (e.code || e.message) + ').';
+  }
+}
+
+async function hapusIndeks(id, kunci) {
+  if (!kunci) return;
+  const { doc, updateDoc, deleteField } = store.fs;
+  try {
+    await updateDoc(doc(store.db, 'indeksDaerah', kunci), { ['daftar.' + id]: deleteField() });
+  } catch (e) {
+    console.warn('[MonevDAK] indeks daerah tidak dibersihkan:', e);
+  }
+}
+
+/** Susun ulang seluruh indeks daerah dari arsip yang ada, sekaligus mengisi
+    kunciDaerah pada berita acara lama yang disimpan sebelum fitur ini ada. */
+async function perbaikiIndeks() {
+  if (!pakaiFirebase()) return 0;
+  const { doc, setDoc } = store.fs;
+  let jumlah = 0;
+  for (const r of ARSIP) {
+    const kunci = r.kunciDaerah || kunciDaerah(r.daerah);
+    if (!kunci) continue;
+    if (!r.kunciDaerah) await setDoc(doc(store.db, 'beritaAcara', r.id), { kunciDaerah: kunci }, { merge: true });
+    await setDoc(doc(store.db, 'indeksDaerah', kunci),
+      { daftar: { [r.id]: ringkasIndeks(r.id, { ...r, kunciDaerah: kunci }) } }, { merge: true });
+    jumlah++;
+  }
+  return jumlah;
+}
+
 async function muatArsip() {
   ARSIP_GALAT = '';
   const pfid = akunPfid(ME);
   const kunci = kunciSaya();
 
-  if (pakaiFirebase()) {
-    const { collection, getDocs, query, orderBy, where } = store.fs;
-    /* Pemda hanya boleh menarik berita acara daerahnya sendiri: kalau
-       kuerinya lebih luas dari izinnya, Firestore menolak seluruh kueri.
-       Pengurutan dilakukan di peramban supaya tidak perlu indeks gabungan. */
-    const q = pfid
-      ? query(collection(store.db, 'beritaAcara'), orderBy('diperbaruiAt', 'desc'))
-      : query(collection(store.db, 'beritaAcara'), where('kunciDaerah', '==', kunci));
-    const snap = await getDocs(q);
+  if (pakaiFirebase() && pfid) {
+    const { collection, getDocs, query, orderBy } = store.fs;
+    const snap = await getDocs(query(collection(store.db, 'beritaAcara'), orderBy('diperbaruiAt', 'desc')));
     ARSIP = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } else if (pakaiFirebase()) {
+    /* Pemda: satu dokumen indeks daerahnya sendiri, bukan penelusuran koleksi. */
+    if (!kunci) throw new Error('Profil Anda belum mencantumkan kabupaten/kota.');
+    const { doc, getDoc } = store.fs;
+    const d = await getDoc(doc(store.db, 'indeksDaerah', kunci));
+    const daftar = (d.exists() && d.data().daftar) || {};
+    ARSIP = Object.entries(daftar).map(([id, x]) => ({ ...x, id }));
   } else {
     ARSIP = Object.entries(bacaLokal())
       .map(([id, x]) => ({ id, ...x }))
@@ -859,9 +918,11 @@ async function bukaArsip(id) {
 async function hapusArsip(id) {
   if (pakaiFirebase()) {
     const { doc, deleteDoc, collection, getDocs } = store.fs;
+    const r = ARSIP.find(x => x.id === id) || {};
     const snap = await getDocs(collection(store.db, 'beritaAcara', id, 'foto'));
     await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
     await deleteDoc(doc(store.db, 'beritaAcara', id));
+    await hapusIndeks(id, r.kunciDaerah || kunciDaerah(r.daerah));
   } else {
     const semua = bacaLokal();
     delete semua[id];
@@ -1727,7 +1788,8 @@ function renderArsip() {
         <input id="baArsipCari" value="${aman(ARSIP_CARI)}" placeholder="Cari daerah, tanggal, atau penyusun" class="w-56 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
       </div>
       <button id="baArsipMuat" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Muat ulang</button>
-      ${pfid ? '<button id="baArsipBaru" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Buat berita acara baru</button>' : ''}
+      ${pfid ? `<button id="baArsipBaru" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Buat berita acara baru</button>
+      <button id="baArsipIndeks" title="Susun ulang daftar yang dilihat pemda, termasuk berita acara lama" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Perbarui daftar pemda</button>` : ''}
     </div>
 
     ${ARSIP_GALAT ? `<div class="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] text-rose-200">${aman(ARSIP_GALAT)}</div>` : ''}
@@ -1760,6 +1822,18 @@ function renderArsip() {
   if (el('#baArsipBaru')) el('#baArsipBaru').onclick = () => {
     window.BA.reset();
     go('berita');
+  };
+
+  if (el('#baArsipIndeks')) el('#baArsipIndeks').onclick = async () => {
+    const t = el('#baArsipIndeks');
+    t.disabled = true; t.textContent = 'Menyusun…';
+    try {
+      const n = await perbaikiIndeks();
+      toast(n + ' berita acara masuk daftar pemda.');
+    } catch (e) {
+      ARSIP_GALAT = 'Daftar pemda gagal disusun: ' + (e.code || e.message);
+    }
+    renderArsip();
   };
 
   els('#view-arsip [data-pratinjau]').forEach(t => t.onclick = () => {
@@ -1841,8 +1915,11 @@ window.BA = {
         console.warn('[MonevDAK] arsip gagal dibaca:', e);
         ARSIP = [];
         ARSIP_DIMUAT = true;
-        ARSIP_GALAT = 'Arsip tidak terbaca (' + (e.code || e.message)
-                    + '). Pastikan aturan Firestore untuk koleksi beritaAcara sudah dipasang.';
+        ARSIP_GALAT = akunPfid(ME)
+          ? 'Arsip tidak terbaca (' + (e.code || e.message)
+            + '). Aturan Firestore untuk koleksi beritaAcara belum terpasang di Firebase Console.'
+          : 'Arsip tidak terbaca (' + (e.code || e.message)
+            + '). Dua sebab yang mungkin: aturan Firestore terbaru belum dipasang, atau profil Anda belum memuat kunci daerah — keluar lalu masuk lagi untuk melengkapinya.';
       }
     }
     renderArsip();

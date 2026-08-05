@@ -916,11 +916,7 @@ const store = {
     if (this.mode !== 'firebase') return this.masukLokal(email);
     const cred = await this.authMod.signInWithEmailAndPassword(this.auth, email, pass);
     this.user = cred.user; this.uid = cred.user.uid; this.cacheHasil = null;
-    const p = await this.profilSaya();
-    /* Akun lama belum punya kunciKab; dilengkapi diam-diam saat masuk supaya
-       arsip berita acara daerahnya langsung terbaca. */
-    if (p && !p.kunciKab) { try { await this.simpanPeserta(p); } catch (e) { console.warn(e); } }
-    return p;
+    return await this.profilSaya();
   },
 
   /** Identitas peserta yang sedang masuk, dibaca dari koleksi `peserta`. */
@@ -933,11 +929,18 @@ const store = {
     const d = await getDoc(doc(this.db, 'peserta', this.uid));
     if (!d.exists()) return null;
     const x = d.data();
-    return {
+    const p = {
       pid: this.uid, uid: this.uid,
       nama: x.nama, prov: x.prov, kab: x.kab, kunciKab: x.kunciKab || '',
       email: x.email || (this.user && this.user.email) || ''
     };
+    /* Akun lama belum punya kunciKab. Dilengkapi diam-diam — tanpa itu aturan
+       Firestore tidak dapat mencocokkan arsip berita acara dengan daerahnya. */
+    if (!p.kunciKab && p.kab) {
+      p.kunciKab = slug(p.kab);
+      try { await this.simpanPeserta(p); } catch (e) { console.warn('[MonevDAK] kunci daerah gagal disimpan:', e); }
+    }
+    return p;
   },
 
   async keluarAkun() {

@@ -63,19 +63,30 @@ service cloud.firestore {
       return idPfid() || namaPfid();
     }
 
+    function punyaProfil() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/peserta/$(request.auth.uid));
+    }
+
+    function profilSaya() {
+      return get(/databases/$(database)/documents/peserta/$(request.auth.uid)).data;
+    }
+
     // Kunci daerah peserta yang sedang masuk, mis. "magelang" atau
     // "kota-magelang". Diisi aplikasi saat mendaftar dan saat masuk.
     function kunciPeserta() {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/peserta/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/peserta/$(request.auth.uid)).data.get('kunciKab', '')
-        : '';
+      return punyaProfil() ? profilSaya().get('kunciKab', '') : '';
     }
 
-    // Berita acara milik daerah pengguna sendiri. Keduanya harus terisi:
-    // kunci kosong tidak boleh dianggap cocok dengan kunci kosong.
-    function daerahSendiri(kunci) {
-      return kunci is string && kunci != '' && kunci == kunciPeserta();
+    // Berita acara milik daerah pengguna sendiri. Kunci kosong tidak boleh
+    // dianggap cocok dengan kunci kosong. Nama kabupaten/kota ikut
+    // dibandingkan sebagai cadangan, untuk dokumen atau profil lama yang
+    // belum sempat diisi kuncinya.
+    function daerahSendiri(dok) {
+      return punyaProfil() && (
+        (dok.get('kunciDaerah', '') != '' && dok.get('kunciDaerah', '') == kunciPeserta())
+        || (dok.get('kab', '') != '' && dok.get('kab', '').lower() == profilSaya().get('kab', '').lower())
+      );
     }
 
     match /peserta/{uid} {
@@ -132,18 +143,32 @@ service cloud.firestore {
     //
     // Petugas PFID menyusun dan mengubah semuanya. Pemda hanya boleh MEMBACA,
     // dan hanya berita acara daerahnya sendiri — pemda Magelang tidak dapat
-    // menyentuh dokumen Kabupaten Malang. Karena itu aplikasi selalu menyaring
-    // kuerinya dengan where('kunciDaerah','==',...); kueri yang lebih luas
-    // daripada izinnya akan ditolak Firestore seluruhnya.
+    // menyentuh dokumen Kabupaten Malang.
+    //
+    // Pemda TIDAK menelusuri koleksi ini: aturan yang bergantung pada isi
+    // dokumen membuat Firestore menolak penelusuran, sekalipun kuerinya sudah
+    // disaring. Daftar untuk pemda diambil dari /indeksDaerah di bawah, dan
+    // koleksi ini hanya dibuka per dokumen saat dokumennya dibuka.
     match /beritaAcara/{id} {
-      allow read: if isPfid() || isAdmin() || daerahSendiri(resource.data.get('kunciDaerah', ''));
+      allow read: if isPfid() || isAdmin() || daerahSendiri(resource.data);
       allow write: if isPfid() || isAdmin();
 
       match /foto/{nomor} {
         allow read: if isPfid() || isAdmin()
-          || daerahSendiri(get(/databases/$(database)/documents/beritaAcara/$(id)).data.get('kunciDaerah', ''));
+          || daerahSendiri(get(/databases/$(database)/documents/beritaAcara/$(id)).data);
         allow write: if isPfid() || isAdmin();
       }
+    }
+
+    // Daftar berita acara per daerah. Nama dokumennya adalah kunci daerah,
+    // mis. `magelang`, dan isinya hanya ringkasan (daerah, tanggal, penyusun,
+    // jumlah ruas) — tanpa isi notulensi. Pemda membaca SATU dokumen yang
+    // namanya sama dengan kunci daerahnya sendiri, jadi izinnya tidak
+    // bergantung pada isi dokumen dan tidak mungkin bocor ke daerah lain.
+    match /indeksDaerah/{kunci} {
+      allow read: if isPfid() || isAdmin()
+        || (kunci != '' && kunci == kunciPeserta());
+      allow write: if isPfid() || isAdmin();
     }
 
     // tutup koleksi lain
