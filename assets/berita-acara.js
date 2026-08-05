@@ -77,7 +77,7 @@ const maksKeluaran = () => (PENYEDIA[AI.penyedia] || PENYEDIA.openai).maksKeluar
 const PASANGAN_NOTULIS = [
   ['Akram Yonda Putra', 'Amiruddin Yusuf'],
   ['Sinta Nur Indah',   'Yusrel Ikhsan Wibawa'],
-  ['Robby Hidayat',     'Brigitta Yolanda'],
+  ['Brigitta Yolanda',  'Robby Hidayat'],
   ['Frandi Sahabat',    'Dyah Nurnaningtyas']
 ];
 
@@ -1098,6 +1098,7 @@ function pasangPenunjuk() {
 function render() {
   const wadah = el('#view-berita');
   if (!wadah) return;
+  if (jamPesan) { clearInterval(jamPesan); jamPesan = null; }
   if (!akunPfid(ME)) { wadah.innerHTML = ''; return; }
 
   wadah.innerHTML = `
@@ -1125,6 +1126,7 @@ function render() {
   pasangPenunjuk();
   if (LANGKAH === 'identitas') pasangIdentitas();
   if (LANGKAH === 'tempel')    pasangTempel();
+  if (LANGKAH === 'baca')      pasangBaca();
   if (LANGKAH === 'periksa')   pasangPeriksa();
 }
 
@@ -1472,14 +1474,94 @@ function pasangTempel() {
 }
 
 /* ── langkah 3: menunggu AI ─────────────────────────────────── */
+/* Menunggu AI itu membosankan dan kadang sampai satu menit. Robot kecil yang
+   membaca notulensi dengan kaca pembesar membuat jedanya terasa ringan, dan
+   kalimat yang berganti-ganti memperlihatkan pekerjaan masih berjalan. */
+const PESAN_BACA = [
+  'Menyipitkan mata ke tabel progres…',
+  'Menyalin nama ruas satu per satu…',
+  'Menghitung rata-rata fisik dan keuangan…',
+  'Mengintip kelengkapan eMonitoring…',
+  'Mencocokkan lebar perkerasan dan bahu jalan…',
+  'Menghitung koma pada angka rupiah…',
+  'Merapikan tabel supaya tidak miring…',
+  'Menyusun butir kesimpulan…'
+];
+
+let jamPesan = null;
+
 function viewBaca() {
   return `
-  <div class="glass rounded-3xl px-6 py-16 text-center">
-    <div class="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
-    <p class="mt-6 text-[15px] font-medium">Membaca ${FOTO.length} tangkapan layar…</p>
-    <p class="mt-2 text-[13px] text-white/50">${aman(AI.model)} sedang menyalin angka progres, kelengkapan eMonitoring, dan informasi umum kegiatan.</p>
-    <p class="mt-1 text-[12px] text-white/35">Gambar besar bisa memakan waktu sampai satu menit.</p>
+  <style>
+    @keyframes baApung   { 0%,100% { transform: translateY(0) }      50% { transform: translateY(-7px) } }
+    @keyframes baKaca    { 0%,100% { transform: translate(0,0) rotate(-6deg) }
+                           25%     { transform: translate(34px,6px) rotate(4deg) }
+                           50%     { transform: translate(52px,26px) rotate(8deg) }
+                           75%     { transform: translate(14px,32px) rotate(-2deg) } }
+    @keyframes baGaris   { 0%,100% { transform: scaleX(.35) }        50% { transform: scaleX(1) } }
+    @keyframes baKilau   { 0%,100% { opacity: .15; transform: scale(.7) }  50% { opacity: 1; transform: scale(1) } }
+    @keyframes baKedip   { 0%,100% { transform: scaleY(1) }  92% { transform: scaleY(1) }  96% { transform: scaleY(.1) } }
+    @keyframes baTitik   { 0%,80%,100% { opacity: .2; transform: translateY(0) }  40% { opacity: 1; transform: translateY(-4px) } }
+    .ba-apung  { animation: baApung 3.2s ease-in-out infinite }
+    .ba-kaca   { animation: baKaca 5.2s ease-in-out infinite; transform-origin: 50% 50% }
+    .ba-garis  { animation: baGaris 2.4s ease-in-out infinite; transform-origin: left center }
+    .ba-kilau  { animation: baKilau 2s ease-in-out infinite }
+    .ba-mata   { animation: baKedip 4s ease-in-out infinite; transform-origin: center }
+    .ba-titik  { animation: baTitik 1.4s ease-in-out infinite }
+  </style>
+
+  <div class="glass rounded-3xl px-6 py-14 text-center">
+    <div class="ba-apung mx-auto w-[190px]">
+      <svg viewBox="0 0 190 150" class="h-auto w-full" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <!-- kertas notulensi -->
+        <rect x="16" y="16" width="118" height="120" rx="9" fill="rgba(255,255,255,.09)" stroke="rgba(255,255,255,.28)" stroke-width="2"/>
+        <rect x="30" y="32" width="62" height="7" rx="3.5" fill="rgba(255,255,255,.55)"/>
+        <rect class="ba-garis" x="30" y="50" width="90" height="6" rx="3" fill="rgba(255,255,255,.22)"/>
+        <rect class="ba-garis" x="30" y="64" width="90" height="6" rx="3" fill="rgba(255,255,255,.22)" style="animation-delay:.3s"/>
+        <rect class="ba-garis" x="30" y="78" width="90" height="6" rx="3" fill="rgba(255,255,255,.22)" style="animation-delay:.6s"/>
+        <rect class="ba-garis" x="30" y="92" width="90" height="6" rx="3" fill="rgba(255,255,255,.22)" style="animation-delay:.9s"/>
+        <rect class="ba-garis" x="30" y="106" width="90" height="6" rx="3" fill="rgba(255,255,255,.22)" style="animation-delay:1.2s"/>
+
+        <!-- kaca pembesar yang berkeliling membaca -->
+        <g class="ba-kaca">
+          <circle cx="46" cy="46" r="21" fill="rgba(125,211,252,.16)" stroke="rgba(186,230,253,.85)" stroke-width="3"/>
+          <path d="M61 61 L74 74" stroke="rgba(186,230,253,.85)" stroke-width="5"/>
+          <circle class="ba-mata" cx="40" cy="44" r="2.6" fill="rgba(255,255,255,.9)"/>
+          <circle class="ba-mata" cx="52" cy="44" r="2.6" fill="rgba(255,255,255,.9)" style="animation-delay:.15s"/>
+          <path d="M40 52c3 3 9 3 12 0" stroke="rgba(255,255,255,.75)" stroke-width="2.2"/>
+        </g>
+
+        <!-- kilau tanda pekerjaan AI -->
+        <g stroke="none" fill="rgba(253,230,138,.9)">
+          <path class="ba-kilau" d="M152 34l3.4 8.6 8.6 3.4-8.6 3.4L152 58l-3.4-8.6-8.6-3.4 8.6-3.4z"/>
+          <path class="ba-kilau" style="animation-delay:.7s" d="M168 74l2.3 5.8 5.8 2.3-5.8 2.3-2.3 5.8-2.3-5.8-5.8-2.3 5.8-2.3z"/>
+          <path class="ba-kilau" style="animation-delay:1.3s" d="M146 100l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/>
+        </g>
+      </svg>
+    </div>
+
+    <p class="mt-7 text-[15px] font-medium">Membaca ${FOTO.length} tangkapan layar…</p>
+    <p id="baPesanAi" class="mt-2 text-[13px] text-white/60 transition-opacity duration-300">${aman(PESAN_BACA[0])}</p>
+
+    <div class="mt-4 flex items-center justify-center gap-1.5">
+      <span class="ba-titik h-1.5 w-1.5 rounded-full bg-white/70"></span>
+      <span class="ba-titik h-1.5 w-1.5 rounded-full bg-white/70" style="animation-delay:.18s"></span>
+      <span class="ba-titik h-1.5 w-1.5 rounded-full bg-white/70" style="animation-delay:.36s"></span>
+    </div>
+
+    <p class="mt-5 text-[12px] text-white/35">${aman(AI.model)} · gambar besar bisa memakan waktu sampai satu menit</p>
   </div>`;
+}
+
+function pasangBaca() {
+  let i = 0;
+  jamPesan = setInterval(() => {
+    const p = el('#baPesanAi');
+    if (!p) return;
+    i = (i + 1) % PESAN_BACA.length;
+    p.style.opacity = '0';
+    setTimeout(() => { p.textContent = PESAN_BACA[i]; p.style.opacity = '1'; }, 300);
+  }, 2600);
 }
 
 /* ── langkah 4: periksa & unduh ─────────────────────────────── */
@@ -1606,7 +1688,17 @@ function viewPeriksa() {
   return `
   <div class="space-y-5">
     <div class="glass rounded-3xl p-5 md:p-6">
-      <h3 class="text-[15px] font-semibold">Ringkasan</h3>
+      <div class="flex items-start justify-between gap-3">
+        <h3 class="text-[15px] font-semibold">Ringkasan</h3>
+        <!-- Sengaja ikon kecil dan pucat: menekannya menimpa seluruh isian dan
+             memakai token AI lagi, jadi jangan sampai terpencet tanpa sengaja. -->
+        <button id="baUlangAi" title="Baca ulang screenshot dengan AI — seluruh isian yang sudah diperbaiki akan ditimpa"
+                class="shrink-0 rounded-full border border-white/12 p-2 text-white/35 transition hover:border-white/30 hover:bg-white/10 hover:text-white/80">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+            <path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/>
+          </svg>
+        </button>
+      </div>
       <div class="mt-4 grid gap-4 md:grid-cols-3">
         <div><label class="mb-1.5 block text-[12px] text-white/55">Hari / Tanggal</label>
           <input value="${aman(tanggalIndo(D.tanggalIso))}" disabled class="${KELAS_INPUT} opacity-60" /></div>
@@ -1656,7 +1748,6 @@ function viewPeriksa() {
     <div class="flex flex-wrap items-center justify-between gap-3 pb-4">
       <button id="baKeTempel2" class="${KELAS_TOMBOL}">Kembali ke screenshot</button>
       <div class="flex flex-wrap gap-3">
-        <button id="baUlangAi" class="${KELAS_TOMBOL}">Baca ulang dengan AI</button>
         <button id="baSimpanArsip" class="${KELAS_TOMBOL}">Simpan ke arsip</button>
         <button id="baUnduh" class="${KELAS_UTAMA}">Unduh Word</button>
       </div>
@@ -1697,6 +1788,9 @@ function pasangPeriksa() {
 
   el('#baKeTempel2').onclick = () => { GALAT = ''; KABAR = ''; LANGKAH = 'tempel'; render(); };
   el('#baUlangAi').onclick = async () => {
+    /* Pertanyaan ini sengaja ada: sekali diklik, koreksi yang sudah diketik
+       hilang dan tokennya terpakai lagi. */
+    if (!confirm('Baca ulang screenshot dengan AI?\n\nSeluruh isian yang sudah diperbaiki akan ditimpa hasil pembacaan baru, dan pembacaan ini memakai token AI.')) return;
     GALAT = ''; KABAR = ''; LANGKAH = 'baca'; render();
     try { terapkanHasil(await bacaDenganAi()); await simpanDiam(); LANGKAH = 'periksa'; }
     catch (e) { GALAT = e.message; LANGKAH = 'tempel'; }
