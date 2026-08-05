@@ -798,6 +798,7 @@ async function simpanArsip(diam) {
   }
 
   ARSIP_DIMUAT = false;
+  DARI_ARSIP = id;          // sejak tersimpan, ini dokumennya sendiri
   ARSIP_STATUS = 'Tersimpan di arsip ' + waktuArsip(Date.now())
                + (foto.length < Math.min(FOTO.length, 3) ? ' (sebagian foto terlalu besar, tidak ikut tersimpan)' : '');
   return id;
@@ -887,6 +888,90 @@ async function muatArsip() {
   ARSIP_DIMUAT = true;
 }
 
+/* ── peringatan daerah kembar ───────────────────────────────────
+   Dua petugas mudah mengerjakan daerah yang sama tanpa saling tahu, dan
+   pembacaan kedua itu memakai token AI untuk hasil yang sudah ada. Begitu
+   nama daerahnya diketik, indeks daerahnya dibaca — satu dokumen saja — lalu
+   petugas diberi tahu bahwa daerah itu sudah pernah dibuat. */
+let KEMBAR     = null;   // { kunci, daftar: [...] } bila daerahnya sudah ada
+let DARI_ARSIP = '';     // id arsip yang sedang dikerjakan, bukan kembar
+let jamKembar  = null;   // penunda saat nama daerah masih diketik
+
+async function daftarDaerah(kunci) {
+  if (pakaiFirebase()) {
+    const { doc, getDoc } = store.fs;
+    const d = await getDoc(doc(store.db, 'indeksDaerah', kunci));
+    const daftar = (d.exists() && d.data().daftar) || {};
+    return Object.entries(daftar).map(([id, x]) => ({ ...x, id }));
+  }
+  return Object.entries(bacaLokal())
+    .map(([id, x]) => ({ id, ...x }))
+    .filter(x => (x.kunciDaerah || kunciDaerah(x.daerah)) === kunci);
+}
+
+async function periksaKembar() {
+  const kunci = kunciDaerah(D.daerah);
+  if (!kunci) { KEMBAR = null; return; }
+  try {
+    const daftar = (await daftarDaerah(kunci))
+      .filter(x => x.id !== DARI_ARSIP)     // yang sedang dikerjakan bukan kembar
+      .sort((a, b) => waktuAngka(b.diperbaruiAt) - waktuAngka(a.diperbaruiAt));
+    KEMBAR = daftar.length ? { kunci, daftar } : null;
+  } catch (e) {
+    console.warn('[MonevDAK] daftar daerah tidak terbaca:', e);
+    KEMBAR = null;
+  }
+}
+
+function kotakKembar() {
+  if (!KEMBAR) return '';
+  const r = KEMBAR.daftar[0];
+  const lain = KEMBAR.daftar.length - 1;
+  return `
+  <div class="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-5 py-4">
+    <div class="flex items-start gap-3">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="mt-0.5 h-5 w-5 shrink-0 text-amber-300"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+      <div class="min-w-0">
+        <p class="text-[13px] font-semibold text-amber-100">${aman(r.daerah)} sudah pernah dibuat.</p>
+        <p class="mt-1 text-[12px] leading-relaxed text-amber-100/75">
+          ${aman(r.tanggalTeks || tanggalIndo(r.tanggalIso))} oleh ${aman(r.penyusun || '—')} · ${r.jumlahRuas || 0} ruas${lain ? ` · masih ada ${lain} berita acara lain untuk daerah ini` : ''}.
+          Buka yang tersimpan saja: isinya bisa langsung diperbaiki, tanpa menempel ulang screenshot dan tanpa memakai token AI lagi.
+        </p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button data-buka-kembar="${aman(r.id)}" class="rounded-full bg-amber-300/90 px-4 py-1.5 text-[12px] font-semibold text-black transition hover:bg-amber-200">Buka yang tersimpan</button>
+          <button data-arsip-kembar class="rounded-full border border-amber-300/40 px-4 py-1.5 text-[12px] font-medium text-amber-100 transition hover:bg-amber-300/10">Lihat di arsip</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function pasangKembar() {
+  els('#view-berita [data-buka-kembar]').forEach(t => t.onclick = async () => {
+    t.disabled = true; t.textContent = 'Membuka…';
+    try {
+      await bukaArsip(t.dataset.bukaKembar);
+      render();
+      toast('Berita acara ' + D.daerah + ' dibuka dari arsip.');
+    } catch (e) {
+      GALAT = e.message;
+      render();
+    }
+  });
+  els('#view-berita [data-arsip-kembar]').forEach(t => t.onclick = () => {
+    ARSIP_CARI = D.daerah;
+    ARSIP_DIMUAT = false;
+    go('arsip');
+  });
+}
+
+/** Periksa ulang lalu perbarui kotaknya saja, supaya ketikan tidak terganggu. */
+async function segarkanKembar() {
+  await periksaKembar();
+  const k = el('#baKembar');
+  if (k) { k.innerHTML = kotakKembar(); pasangKembar(); }
+}
+
 /** Isi satu berita acara tersimpan, tanpa menyentuh formulir yang terbuka. */
 async function ambilArsip(id) {
   if (pakaiFirebase()) {
@@ -913,6 +998,8 @@ async function bukaArsip(id) {
   ARSIP_STATUS = 'Dibuka dari arsip, terakhir disimpan ' + waktuArsip(rekaman.diperbaruiAt) + '.';
   LANGKAH = 'periksa';
   GALAT = ''; KABAR = '';
+  /* Yang sedang dikerjakan tidak boleh dilaporkan sebagai daerah kembar. */
+  DARI_ARSIP = id; KEMBAR = null;
 }
 
 async function hapusArsip(id) {
@@ -1164,6 +1251,7 @@ function viewIdentitas() {
       <div class="md:col-span-2">
         <label class="mb-1.5 block text-[12px] font-medium text-white/60">Daerah (yang tercetak di notulensi)</label>
         <input id="baDaerah" value="${aman(D.daerah)}" placeholder="mis. Kab Kep. Siau Tagulandang Biaro" class="${KELAS_INPUT}" />
+        <div id="baKembar" class="mt-3 empty:mt-0">${kotakKembar()}</div>
       </div>
 
       <div class="md:col-span-2">
@@ -1193,6 +1281,8 @@ function pasangIdentitas() {
       daftar.map(k => `<option${k === D._kab ? ' selected' : ''}>${aman(k)}</option>`).join('');
   };
   isiKab();
+  pasangKembar();
+  if (D.daerah.trim()) segarkanKembar();
 
   el('#baTgl').oninput = e => {
     D.tanggalIso = e.target.value;
@@ -1204,8 +1294,14 @@ function pasangIdentitas() {
     if (!D._kab) return;
     D.daerah = /^Kota\s/i.test(D._kab) ? D._kab : 'Kab ' + D._kab;
     el('#baDaerah').value = D.daerah;
+    segarkanKembar();
   };
-  el('#baDaerah').oninput = e => { D.daerah = e.target.value; };
+  el('#baDaerah').oninput = e => {
+    D.daerah = e.target.value;
+    /* Ditunda sebentar: memeriksa tiap huruf yang diketik hanya buang bacaan. */
+    clearTimeout(jamKembar);
+    jamKembar = setTimeout(segarkanKembar, 600);
+  };
   el('#baPasangan').onchange = e => {
     D.pasangan = Number(e.target.value);
     D.notulis1 = PASANGAN_NOTULIS[D.pasangan][0];
@@ -1226,6 +1322,7 @@ function viewTempel() {
   const bersama = AI_DARI === 'bersama';
   return `
   <div class="glass rounded-3xl p-6 md:p-8">
+    <div id="baKembar" class="mb-6 empty:mb-0">${kotakKembar()}</div>
     <h2 class="text-[17px] font-semibold">Tangkapan layar rapat</h2>
     <p class="mt-1 text-[13px] text-white/50">
       Tekan <span class="rounded bg-white/12 px-1.5 py-0.5 font-mono text-[12px]">Ctrl</span> +
@@ -1366,6 +1463,7 @@ async function tambahBerkas(daftar) {
 
 let pasangTerpasang = false;
 function pasangTempel() {
+  pasangKembar();
   const drop = el('#baDrop');
   drop.onclick = () => el('#baBerkas').click();
   drop.ondragover = e => { e.preventDefault(); drop.classList.add('border-white/50'); };
@@ -2025,6 +2123,7 @@ window.BA = {
     D = kosong(); FOTO = []; LANGKAH = 'identitas'; GALAT = ''; KABAR = '';
     konfigDicoba = false; AI_GALAT = ''; ARSIP_STATUS = '';
     ARSIP = []; ARSIP_DIMUAT = false; ARSIP_GALAT = ''; ARSIP_CARI = '';
+    KEMBAR = null; DARI_ARSIP = ''; clearTimeout(jamKembar);
   }
 };
 
