@@ -94,12 +94,30 @@ const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
+/* Butir yang selalu ada pada bagian Kesimpulan. Berita acara lama di arsip
+   dibuat sebelum butir ini diminta, jadi butir ini disisipkan lagi saat
+   dokumennya disusun ulang — lihat lengkapiButir(). */
+const BUTIR_WAJIB = 'Tidak melakukan perubahan tanpa melakukan konsultasi kepada Balai Jalan dan PFID.';
+
 const BUTIR_BAKU = [
   'Seluruh pelaksana kegiatan diminta menjaga mutu, waktu, dan administrasi pelaksanaan sesuai ketentuan DAK.',
   'Paket yang mengalami keterlambatan wajib menyampaikan rencana percepatan pelaksanaan.',
   'Pengawasan lapangan akan ditingkatkan untuk memastikan kualitas pekerjaan sesuai spesifikasi teknis.',
-  'Monitoring progres fisik dan keuangan dilaksanakan secara berkala sebagai bahan evaluasi pimpinan.'
+  'Monitoring progres fisik dan keuangan dilaksanakan secara berkala sebagai bahan evaluasi pimpinan.',
+  BUTIR_WAJIB
 ];
+
+/** Samakan butir kesimpulan berita acara lama dengan yang berlaku sekarang.
+    Perbandingannya longgar supaya butir yang sudah diketik sendiri oleh
+    petugas — beda titik atau huruf besar — tidak tercetak dua kali. */
+const intiButir = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+function lengkapiButir(butir) {
+  const daftar = (butir || []).filter(Boolean);
+  return daftar.some(x => intiButir(x) === intiButir(BUTIR_WAJIB))
+    ? daftar
+    : daftar.concat(BUTIR_WAJIB);
+}
 
 const ITEM_UMUM = [
   { k: 'lp', label: 'Lebar Perkerasan Jalan' },
@@ -593,15 +611,16 @@ async function bingkaiFoto(dataUrl, rasio) {
 
 /** Nama daerah, dibersihkan dari karakter yang tidak boleh ada di nama berkas.
     Kalau kolom daerah dikosongkan, pilihan kabupaten/kota yang dipakai. */
-function daerahBersih() {
-  const asal = (D.daerah || D._kab || '').replace(/[\\/:*?"<>|]/g, ' ');
+function daerahBersih(d) {
+  d = d || D;
+  const asal = (d.daerah || d._kab || '').replace(/[\\/:*?"<>|]/g, ' ');
   return asal.replace(/\s+/g, ' ').trim();
 }
 
 /** Berkas Word diberi nama daerahnya, supaya berkas dari banyak daerah
     tidak saling tertimpa di folder unduhan. */
-function namaBerkas() {
-  const daerah = daerahBersih();
+function namaBerkas(d) {
+  const daerah = daerahBersih(d);
   return (daerah ? daerah + ' - ' : '') + 'Notulensi Rakor PE DAK Jalan TA 2026 TW II.docx';
 }
 
@@ -666,15 +685,19 @@ async function susunBlob(d, foto) {
   });
 }
 
-async function buatWord() {
-  const blob = await susunBlob(D, FOTO);
-  const nama = namaBerkas();
+/** Simpan blob ke folder unduhan peramban. */
+function unduhBlob(blob, nama) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = nama;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
   return nama;
+}
+
+async function buatWord() {
+  const blob = await susunBlob(D, FOTO);
+  return unduhBlob(blob, namaBerkas());
 }
 
 
@@ -990,10 +1013,18 @@ async function ambilArsip(id) {
   return { rekaman, foto: rekaman.foto || [] };
 }
 
+/** Isian formulir dari satu rekaman arsip, disamakan dengan bentuk terbaru:
+    berita acara yang tersimpan sebelum ada butir wajib tetap mencetaknya. */
+function dataArsip(rekaman) {
+  const d = Object.assign(kosong(), (rekaman && rekaman.data) || {});
+  d.butir = lengkapiButir(d.butir);
+  return d;
+}
+
 /** Pindahkan satu berita acara tersimpan ke formulir yang sedang dibuka. */
 async function bukaArsip(id) {
   const { rekaman, foto } = await ambilArsip(id);
-  D = Object.assign(kosong(), rekaman.data || {});
+  D = dataArsip(rekaman);
   FOTO = foto.map(url => ({ url, urlAi: url }));
   ARSIP_STATUS = 'Dibuka dari arsip, terakhir disimpan ' + waktuArsip(rekaman.diperbaruiAt) + '.';
   LANGKAH = 'periksa';
@@ -1044,9 +1075,12 @@ function bingkaiPratinjau(judul, isi) {
           <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">Pratinjau dokumen</p>
           <p class="truncate text-[15px] font-semibold text-white">${aman(judul)}</p>
         </div>
-        <button data-tutup class="rounded-full border border-white/20 p-2 text-white/70 transition hover:bg-white/10 hover:text-white" title="Tutup (Esc)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-4 w-4"><path d="M6 6l12 12M18 6L6 18"/></svg>
-        </button>
+        <div class="flex shrink-0 items-center gap-2">
+          <button data-unduh-pratinjau disabled class="rounded-full border border-white/20 px-3.5 py-1.5 text-[12px] font-medium text-white/80 transition hover:bg-white/10 disabled:opacity-40">Unduh Word</button>
+          <button data-tutup class="rounded-full border border-white/20 p-2 text-white/70 transition hover:bg-white/10 hover:text-white" title="Tutup (Esc)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-4 w-4"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
       </div>
       <div id="baPratinjauIsi" class="max-h-[76vh] overflow-y-auto bg-white/[0.04] p-4 md:p-6">${isi}</div>
     </div>`;
@@ -1081,18 +1115,31 @@ async function pratinjauArsip(id, judul) {
   bingkaiPratinjau(judul, MEMUAT_PRATINJAU);
   try {
     const { rekaman, foto } = await ambilArsip(id);
-    const blob = await susunBlob(
-      Object.assign(kosong(), rekaman.data || {}),
-      foto.map(url => ({ url, urlAi: url }))
-    );
+    const d = dataArsip(rekaman);
+    const blob = await susunBlob(d, foto.map(url => ({ url, urlAi: url })));
     await muatSkrip(CDN_MAMMOTH);
     const hasil = await window.mammoth.convertToHtml({ arrayBuffer: await blob.arrayBuffer() });
     const wadah = el('#baPratinjauIsi');
     if (wadah) wadah.innerHTML = GAYA_KERTAS + '<div id="baKertas">' + hasil.value + '</div>';
+    /* Dokumennya sudah tersusun, jadi unduhannya tinggal memakai blob yang sama. */
+    const unduh = el('#baPratinjau [data-unduh-pratinjau]');
+    if (unduh) {
+      unduh.disabled = false;
+      unduh.onclick = () => toast('Berkas ' + unduhBlob(blob, namaBerkas(d)) + ' diunduh.');
+    }
   } catch (e) {
     const wadah = el('#baPratinjauIsi');
     if (wadah) wadah.innerHTML = `<div class="px-6 py-14 text-center text-[13px] text-rose-200">Dokumen tidak dapat ditampilkan: ${aman(e.message)}</div>`;
   }
+}
+
+/** Unduh satu berita acara tersimpan tanpa menyentuh formulir yang terbuka —
+    pemda memakainya untuk menyimpan dokumen daerahnya sendiri. */
+async function unduhArsip(id) {
+  const { rekaman, foto } = await ambilArsip(id);
+  const d = dataArsip(rekaman);
+  const blob = await susunBlob(d, foto.map(url => ({ url, urlAi: url })));
+  return unduhBlob(blob, namaBerkas(d));
 }
 
 /** Simpan otomatis sesudah AI selesai membaca; kegagalannya tidak menghentikan
@@ -1944,9 +1991,9 @@ function kartuArsip(r, pfid) {
       </div>
       <div class="flex flex-wrap gap-2">
         <button data-pratinjau="${aman(r.id)}" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">Lihat dokumen</button>
+        <button data-unduh="${aman(r.id)}" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">Unduh Word</button>
         ${pfid ? `
         <button data-buka="${aman(r.id)}" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">Buka &amp; edit</button>
-        <button data-unduh="${aman(r.id)}" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">Unduh Word</button>
         <button data-hapus-arsip="${aman(r.id)}" class="rounded-full border border-white/12 px-3 py-1.5 text-[12px] text-white/45 transition hover:border-rose-400/40 hover:text-rose-300">Hapus</button>` : ''}
       </div>
     </div>
@@ -1971,7 +2018,7 @@ function renderArsip() {
     <p class="mt-3 max-w-[640px] text-[15px] text-white/65">
       ${pfid
         ? 'Setiap berita acara yang selesai dibaca AI tersimpan di sini dan terlihat oleh semua petugas. Membukanya kembali tidak memanggil AI lagi, jadi tidak ada token yang terpakai untuk perbaikan.'
-        : 'Notulensi rapat pemantauan dan evaluasi DAK Fisik Sub Bidang Jalan untuk ' + aman(ME.kab) + '. Dokumennya dapat dibaca di sini; perubahan isi dilakukan oleh petugas PFID.'}
+        : 'Notulensi rapat pemantauan dan evaluasi DAK Fisik Sub Bidang Jalan untuk ' + aman(ME.kab) + '. Dokumennya dapat dibaca dan diunduh dalam bentuk Word di sini; perubahan isi dilakukan oleh petugas PFID.'}
     </p>
 
     <div class="mt-8 flex flex-wrap items-center gap-3">
@@ -2045,14 +2092,15 @@ function renderArsip() {
     }
   });
 
+  /* Unduhan tidak memindahkan isinya ke formulir: pemda tidak punya formulir,
+     dan petugas PFID tidak kehilangan berita acara yang sedang dikerjakan. */
   els('#view-arsip [data-unduh]').forEach(t => t.onclick = async () => {
     t.disabled = true; t.textContent = 'Menyusun…';
     try {
-      await bukaArsip(t.dataset.unduh);
-      toast('Berkas ' + (await buatWord()) + ' diunduh.');
+      toast('Berkas ' + (await unduhArsip(t.dataset.unduh)) + ' diunduh.');
       renderArsip();
     } catch (e) {
-      ARSIP_GALAT = 'Gagal membuat dokumen: ' + e.message;
+      ARSIP_GALAT = 'Gagal membuat dokumen: ' + (e.code || e.message);
       renderArsip();
     }
   });
