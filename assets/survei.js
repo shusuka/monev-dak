@@ -149,6 +149,19 @@ async function semuaSurvei() {
   return Object.entries(bacaLokal()).map(([id, x]) => ({ id, ...x }));
 }
 
+/** Hapus satu penilaian. Hanya admin yang diizinkan firestore.rules; pemda
+    yang penilaiannya dihapus dapat mengisi surveinya lagi dari awal. */
+async function hapusSurvei(id) {
+  if (pakaiFirebase()) {
+    const { doc, deleteDoc } = store.fs;
+    await deleteDoc(doc(store.db, 'survei', id));
+  } else {
+    const semua = bacaLokal();
+    delete semua[id];
+    tulisLokal(semua);
+  }
+}
+
 
 /* ═══════════════════════════════════════════════════════════════
    2. TAMPILAN PENGISIAN — satu pertanyaan satu layar
@@ -607,7 +620,12 @@ function renderAdminSurvei() {
 
     <div class="mt-6 flex flex-wrap items-center gap-3">
       <button id="svAdmMuat" class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 transition hover:bg-white/10">Muat ulang</button>
-      <button id="svAdmExcel" class="cta-glow rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black"${REKAP.length ? '' : ' disabled style="opacity:.4"'}>Unduh Excel</button>
+      <!-- pengisian coba-coba saat uji coba perlu bisa dibuang dari rekap -->
+      <button id="svAdmHapus" disabled
+              class="rounded-full border border-red-400/50 bg-red-500/15 px-5 py-2.5 text-[13px] font-medium text-red-200 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40">
+        Hapus terpilih <span id="svAdmHapusJml"></span>
+      </button>
+      <button id="svAdmExcel" class="cta-glow ml-auto rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black"${REKAP.length ? '' : ' disabled style="opacity:.4"'}>Unduh Excel</button>
     </div>
 
     <div class="glass mt-6 overflow-hidden rounded-3xl">
@@ -615,6 +633,9 @@ function renderAdminSurvei() {
         <table class="w-full min-w-[900px] text-left text-[13px]">
           <thead class="bg-white/[0.06] text-[11px] uppercase tracking-wider text-white/50">
             <tr>
+              <th class="w-10 px-4 py-3">
+                <input id="svPilihSemua" type="checkbox" class="h-4 w-4 cursor-pointer accent-white/90" title="Pilih semua" />
+              </th>
               <th class="px-4 py-3 font-medium">Pemda</th>
               <th class="px-4 py-3 font-medium">Penilai</th>
               <th class="px-4 py-3 font-medium">Indeks</th>
@@ -628,6 +649,7 @@ function renderAdminSurvei() {
           <tbody class="divide-y divide-white/8">
             ${REKAP.length ? REKAP.map((r, i) => `
               <tr class="transition hover:bg-white/[0.04]">
+                <td class="px-4 py-3"><input type="checkbox" class="svPilih h-4 w-4 cursor-pointer accent-white/90" value="${aman(r.id)}" /></td>
                 <td class="px-4 py-3 font-medium">${aman(r.kab || '—')}<span class="block text-[11px] text-white/40">${aman(r.prov || '')}</span></td>
                 <td class="px-4 py-3 text-white/75">${aman(r.nama || '—')}<span class="block text-[11px] text-white/40">${aman((r.jawaban || {}).hp || r.email || '')}</span></td>
                 <td class="px-4 py-3 tabular-nums">${r.indeks == null ? '—' : aman(r.indeks)}</td>
@@ -635,9 +657,12 @@ function renderAdminSurvei() {
                 <td class="px-4 py-3 text-white/70">${aman((r.jawaban || {}).deskWilayah || '—')}</td>
                 <td class="px-4 py-3 tabular-nums">${aman((r.jawaban || {}).skorWilayah || '—')}</td>
                 <td class="px-4 py-3 text-white/50">${aman(waktuTeks(r.dikirimAt))}</td>
-                <td class="px-4 py-3 text-right"><button data-detail="${i}" class="rounded-full border border-white/15 px-3 py-1.5 text-[12px] text-white/70 transition hover:bg-white/10">Lihat</button></td>
+                <td class="px-4 py-3 text-right">
+                  <button data-detail="${i}" class="rounded-full border border-white/15 px-3 py-1.5 text-[12px] text-white/70 transition hover:bg-white/10">Lihat</button>
+                  <button data-hapus="${aman(r.id)}" title="Hapus penilaian ini" class="ml-1.5 rounded-full border border-white/12 px-3 py-1.5 text-[12px] text-white/45 transition hover:border-red-400/40 hover:text-red-300">Hapus</button>
+                </td>
               </tr>`).join('')
-            : '<tr><td colspan="8" class="px-4 py-10 text-center text-white/45">Belum ada pemda yang mengisi survei.</td></tr>'}
+            : '<tr><td colspan="9" class="px-4 py-10 text-center text-white/45">Belum ada pemda yang mengisi survei.</td></tr>'}
           </tbody>
         </table>
       </div>
@@ -652,6 +677,77 @@ function renderAdminSurvei() {
     t.disabled = false; t.textContent = 'Unduh Excel';
   };
   els('#adSurvei [data-detail]').forEach(t => t.onclick = () => bukaDetail(REKAP[Number(t.dataset.detail)]));
+
+  els('#adSurvei .svPilih').forEach(c => c.onchange = perbaruiPilihanSurvei);
+  if (el('#svPilihSemua')) el('#svPilihSemua').onchange = e => {
+    els('#adSurvei .svPilih').forEach(c => c.checked = e.target.checked);
+    perbaruiPilihanSurvei();
+  };
+  els('#adSurvei [data-hapus]').forEach(t => t.onclick = () => {
+    const r = REKAP.find(x => x.id === t.dataset.hapus);
+    if (r) jalankanHapusSurvei([r]);
+  });
+  el('#svAdmHapus').onclick = () => {
+    const dipilih = idTerpilihSurvei();
+    jalankanHapusSurvei(REKAP.filter(r => dipilih.includes(r.id)));
+  };
+  perbaruiPilihanSurvei();
+}
+
+/* ── pilih dan hapus penilaian ─────────────────────────────────
+   Uji coba aplikasi meninggalkan pengisian coba-coba yang ikut terhitung di
+   indeks kepuasan, jadi admin perlu dapat membuangnya dari rekap. */
+const idTerpilihSurvei = () => els('#adSurvei .svPilih').filter(c => c.checked).map(c => c.value);
+
+function perbaruiPilihanSurvei() {
+  const n = idTerpilihSurvei().length;
+  const total = els('#adSurvei .svPilih').length;
+  const tombol = el('#svAdmHapus');
+  if (!tombol) return;
+  tombol.disabled = n === 0;
+  el('#svAdmHapusJml').textContent = n ? '(' + n + ')' : '';
+  const semua = el('#svPilihSemua');
+  if (semua) {
+    semua.checked = total > 0 && n === total;
+    semua.indeterminate = n > 0 && n < total;
+  }
+}
+
+async function jalankanHapusSurvei(daftar) {
+  if (!daftar || !daftar.length) return;
+  const contoh = daftar.slice(0, 6).map(r => '• ' + (r.kab || '?') + ' — ' + (r.nama || 'tanpa nama')).join('\n');
+  const sisa = daftar.length > 6 ? '\n• … dan ' + (daftar.length - 6) + ' lainnya' : '';
+  if (!confirm(
+    'Hapus ' + daftar.length + ' penilaian berikut?\n\n' + contoh + sisa +
+    '\n\nJawabannya hilang dari rekap dan dari perhitungan indeks kepuasan, dan TIDAK dapat dipulihkan.' +
+    '\nPemda yang bersangkutan dapat mengisi surveinya lagi dari awal.'
+  )) return;
+
+  const tombol = el('#svAdmHapus');
+  if (tombol) { tombol.disabled = true; tombol.textContent = 'Menghapus…'; }
+
+  const gagal = [];
+  let sukses = 0;
+  for (const r of daftar) {
+    try { await hapusSurvei(r.id); sukses++; }
+    catch (e) {
+      console.error('[MonevDAK] penilaian gagal dihapus', r.id, e);
+      gagal.push({ nama: r.kab || r.nama || r.id, kode: (e && e.code) || e.message });
+    }
+  }
+
+  await window.SURVEI.renderAdmin();
+
+  if (!gagal.length) {
+    toast(sukses + ' penilaian dihapus.');
+  } else {
+    const izin = gagal.some(x => /permission/.test(String(x.kode)));
+    alert(
+      sukses + ' penilaian dihapus, ' + gagal.length + ' gagal.\n\n' +
+      gagal.slice(0, 5).map(x => '• ' + x.nama + ' (' + x.kode + ')').join('\n') +
+      (izin ? '\n\nFirestore menolak penghapusan. Pastikan firestore.rules versi terbaru sudah dipublikasikan dan email admin ini terdaftar pada adminEmail().' : '')
+    );
+  }
 }
 
 function bukaDetail(r) {
