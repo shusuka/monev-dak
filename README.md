@@ -155,6 +155,29 @@ Setelah itu masuk lewat tombol **Masuk Admin** di footer halaman depan memakai e
 
 > Gerbang admin mengatur akses ke tampilan rekap dan ekspor, bukan kerahasiaan data. Koleksi `hasil` memang berstatus baca-publik karena papan peringkat peserta memerlukannya.
 
+### Tab Survei Kepuasan Pemda
+
+Tab kedua di halaman admin merekap kuesioner kepuasan (`assets/survei.js`).
+
+**Penyaring.** Provinsi, mutu (A–D), dan pencarian bebas atas nama pemda, penilai, email, atau nomor telepon. **Seluruh halaman ikut menyempit** — kartu ringkasan, semua grafik, tabel, dan berkas Excel yang diunduh. Tombol ungu di samping penyaring menampilkan “x dari y” sekaligus menghapus seluruh penyaring dengan sekali klik.
+
+**Infografis**, semuanya digambar sendiri sebagai SVG — tidak ada pustaka grafik yang perlu diunduh, jadi panel tetap terbuka walau koneksi seret:
+
+| Grafik | Isi | Interaksi |
+|---|---|---|
+| Jarum indeks | Indeks kepuasan gabungan, dengan pita mutu A–D di lingkar luarnya | tunjuk pita untuk melihat rentangnya |
+| Radar tujuh unsur | Rata-rata tiap unsur pada skala 1–4 | **klik** salah satu sudut untuk membedah unsurnya |
+| Donat mutu | Berapa pemda pada tiap kelas mutu | **klik** legendanya untuk menyaring mutu itu |
+| Sebaran jawaban | Batang bertumpuk 1–4 tiap unsur | tunjuk tiap warna; klik barisnya untuk membedah |
+| Peringkat wilayah | Indeks rata-rata per provinsi; **berganti sendiri menjadi peringkat kabupaten/kota** begitu satu provinsi dipilih | **klik** provinsi untuk menyaring seluruh halaman |
+| Skor petugas desk | Rata-rata bintang tiap koordinator wilayah dan verifikator | tunjuk kartunya untuk jumlah penilai |
+
+Panel **Bedah unsur** yang muncul setelah sebuah unsur diklik memperlihatkan sebaran jawabannya sebagai batang tegak, dan daftar enam daerah yang menilai paling rendah pada unsur itu — daftar inilah yang dipakai menentukan siapa yang perlu dihubungi lebih dulu.
+
+Satu kalimat ringkasan di bawah baris grafik pertama menyebut unsur terkuat dan unsur yang paling perlu perhatian, supaya kesimpulannya terbaca tanpa menafsirkan grafik lebih dulu.
+
+> Angka pada nama tab (“Survei Kepuasan Pemda · 24”) selalu jumlah keseluruhan, bukan hasil penyaringan.
+
 **Batas penghapusan.** Menghapus peserta membuang dokumen `peserta` dan seluruh dokumen `hasil` miliknya, sehingga hilang dari papan peringkat dan rekap. **Akun masuknya di Authentication tidak ikut terhapus** — penghapusan akun hanya mungkin dari Firebase Console (*Authentication → Users → ⋮ → Delete account*) atau lewat Admin SDK. Selama akunnya masih ada, orang itu tetap bisa masuk tetapi akan diberi tahu bahwa akunnya bukan akun peserta, dan tidak dapat mendaftar ulang dengan email yang sama.
 
 ---
