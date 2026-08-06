@@ -167,7 +167,52 @@
 
   @media (prefers-reduced-motion: reduce) {
     .juara, .juara::after, .piala-anim { animation: none; }
+    .admin-warna, .admin-ombak::after, .admin-ikon, .admin-pil { animation: none; }
   }
+
+  /* ---------- pintu masuk admin ----------
+     Tautannya dulu abu-abu pucat dan nyaris tidak terlihat. Sekarang tulisannya
+     memakai gradasi jingga–merah muda–ungu yang mengalir, dengan garis ombak
+     kecil di bawahnya; keduanya bergerak pelan supaya menarik mata tanpa
+     mengganggu formulir masuk di sebelahnya. */
+  @keyframes adminAlir     { to { background-position: 250% 50%; } }
+  @keyframes adminGelombang{ to { -webkit-mask-position: 24px center; mask-position: 24px center; } }
+
+  .admin-warna {
+    background: linear-gradient(100deg, #FF8A3D, #F472B6 35%, #A855F7 60%, #F472B6 85%, #FF8A3D);
+    background-size: 250% 100%;
+    background-position: 0 50%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: adminAlir 5s linear infinite;
+  }
+  .admin-ombak { position: relative; display: inline-block; }
+  .admin-ombak::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -7px; height: 6px;
+    background: linear-gradient(100deg, #FF8A3D, #F472B6 35%, #A855F7 60%, #F472B6 85%, #FF8A3D);
+    background-size: 250% 100%;
+    background-position: 0 50%;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='6'%3E%3Cpath d='M0 3q3-3 6 0t6 0 6 0 6 0' fill='none' stroke='%23000' stroke-width='1.7'/%3E%3C/svg%3E");
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='6'%3E%3Cpath d='M0 3q3-3 6 0t6 0 6 0 6 0' fill='none' stroke='%23000' stroke-width='1.7'/%3E%3C/svg%3E");
+    -webkit-mask-size: 24px 6px; mask-size: 24px 6px;
+    -webkit-mask-repeat: repeat-x; mask-repeat: repeat-x;
+    -webkit-mask-position: 0 center; mask-position: 0 center;
+    animation: adminAlir 5s linear infinite, adminGelombang 1.4s linear infinite;
+    opacity: .85;
+  }
+  /* Lambang perisainya ikut berwarna, sebab warna tulisannya sudah transparan. */
+  .admin-ikon { color: #F472B6; animation: adminKedip 5s ease-in-out infinite; }
+  @keyframes adminKedip { 0%,100% { color: #FF8A3D; } 50% { color: #A855F7; } }
+  /* Pil di kaki halaman: bingkainya ikut gradasi yang sama. */
+  .admin-pil {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(rgba(10,10,12,.55), rgba(10,10,12,.55)) padding-box,
+      linear-gradient(100deg, #FF8A3D, #F472B6 35%, #A855F7 60%, #F472B6 85%, #FF8A3D) border-box;
+    background-size: auto, 250% 100%;
+    background-position: 0 0, 0 50%;
+    animation: adminPilAlir 5s linear infinite;
+  }
+  @keyframes adminPilAlir { to { background-position: 0 0, 250% 50%; } }
 
   /* ---------- misc ---------- */
   .sunset-text { background: linear-gradient(90deg, #FF512F, #F09819); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -348,7 +393,10 @@
         <p>MonevDAK · Pusat Fasilitasi Infrastruktur Daerah, Kementerian PU</p>
         <div class="flex flex-wrap items-center gap-4">
           <p id="footMode">Memeriksa koneksi basis data…</p>
-          <button onclick="go('adminlogin')" class="rounded-full border border-white/15 px-4 py-1.5 text-[12px] font-medium text-white/60 transition hover:bg-white/10 hover:text-white">Masuk Admin</button>
+          <button onclick="go('adminlogin')" class="admin-pil inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[12px] font-semibold transition hover:-translate-y-px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="admin-ikon h-4 w-4"><path d="M12 3l8 4v5c0 4.4-3.4 8.3-8 9-4.6-.7-8-4.6-8-9V7l8-4z"/></svg>
+            <span class="admin-warna">Masuk Admin</span>
+          </button>
         </div>
       </div>
     </footer>
@@ -418,9 +466,9 @@
         </div>
 
         <div class="border-t border-gray-100 pt-4 text-center">
-          <button type="button" onclick="go('adminlogin')" class="inline-flex items-center gap-2 text-[13px] font-medium text-gray-400 transition hover:text-gray-700">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M12 3l8 4v5c0 4.4-3.4 8.3-8 9-4.6-.7-8-4.6-8-9V7l8-4z"/></svg>
-            Masuk sebagai admin
+          <button type="button" onclick="go('adminlogin')" class="inline-flex items-center gap-2 pb-1 text-[14px] font-semibold transition hover:-translate-y-px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="admin-ikon h-[18px] w-[18px]"><path d="M12 3l8 4v5c0 4.4-3.4 8.3-8 9-4.6-.7-8-4.6-8-9V7l8-4z"/></svg>
+            <span class="admin-warna admin-ombak">Masuk sebagai admin</span>
           </button>
         </div>
       </form>
