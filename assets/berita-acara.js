@@ -750,6 +750,7 @@ let ARSIP_GALAT  = '';
 let ARSIP_CARI   = '';
 let ARSIP_PROV   = '';        // saringan provinsi, hanya untuk petugas PFID
 let ARSIP_STATUS = '';        // keterangan simpan terakhir pada langkah periksa
+let SUDAH_UNDUH  = false;     // Word-nya sudah diunduh, daerah ini boleh ditutup
 
 const idArsip = () => (window.slug ? window.slug(D.daerah || 'daerah') : String(D.daerah || 'daerah')
   .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')) + '__' + D.tanggalIso;
@@ -1050,7 +1051,7 @@ async function bukaArsip(id) {
   FOTO = foto.map(url => ({ url, urlAi: url }));
   ARSIP_STATUS = 'Dibuka dari arsip, terakhir disimpan ' + waktuArsip(rekaman.diperbaruiAt) + '.';
   LANGKAH = 'periksa';
-  GALAT = ''; KABAR = '';
+  GALAT = ''; KABAR = ''; SUDAH_UNDUH = false;
   /* Yang sedang dikerjakan tidak boleh dilaporkan sebagai daerah kembar. */
   DARI_ARSIP = id; KEMBAR = null;
 }
@@ -1851,6 +1852,19 @@ function viewInfoUmum() {
   </div>`;
 }
 
+/** Kosongkan formulir untuk daerah berikutnya. Tanggal dan pasangan notulis
+    dibawa serta: rapat sehari biasanya membahas beberapa daerah berturut-turut
+    dengan notulis yang sama, dan keduanya tetap bisa diubah di langkah
+    identitas. Kunci AI dan daftar arsip tidak disentuh — petugasnya sama. */
+function mulaiBaru() {
+  const { tanggalIso, pasangan, notulis1, notulis2 } = D;
+  D = Object.assign(kosong(), { tanggalIso, pasangan, notulis1, notulis2 });
+  FOTO = [];
+  LANGKAH = 'identitas';
+  GALAT = ''; KABAR = ''; ARSIP_STATUS = ''; SUDAH_UNDUH = false;
+  KEMBAR = null; DARI_ARSIP = ''; clearTimeout(jamKembar);
+}
+
 function viewPeriksa() {
   return `
   <div class="space-y-5">
@@ -1913,7 +1927,12 @@ function viewPeriksa() {
     </div>
 
     <div class="flex flex-wrap items-center justify-between gap-3 pb-4">
-      <button id="baKeTempel2" class="${KELAS_TOMBOL}">Kembali ke screenshot</button>
+      <div class="flex flex-wrap gap-3">
+        <button id="baKeTempel2" class="${KELAS_TOMBOL}">Kembali ke screenshot</button>
+        <!-- Sesudah Word-nya diunduh, tombol inilah langkah berikutnya:
+             daerah ini selesai, giliran daerah lain. -->
+        <button id="baMulaiBaru" class="${KELAS_TOMBOL}${SUDAH_UNDUH ? ' !border-white/45 !text-white' : ''}">Mulai daerah baru</button>
+      </div>
       <div class="flex flex-wrap gap-3">
         <button id="baSimpanArsip" class="${KELAS_TOMBOL}">Simpan ke arsip</button>
         <button id="baUnduh" class="${KELAS_UTAMA}">Unduh Word</button>
@@ -1954,6 +1973,20 @@ function pasangPeriksa() {
   });
 
   el('#baKeTempel2').onclick = () => { GALAT = ''; KABAR = ''; LANGKAH = 'tempel'; render(); };
+
+  el('#baMulaiBaru').onclick = () => {
+    /* Isian yang belum tersimpan tidak bisa dikembalikan, jadi pertanyaannya
+       menyebutkan keadaan arsipnya supaya petugas tahu apa yang hilang. */
+    const pesan = 'Mulai berita acara daerah baru?\n\nIsian ' + (D.daerah || 'daerah ini')
+      + ' dan screenshot-nya dikosongkan dari layar.\n\n'
+      + (DARI_ARSIP
+          ? 'Salinannya sudah ada di arsip dan bisa dibuka lagi kapan saja.'
+          : 'Berita acara ini BELUM tersimpan di arsip — simpan dulu bila masih diperlukan.');
+    if (!confirm(pesan)) return;
+    mulaiBaru();
+    render();
+    toast('Formulir dikosongkan. Isi daerah berikutnya.');
+  };
   el('#baUlangAi').onclick = async () => {
     /* Pertanyaan ini sengaja ada: sekali diklik, koreksi yang sudah diketik
        hilang dan tokennya terpakai lagi. */
@@ -1988,7 +2021,10 @@ function pasangPeriksa() {
       render();
       return;
     }
-    tombol.disabled = false; tombol.textContent = 'Unduh Word';
+    /* Daerah ini selesai; tombol "Mulai daerah baru" ditegaskan sebagai
+       langkah berikutnya. */
+    SUDAH_UNDUH = true;
+    render();
   };
 }
 
@@ -2226,7 +2262,7 @@ window.BA = {
       supaya akun berikutnya tidak memakai sisa kunci akun sebelumnya. */
   reset() {
     D = kosong(); FOTO = []; LANGKAH = 'identitas'; GALAT = ''; KABAR = '';
-    konfigDicoba = false; AI_GALAT = ''; ARSIP_STATUS = '';
+    konfigDicoba = false; AI_GALAT = ''; ARSIP_STATUS = ''; SUDAH_UNDUH = false;
     ARSIP = []; ARSIP_DIMUAT = false; ARSIP_GALAT = ''; ARSIP_CARI = ''; ARSIP_PROV = '';
     KEMBAR = null; DARI_ARSIP = ''; clearTimeout(jamKembar);
   }
