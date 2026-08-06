@@ -722,10 +722,33 @@ const kunciDaerah = teks => slugKunci(String(teks || '').replace(/^\s*(kabupaten
 /** Daerah milik pengguna yang sedang masuk; petugas PFID tidak terikat daerah. */
 const kunciSaya = () => (ME ? kunciDaerah(ME.kab) : '');
 
+/* Provinsi tidak selalu ikut tersimpan: berita acara lama dibuat sebelum
+   pemilih wilayah ada, dan nama daerah boleh diketik sendiri. Karena itu
+   provinsinya dicari lagi dari daftar wilayah memakai nama kabupaten/kotanya. */
+let PETA_PROV = null;
+
+function provinsiDari(teks) {
+  if (!PETA_PROV) {
+    PETA_PROV = {};
+    const w = window.WILAYAH || {};
+    Object.keys(w).forEach(prov => String(w[prov]).split(',').forEach(kab => {
+      const k = kunciDaerah(kab);
+      if (k && !(k in PETA_PROV)) PETA_PROV[k] = prov;
+    }));
+  }
+  return PETA_PROV[kunciDaerah(teks)] || '';
+}
+
+const provArsip = r => r.prov || provinsiDari(r.daerah || r.kab || '');
+
+/* Nilai pilihan untuk berita acara yang provinsinya tidak dapat dipastikan. */
+const TANPA_PROV = '__tanpa__';
+
 let ARSIP        = [];        // daftar ringkas untuk menu arsip
 let ARSIP_DIMUAT = false;
 let ARSIP_GALAT  = '';
 let ARSIP_CARI   = '';
+let ARSIP_PROV   = '';        // saringan provinsi, hanya untuk petugas PFID
 let ARSIP_STATUS = '';        // keterangan simpan terakhir pada langkah periksa
 
 const idArsip = () => (window.slug ? window.slug(D.daerah || 'daerah') : String(D.daerah || 'daerah')
@@ -1980,7 +2003,7 @@ function kartuArsip(r, pfid) {
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div class="min-w-0">
         <h3 class="text-[16px] font-semibold">${aman(r.daerah)}</h3>
-        <p class="mt-1 text-[13px] text-white/55">${aman(r.tanggalTeks || tanggalIndo(r.tanggalIso))}</p>
+        <p class="mt-1 text-[13px] text-white/55">${aman(r.tanggalTeks || tanggalIndo(r.tanggalIso))}${pfid && provArsip(r) ? ' · ' + aman(provArsip(r)) : ''}</p>
         <p class="mt-2 text-[12px] text-white/40">
           ${r.jumlahRuas || 0} ruas · ${foto} foto · notulis ${aman(r.notulis1 || '—')} &amp; ${aman(r.notulis2 || '—')}
         </p>
@@ -2007,9 +2030,27 @@ function renderArsip() {
   /* Petugas PFID menyusun dan mengubah; pemda hanya membaca dokumen daerahnya. */
   const pfid = akunPfid(ME);
   const cari = ARSIP_CARI.trim().toLowerCase();
-  const daftar = cari
-    ? ARSIP.filter(r => (r.daerah + ' ' + (r.penyusun || '') + ' ' + (r.tanggalTeks || '')).toLowerCase().includes(cari))
-    : ARSIP;
+
+  /* Provinsi hanya berguna bagi petugas PFID: pemda cuma melihat daerahnya
+     sendiri. Pilihannya disusun dari arsip yang ada, bukan dari 38 provinsi,
+     supaya yang tampil hanya provinsi yang benar-benar punya berita acara. */
+  const jumlahProv = {};
+  let tanpaProv = 0;
+  ARSIP.forEach(r => {
+    const p = provArsip(r);
+    if (p) jumlahProv[p] = (jumlahProv[p] || 0) + 1;
+    else tanpaProv++;
+  });
+  const daftarProv = Object.keys(jumlahProv).sort((a, b) => a.localeCompare(b));
+  /* Saringan yang provinsinya sudah tidak ada di arsip diabaikan, bukan
+     menyisakan daftar kosong tanpa sebab yang jelas. */
+  if (!pfid || (ARSIP_PROV && ARSIP_PROV !== TANPA_PROV && !jumlahProv[ARSIP_PROV])) ARSIP_PROV = '';
+  if (ARSIP_PROV === TANPA_PROV && !tanpaProv) ARSIP_PROV = '';
+
+  const daftar = ARSIP.filter(r =>
+    (!cari || (r.daerah + ' ' + (r.penyusun || '') + ' ' + (r.tanggalTeks || '') + ' ' + provArsip(r))
+      .toLowerCase().includes(cari)) &&
+    (!ARSIP_PROV || (ARSIP_PROV === TANPA_PROV ? !provArsip(r) : provArsip(r) === ARSIP_PROV)));
 
   wadah.innerHTML = `
     <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">${pfid ? 'Petugas PFID' : 'Pemerintah daerah'}</p>
@@ -2025,6 +2066,15 @@ function renderArsip() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4 text-white/50"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input id="baArsipCari" value="${aman(ARSIP_CARI)}" placeholder="Cari daerah, tanggal, atau penyusun" class="w-56 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
       </div>
+      ${pfid && (daftarProv.length || tanpaProv) ? `
+      <div class="glass flex items-center gap-2 rounded-full px-5 py-2.5">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-white/50"><path d="M3 5h18l-7 8v6l-4 2v-8L3 5z"/></svg>
+        <select id="baArsipProv" class="bg-transparent text-[13px] leading-[19.5px] text-white outline-none [&>option]:bg-ink">
+          <option value="">Semua provinsi (${ARSIP.length})</option>
+          ${daftarProv.map(p => `<option value="${aman(p)}"${ARSIP_PROV === p ? ' selected' : ''}>${aman(p)} (${jumlahProv[p]})</option>`).join('')}
+          ${tanpaProv ? `<option value="${TANPA_PROV}"${ARSIP_PROV === TANPA_PROV ? ' selected' : ''}>Tanpa provinsi (${tanpaProv})</option>` : ''}
+        </select>
+      </div>` : ''}
       <button id="baArsipMuat" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Muat ulang</button>
       ${pfid ? `<button id="baArsipBaru" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Buat berita acara baru</button>
       <button id="baArsipIndeks" title="Susun ulang daftar yang dilihat pemda, termasuk berita acara lama" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Perbarui daftar pemda</button>` : ''}
@@ -2035,9 +2085,12 @@ function renderArsip() {
     <div class="mt-7 space-y-4">
       ${daftar.length ? daftar.map(r => kartuArsip(r, pfid)).join('') : `
         <div class="glass rounded-3xl px-6 py-14 text-center">
-          <p class="text-[15px] font-medium text-white/75">${ARSIP.length ? 'Tidak ada yang cocok dengan pencarian itu.'
+          <p class="text-[15px] font-medium text-white/75">${ARSIP.length
+            ? (ARSIP_PROV && ARSIP_PROV !== TANPA_PROV
+                ? 'Tidak ada berita acara ' + aman(ARSIP_PROV) + ' yang cocok.'
+                : 'Tidak ada yang cocok dengan pencarian itu.')
             : pfid ? 'Arsip masih kosong.' : 'Belum ada berita acara untuk ' + aman(ME.kab) + '.'}</p>
-          <p class="mt-2 text-[13px] text-white/45">${ARSIP.length ? 'Coba kata kunci lain.'
+          <p class="mt-2 text-[13px] text-white/45">${ARSIP.length ? (ARSIP_PROV ? 'Ganti provinsinya ke “Semua provinsi”, atau coba kata kunci lain.' : 'Coba kata kunci lain.')
             : pfid ? 'Berita acara tersimpan sendiri begitu AI selesai membaca screenshot.'
                    : 'Dokumennya muncul di sini setelah petugas PFID menyusun notulensi rapat daerah Anda.'}</p>
         </div>`}
@@ -2050,6 +2103,11 @@ function renderArsip() {
     const baru = el('#baArsipCari');
     baru.focus();
     baru.setSelectionRange(posisi, posisi);
+  };
+
+  if (el('#baArsipProv')) el('#baArsipProv').onchange = e => {
+    ARSIP_PROV = e.target.value;
+    renderArsip();
   };
 
   el('#baArsipMuat').onclick = async () => {
@@ -2169,7 +2227,7 @@ window.BA = {
   reset() {
     D = kosong(); FOTO = []; LANGKAH = 'identitas'; GALAT = ''; KABAR = '';
     konfigDicoba = false; AI_GALAT = ''; ARSIP_STATUS = '';
-    ARSIP = []; ARSIP_DIMUAT = false; ARSIP_GALAT = ''; ARSIP_CARI = '';
+    ARSIP = []; ARSIP_DIMUAT = false; ARSIP_GALAT = ''; ARSIP_CARI = ''; ARSIP_PROV = '';
     KEMBAR = null; DARI_ARSIP = ''; clearTimeout(jamKembar);
   }
 };
