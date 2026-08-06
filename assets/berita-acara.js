@@ -94,30 +94,29 @@ const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
-/* Butir yang selalu ada pada bagian Kesimpulan. Berita acara lama di arsip
-   dibuat sebelum butir ini diminta, jadi butir ini disisipkan lagi saat
-   dokumennya disusun ulang — lihat lengkapiButir(). */
-const BUTIR_WAJIB = 'Tidak melakukan perubahan tanpa melakukan konsultasi kepada Balai Jalan dan PFID.';
-
 const BUTIR_BAKU = [
   'Seluruh pelaksana kegiatan diminta menjaga mutu, waktu, dan administrasi pelaksanaan sesuai ketentuan DAK.',
   'Paket yang mengalami keterlambatan wajib menyampaikan rencana percepatan pelaksanaan.',
   'Pengawasan lapangan akan ditingkatkan untuk memastikan kualitas pekerjaan sesuai spesifikasi teknis.',
-  'Monitoring progres fisik dan keuangan dilaksanakan secara berkala sebagai bahan evaluasi pimpinan.',
-  BUTIR_WAJIB
+  'Monitoring progres fisik dan keuangan dilaksanakan secara berkala sebagai bahan evaluasi pimpinan.'
 ];
 
-/** Samakan butir kesimpulan berita acara lama dengan yang berlaku sekarang.
-    Perbandingannya longgar supaya butir yang sudah diketik sendiri oleh
-    petugas — beda titik atau huruf besar — tidak tercetak dua kali. */
-const intiButir = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+/* Dua butir tebal terakhir bagian Kesimpulan sudah tetap di template, jadi
+   selalu tercetak paling bawah tanpa bisa terhapus atau tertukar urutannya.
+   Butir yang sama pernah ikut daftar yang bisa diketik; kalau masih tersimpan
+   di arsip, butir itu dibuang supaya tidak tercetak dua kali. */
+const BUTIR_TETAP = [
+  'Kelengkapan dokumen di aplikasi eMonitoring DAK berpengaruh pada penilain kinerja daerah, untuk daerah diminta melengkapi sampai dengan batas waktu satu minggu kedepan.',
+  'Tidak melakukan perubahan tanpa melakukan konsultasi kepada Balai Jalan dan PFID.'
+];
 
-function lengkapiButir(butir) {
-  const daftar = (butir || []).filter(Boolean);
-  return daftar.some(x => intiButir(x) === intiButir(BUTIR_WAJIB))
-    ? daftar
-    : daftar.concat(BUTIR_WAJIB);
-}
+/* Perbandingannya longgar: butir yang pernah diketik sendiri oleh petugas
+   biasanya beda titik atau huruf besarnya saja. */
+const intiButir = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const INTI_TETAP = BUTIR_TETAP.map(intiButir);
+
+const butirBebas = butir =>
+  (butir || []).filter(Boolean).filter(x => !INTI_TETAP.includes(intiButir(x)));
 
 const ITEM_UMUM = [
   { k: 'lp', label: 'Lebar Perkerasan Jalan' },
@@ -643,7 +642,7 @@ function dataTemplate(d, foto) {
     permasalahanUtama: d.permasalahanUtama,
     tindakLanjut,
     kesimpulan: d.kesimpulan || [],
-    butir: (d.butir || []).filter(Boolean),
+    butir: butirBebas(d.butir),
     /* Bagian yang kosong dibuang seluruhnya — judul tanpa isi membuat
        susunan paragraf dokumen terlihat berantakan. */
     adaCatatan: catatan.length > 0,
@@ -1014,10 +1013,10 @@ async function ambilArsip(id) {
 }
 
 /** Isian formulir dari satu rekaman arsip, disamakan dengan bentuk terbaru:
-    berita acara yang tersimpan sebelum ada butir wajib tetap mencetaknya. */
+    butir yang kini tetap di template dibuang dari daftar yang bisa diketik. */
 function dataArsip(rekaman) {
   const d = Object.assign(kosong(), (rekaman && rekaman.data) || {});
-  d.butir = lengkapiButir(d.butir);
+  d.butir = butirBebas(d.butir);
   return d;
 }
 
@@ -1874,7 +1873,7 @@ function viewPeriksa() {
     ${daftarTeks('Butir evaluasi', 'evaluasiPoin', 'Contoh: “Terdapat 2 paket yang sesuai jadwal.”', 'Butir')}
     ${tabel('Tindak Lanjut', 'tindakLanjut', KOLOM_TL, 'Baris')}
     ${tabel('Kesimpulan — kesesuaian item', 'kesimpulan', KOLOM_KESIMPULAN, 'Ruas')}
-    ${daftarTeks('Butir kesimpulan', 'butir', 'Butir tebal terakhir soal kelengkapan eMonitoring sudah tetap di template.', 'Butir')}
+    ${daftarTeks('Butir kesimpulan', 'butir', 'Dua butir tebal terakhir — kelengkapan eMonitoring dan konsultasi ke Balai Jalan dan PFID — sudah tetap di template.', 'Butir')}
 
     <div class="glass rounded-3xl p-5 md:p-6">
       <h3 class="text-[15px] font-semibold">Foto dokumentasi</h3>
