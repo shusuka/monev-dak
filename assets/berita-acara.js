@@ -766,6 +766,7 @@ let ARSIP_GALAT  = '';
 let ARSIP_CARI   = '';
 let ARSIP_PROV   = '';        // saringan provinsi, hanya untuk petugas PFID
 let ARSIP_OLEH   = '';        // saringan penyusun, hanya untuk petugas PFID
+let ARSIP_ADMIN  = false;     // arsip sedang ditampilkan di panel admin
 let ARSIP_STATUS = '';        // keterangan simpan terakhir pada langkah periksa
 let SUDAH_UNDUH  = false;     // Word-nya sudah diunduh, daerah ini boleh ditutup
 
@@ -928,7 +929,9 @@ async function perbaikiIndeks() {
 
 async function muatArsip() {
   ARSIP_GALAT = '';
-  const pfid = akunPfid(ME);
+  /* Admin membaca seluruh koleksi seperti petugas PFID — izinnya sudah ada di
+     firestore.rules — tetapi hanya untuk dilihat dan diunduh. */
+  const pfid = ARSIP_ADMIN || akunPfid(ME);
   const kunci = kunciSaya();
 
   if (pakaiFirebase() && pfid) {
@@ -1661,9 +1664,10 @@ function pasangTempel() {
 }
 
 /* ── langkah 3: menunggu AI ─────────────────────────────────── */
-/* Menunggu AI itu membosankan dan kadang sampai satu menit. Robot kecil yang
-   membaca notulensi dengan kaca pembesar membuat jedanya terasa ringan, dan
-   kalimat yang berganti-ganti memperlihatkan pekerjaan masih berjalan. */
+/* Menunggu AI itu membosankan dan kadang sampai satu menit. Tandem roller yang
+   mondar-mandir memadatkan aspal membuat jedanya terasa ringan — sekalian
+   gambar pekerjaan yang sedang dipantau — dan kalimat yang berganti-ganti
+   memperlihatkan pekerjaan masih berjalan. */
 const PESAN_BACA = [
   'Menyipitkan mata ke tabel progres…',
   'Menyalin nama ruas satu per satu…',
@@ -1680,50 +1684,78 @@ let jamPesan = null;
 function viewBaca() {
   return `
   <style>
-    @keyframes baApung   { 0%,100% { transform: translateY(0) }      50% { transform: translateY(-7px) } }
-    @keyframes baKaca    { 0%,100% { transform: translate(0,0) rotate(-6deg) }
-                           25%     { transform: translate(34px,6px) rotate(4deg) }
-                           50%     { transform: translate(52px,26px) rotate(8deg) }
-                           75%     { transform: translate(14px,32px) rotate(-2deg) } }
-    @keyframes baGaris   { 0%,100% { transform: scaleX(.35) }        50% { transform: scaleX(1) } }
+    /* Satu putaran 6 detik: maju memadatkan, berhenti sebentar di ujung, lalu
+       mundur. Roda dan getarannya mengikuti irama yang sama. */
+    @keyframes baJalan   { 0% { transform: translateX(0) }  46%,54% { transform: translateX(112px) }  100% { transform: translateX(0) } }
+    @keyframes baGuling  { 0% { transform: rotate(0deg) }   46%,54% { transform: rotate(900deg) }     100% { transform: rotate(0deg) } }
+    @keyframes baGetar   { 0%,100% { transform: translateY(0) }   50% { transform: translateY(.8px) } }
+    @keyframes baAsap    { 0% { opacity: 0; transform: translate(0,0) scale(.5) }
+                           30% { opacity: .55 }
+                           100% { opacity: 0; transform: translate(-7px,-24px) scale(1.35) } }
+    @keyframes baPadat   { 0%,100% { opacity: .12 }  50% { opacity: .5 } }
     @keyframes baKilau   { 0%,100% { opacity: .15; transform: scale(.7) }  50% { opacity: 1; transform: scale(1) } }
-    @keyframes baKedip   { 0%,100% { transform: scaleY(1) }  92% { transform: scaleY(1) }  96% { transform: scaleY(.1) } }
     @keyframes baTitik   { 0%,80%,100% { opacity: .2; transform: translateY(0) }  40% { opacity: 1; transform: translateY(-4px) } }
-    .ba-apung  { animation: baApung 3.2s ease-in-out infinite }
-    .ba-kaca   { animation: baKaca 5.2s ease-in-out infinite; transform-origin: 50% 50% }
-    .ba-garis  { animation: baGaris 2.4s ease-in-out infinite; transform-origin: left center }
+    .ba-mesin  { animation: baJalan 6s ease-in-out infinite }
+    .ba-getar  { animation: baGetar .14s linear infinite }
+    .ba-guling { animation: baGuling 6s ease-in-out infinite }
+    .ba-asap   { animation: baAsap 2.4s ease-out infinite }
+    .ba-padat  { animation: baPadat 2.8s ease-in-out infinite }
     .ba-kilau  { animation: baKilau 2s ease-in-out infinite }
-    .ba-mata   { animation: baKedip 4s ease-in-out infinite; transform-origin: center }
     .ba-titik  { animation: baTitik 1.4s ease-in-out infinite }
   </style>
 
   <div class="glass rounded-3xl px-6 py-14 text-center">
-    <div class="ba-apung mx-auto w-[190px]">
-      <svg viewBox="0 0 190 150" class="h-auto w-full" fill="none" stroke-linecap="round" stroke-linejoin="round">
-        <!-- kertas notulensi -->
-        <rect x="16" y="16" width="118" height="120" rx="9" fill="rgba(255,255,255,.09)" stroke="rgba(255,255,255,.28)" stroke-width="2"/>
-        <rect x="30" y="32" width="62" height="7" rx="3.5" fill="rgba(255,255,255,.55)"/>
-        <rect class="ba-garis" x="30" y="50" width="90" height="6" rx="3" fill="rgba(255,255,255,.22)"/>
-        <rect class="ba-garis" x="30" y="64" width="90" height="6" rx="3" fill="rgba(255,255,255,.22)" style="animation-delay:.3s"/>
-        <rect class="ba-garis" x="30" y="78" width="90" height="6" rx="3" fill="rgba(255,255,255,.22)" style="animation-delay:.6s"/>
-        <rect class="ba-garis" x="30" y="92" width="90" height="6" rx="3" fill="rgba(255,255,255,.22)" style="animation-delay:.9s"/>
-        <rect class="ba-garis" x="30" y="106" width="90" height="6" rx="3" fill="rgba(255,255,255,.22)" style="animation-delay:1.2s"/>
+    <div class="mx-auto w-[240px] max-w-full">
+      <svg viewBox="0 0 220 132" class="h-auto w-full" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <!-- badan jalan yang sedang dipadatkan -->
+      <rect x="4" y="96" width="212" height="24" rx="7" fill="rgba(255,255,255,.07)" stroke="rgba(255,255,255,.14)" stroke-width="1.5"/>
+      <g fill="rgba(255,255,255,.5)">
+        <rect class="ba-padat" x="18" y="106" width="16" height="3" rx="1.5"/>
+        <rect class="ba-padat" x="52" y="106" width="16" height="3" rx="1.5" style="animation-delay:.4s"/>
+        <rect class="ba-padat" x="86" y="106" width="16" height="3" rx="1.5" style="animation-delay:.8s"/>
+        <rect class="ba-padat" x="120" y="106" width="16" height="3" rx="1.5" style="animation-delay:1.2s"/>
+        <rect class="ba-padat" x="154" y="106" width="16" height="3" rx="1.5" style="animation-delay:1.6s"/>
+        <rect class="ba-padat" x="188" y="106" width="14" height="3" rx="1.5" style="animation-delay:2s"/>
+      </g>
 
-        <!-- kaca pembesar yang berkeliling membaca -->
-        <g class="ba-kaca">
-          <circle cx="46" cy="46" r="21" fill="rgba(125,211,252,.16)" stroke="rgba(186,230,253,.85)" stroke-width="3"/>
-          <path d="M61 61 L74 74" stroke="rgba(186,230,253,.85)" stroke-width="5"/>
-          <circle class="ba-mata" cx="40" cy="44" r="2.6" fill="rgba(255,255,255,.9)"/>
-          <circle class="ba-mata" cx="52" cy="44" r="2.6" fill="rgba(255,255,255,.9)" style="animation-delay:.15s"/>
-          <path d="M40 52c3 3 9 3 12 0" stroke="rgba(255,255,255,.75)" stroke-width="2.2"/>
+      <!-- tandem roller: dua drum baja, mondar-mandir mengaspal -->
+      <g class="ba-mesin">
+        <g class="ba-getar">
+          <!-- rangka penghubung dan bak -->
+          <rect x="27" y="72" width="40" height="14" rx="3" fill="rgba(253,230,138,.9)"/>
+          <rect x="24" y="86" width="46" height="5" rx="2.5" fill="rgba(255,255,255,.25)"/>
+          <!-- kabin operator -->
+          <rect x="33" y="48" width="27" height="25" rx="6" fill="rgba(253,230,138,.95)"/>
+          <rect x="37" y="52" width="19" height="13" rx="3" fill="rgba(125,211,252,.45)"/>
+          <rect x="30" y="45" width="33" height="4" rx="2" fill="rgba(253,230,138,.7)"/>
+          <!-- knalpot dan asapnya -->
+          <rect x="63" y="50" width="4.5" height="13" rx="2" fill="rgba(255,255,255,.45)"/>
+          <g fill="rgba(255,255,255,.55)">
+            <circle class="ba-asap" cx="65" cy="46" r="3.4"/>
+            <circle class="ba-asap" cx="65" cy="46" r="2.8" style="animation-delay:.8s"/>
+            <circle class="ba-asap" cx="65" cy="46" r="3.1" style="animation-delay:1.6s"/>
+          </g>
+          <!-- drum belakang -->
+          <circle cx="24" cy="96" r="12.5" fill="rgba(226,232,240,.92)"/>
+          <circle cx="24" cy="96" r="12.5" fill="none" stroke="rgba(15,17,20,.35)" stroke-width="2"/>
+          <g class="ba-guling" style="transform-origin:24px 96px" stroke="rgba(15,17,20,.35)" stroke-width="2">
+            <path d="M24 85.5v21M13.5 96h21"/>
+          </g>
+          <!-- drum depan -->
+          <circle cx="70" cy="96" r="12.5" fill="rgba(226,232,240,.92)"/>
+          <circle cx="70" cy="96" r="12.5" fill="none" stroke="rgba(15,17,20,.35)" stroke-width="2"/>
+          <g class="ba-guling" style="transform-origin:70px 96px" stroke="rgba(15,17,20,.35)" stroke-width="2">
+            <path d="M70 85.5v21M59.5 96h21"/>
+          </g>
         </g>
+      </g>
 
-        <!-- kilau tanda pekerjaan AI -->
-        <g stroke="none" fill="rgba(253,230,138,.9)">
-          <path class="ba-kilau" d="M152 34l3.4 8.6 8.6 3.4-8.6 3.4L152 58l-3.4-8.6-8.6-3.4 8.6-3.4z"/>
-          <path class="ba-kilau" style="animation-delay:.7s" d="M168 74l2.3 5.8 5.8 2.3-5.8 2.3-2.3 5.8-2.3-5.8-5.8-2.3 5.8-2.3z"/>
-          <path class="ba-kilau" style="animation-delay:1.3s" d="M146 100l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/>
-        </g>
+      <!-- aspal yang sudah padat mengkilap -->
+      <g stroke="none" fill="rgba(253,230,138,.9)">
+        <path class="ba-kilau" d="M186 24l3.2 8.2 8.2 3.2-8.2 3.2L186 47l-3.2-8.4-8.2-3.2 8.2-3.2z"/>
+        <path class="ba-kilau" style="animation-delay:.7s" d="M203 56l2.2 5.6 5.6 2.2-5.6 2.2-2.2 5.6-2.2-5.6-5.6-2.2 5.6-2.2z"/>
+        <path class="ba-kilau" style="animation-delay:1.3s" d="M15 40l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/>
+      </g>
       </svg>
     </div>
 
@@ -2051,14 +2083,14 @@ function pasangPeriksa() {
 /* ═══════════════════════════════════════════════════════════════
    6b. MENU ARSIP — daftar berita acara seluruh petugas
    ═══════════════════════════════════════════════════════════════ */
-function kartuArsip(r, pfid) {
+function kartuArsip(r, pfid, semua) {
   const foto = r.jumlahFoto || 0;
   return `
   <div class="glass rounded-3xl p-5 md:p-6">
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div class="min-w-0">
         <h3 class="text-[16px] font-semibold">${aman(r.daerah)}</h3>
-        <p class="mt-1 text-[13px] text-white/55">${aman(r.tanggalTeks || tanggalIndo(r.tanggalIso))}${pfid && provArsip(r) ? ' · ' + aman(provArsip(r)) : ''}</p>
+        <p class="mt-1 text-[13px] text-white/55">${aman(r.tanggalTeks || tanggalIndo(r.tanggalIso))}${semua && provArsip(r) ? ' · ' + aman(provArsip(r)) : ''}</p>
         <p class="mt-2 text-[12px] text-white/40">
           ${r.jumlahRuas || 0} ruas · ${foto} foto · notulis ${aman(r.notulis1 || '—')} &amp; ${aman(r.notulis2 || '—')}
         </p>
@@ -2095,19 +2127,25 @@ function kotakSaring(id, ikon, labelSemua, labelKosong, opsi, terpilih) {
 }
 
 function renderArsip() {
-  const wadah = el('#view-arsip');
+  /* Satu penyaji untuk dua tempat: menu arsip di aplikasi, dan tab berita acara
+     di panel admin. Keduanya tidak pernah tampil bersamaan — admin memakai
+     cangkangnya sendiri — jadi keadaannya boleh dipakai bersama. */
+  const admin = ARSIP_ADMIN;
+  const wadah = el(admin ? '#adBa' : '#view-arsip');
   if (!wadah) return;
-  if (!ME) { wadah.innerHTML = ''; return; }
+  if (!admin && !ME) { wadah.innerHTML = ''; return; }
 
-  /* Petugas PFID menyusun dan mengubah; pemda hanya membaca dokumen daerahnya. */
-  const pfid = akunPfid(ME);
+  /* Petugas PFID menyusun dan mengubah; pemda hanya membaca dokumen daerahnya;
+     admin melihat semuanya, tetapi hanya untuk dibaca dan diunduh. */
+  const pfid = !admin && akunPfid(ME);
+  const semua = admin || pfid;          // yang melihat lebih dari satu daerah
   const cari = ARSIP_CARI.trim().toLowerCase();
 
-  /* Saringan provinsi dan penyusun hanya berguna bagi petugas PFID: pemda cuma
-     melihat daerahnya sendiri. Pilihannya disusun dari isi arsip, bukan dari 38
+  /* Saringan provinsi dan penyusun tidak berguna bagi pemda: isinya cuma
+     daerahnya sendiri. Pilihannya disusun dari isi arsip, bukan dari 38
      provinsi atau daftar petugas, supaya yang tampil hanya yang benar-benar
      punya berita acara. */
-  if (!pfid) { ARSIP_PROV = ''; ARSIP_OLEH = ''; }
+  if (!semua) { ARSIP_PROV = ''; ARSIP_OLEH = ''; }
   const adaNilai = (nilai, pilihan) =>
     !pilihan || ARSIP.some(r => (nilai(r) || TANPA_ISI) === pilihan);
   if (!adaNilai(provArsip, ARSIP_PROV)) ARSIP_PROV = '';
@@ -2134,21 +2172,26 @@ function renderArsip() {
   ].filter(Boolean);
 
   wadah.innerHTML = `
+    ${admin ? `
+    <p class="mt-7 max-w-[720px] text-[14px] leading-[1.7] text-white/60">
+      Seluruh notulensi rapat pemantauan dan evaluasi yang sudah disusun petugas PFID, ${ARSIP.length} berita acara.
+      Dokumennya dapat dibaca di layar dan diunduh dalam bentuk Word; penyuntingan tetap di tangan petugas penyusunnya.
+    </p>` : `
     <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">${pfid ? 'Petugas PFID' : 'Pemerintah daerah'}</p>
     <h1 class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[40px]">Arsip berita acara</h1>
     <p class="mt-3 max-w-[640px] text-[15px] text-white/65">
       ${pfid
         ? 'Setiap berita acara yang selesai dibaca AI tersimpan di sini dan terlihat oleh semua petugas. Membukanya kembali tidak memanggil AI lagi, jadi tidak ada token yang terpakai untuk perbaikan.'
         : 'Notulensi rapat pemantauan dan evaluasi DAK Fisik Sub Bidang Jalan untuk ' + aman(ME.kab) + '. Dokumennya dapat dibaca dan diunduh dalam bentuk Word di sini; perubahan isi dilakukan oleh petugas PFID.'}
-    </p>
+    </p>`}
 
     <div class="mt-8 flex flex-wrap items-center gap-3">
       <div class="glass flex items-center gap-2 rounded-full px-5 py-2.5">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4 text-white/50"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input id="baArsipCari" value="${aman(ARSIP_CARI)}" placeholder="Cari daerah, tanggal, atau penyusun" class="w-56 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
       </div>
-      ${pfid ? kotakSaring('baArsipProv', IKON_SARING, 'Semua provinsi', 'Tanpa provinsi', opsiProv, ARSIP_PROV) : ''}
-      ${pfid ? kotakSaring('baArsipOleh', IKON_PENYUSUN, 'Semua penyusun', 'Tanpa nama', opsiOleh, ARSIP_OLEH) : ''}
+      ${semua ? kotakSaring('baArsipProv', IKON_SARING, 'Semua provinsi', 'Tanpa provinsi', opsiProv, ARSIP_PROV) : ''}
+      ${semua ? kotakSaring('baArsipOleh', IKON_PENYUSUN, 'Semua penyusun', 'Tanpa nama', opsiOleh, ARSIP_OLEH) : ''}
       <button id="baArsipMuat" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Muat ulang</button>
       ${pfid ? `<button id="baArsipBaru" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Buat berita acara baru</button>
       <button id="baArsipIndeks" title="Susun ulang daftar yang dilihat pemda, termasuk berita acara lama" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Perbarui daftar pemda</button>` : ''}
@@ -2157,15 +2200,15 @@ function renderArsip() {
     ${ARSIP_GALAT ? `<div class="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] text-rose-200">${aman(ARSIP_GALAT)}</div>` : ''}
 
     <div class="mt-7 space-y-4">
-      ${daftar.length ? daftar.map(r => kartuArsip(r, pfid)).join('') : `
+      ${daftar.length ? daftar.map(r => kartuArsip(r, pfid, semua)).join('') : `
         <div class="glass rounded-3xl px-6 py-14 text-center">
           <p class="text-[15px] font-medium text-white/75">${ARSIP.length
             ? (saringanTerpakai.length
                 ? 'Tidak ada berita acara ' + aman(saringanTerpakai.join(' · ')) + ' yang cocok.'
                 : 'Tidak ada yang cocok dengan pencarian itu.')
-            : pfid ? 'Arsip masih kosong.' : 'Belum ada berita acara untuk ' + aman(ME.kab) + '.'}</p>
+            : semua ? 'Arsip masih kosong.' : 'Belum ada berita acara untuk ' + aman(ME.kab) + '.'}</p>
           <p class="mt-2 text-[13px] text-white/45">${ARSIP.length ? (saringanTerpakai.length ? 'Kembalikan saringannya ke “Semua”, atau coba kata kunci lain.' : 'Coba kata kunci lain.')
-            : pfid ? 'Berita acara tersimpan sendiri begitu AI selesai membaca screenshot.'
+            : semua ? 'Berita acara tersimpan sendiri begitu AI selesai membaca screenshot.'
                    : 'Dokumennya muncul di sini setelah petugas PFID menyusun notulensi rapat daerah Anda.'}</p>
         </div>`}
     </div>`;
@@ -2191,7 +2234,7 @@ function renderArsip() {
 
   el('#baArsipMuat').onclick = async () => {
     ARSIP_DIMUAT = false;
-    await window.BA.renderArsip();
+    await tampilkanArsip();
   };
 
   if (el('#baArsipBaru')) el('#baArsipBaru').onclick = () => {
@@ -2211,12 +2254,16 @@ function renderArsip() {
     renderArsip();
   };
 
-  els('#view-arsip [data-pratinjau]').forEach(t => t.onclick = () => {
+  /* Tombol dicari di dalam wadahnya sendiri, sebab penyaji ini dipakai juga
+     oleh panel admin yang wadahnya berbeda. */
+  const dalam = s => Array.from(wadah.querySelectorAll(s));
+
+  dalam('[data-pratinjau]').forEach(t => t.onclick = () => {
     const r = ARSIP.find(x => x.id === t.dataset.pratinjau) || {};
     pratinjauArsip(t.dataset.pratinjau, (r.daerah || '') + ' · ' + (r.tanggalTeks || ''));
   });
 
-  els('#view-arsip [data-buka]').forEach(t => t.onclick = async () => {
+  dalam('[data-buka]').forEach(t => t.onclick = async () => {
     t.disabled = true; t.textContent = 'Membuka…';
     try {
       await bukaArsip(t.dataset.buka);
@@ -2230,7 +2277,7 @@ function renderArsip() {
 
   /* Unduhan tidak memindahkan isinya ke formulir: pemda tidak punya formulir,
      dan petugas PFID tidak kehilangan berita acara yang sedang dikerjakan. */
-  els('#view-arsip [data-unduh]').forEach(t => t.onclick = async () => {
+  dalam('[data-unduh]').forEach(t => t.onclick = async () => {
     t.disabled = true; t.textContent = 'Menyusun…';
     try {
       toast('Berkas ' + (await unduhArsip(t.dataset.unduh)) + ' diunduh.');
@@ -2241,20 +2288,42 @@ function renderArsip() {
     }
   });
 
-  els('#view-arsip [data-hapus-arsip]').forEach(t => t.onclick = async () => {
+  dalam('[data-hapus-arsip]').forEach(t => t.onclick = async () => {
     const id = t.dataset.hapusArsip;
     const r = ARSIP.find(x => x.id === id) || {};
     if (!confirm('Hapus berita acara ' + (r.daerah || id) + ' dari arsip? Semua petugas akan kehilangan salinan ini.')) return;
     t.disabled = true; t.textContent = 'Menghapus…';
     try {
       await hapusArsip(id);
-      await window.BA.renderArsip();
+      await tampilkanArsip();
       toast('Berita acara dihapus dari arsip.');
     } catch (e) {
       ARSIP_GALAT = 'Gagal menghapus: ' + (e.code || e.message);
       renderArsip();
     }
   });
+}
+
+
+/** Muat arsipnya bila belum, lalu tampilkan — dipakai menu arsip maupun panel
+    admin, keduanya lewat penyaji dan keadaan yang sama. */
+async function tampilkanArsip() {
+  if (!ARSIP_DIMUAT) {
+    renderArsip();          // tampilkan kerangkanya dulu supaya tidak kosong
+    try {
+      await muatArsip();
+    } catch (e) {
+      console.warn('[MonevDAK] arsip gagal dibaca:', e);
+      ARSIP = [];
+      ARSIP_DIMUAT = true;
+      ARSIP_GALAT = (ARSIP_ADMIN || akunPfid(ME))
+        ? 'Arsip tidak terbaca (' + (e.code || e.message)
+          + '). Aturan Firestore untuk koleksi beritaAcara belum terpasang di Firebase Console.'
+        : 'Arsip tidak terbaca (' + (e.code || e.message)
+          + '). Dua sebab yang mungkin: aturan Firestore terbaru belum dipasang, atau profil Anda belum memuat kunci daerah — keluar lalu masuk lagi untuk melengkapinya.';
+    }
+  }
+  renderArsip();
 }
 
 
@@ -2283,30 +2352,28 @@ window.BA = {
   /** Dipanggil router saat berpindah ke menu arsip. */
   async renderArsip() {
     if (!ME) return;
-    if (!ARSIP_DIMUAT) {
-      renderArsip();          // tampilkan kerangkanya dulu supaya tidak kosong
-      try {
-        await muatArsip();
-      } catch (e) {
-        console.warn('[MonevDAK] arsip gagal dibaca:', e);
-        ARSIP = [];
-        ARSIP_DIMUAT = true;
-        ARSIP_GALAT = akunPfid(ME)
-          ? 'Arsip tidak terbaca (' + (e.code || e.message)
-            + '). Aturan Firestore untuk koleksi beritaAcara belum terpasang di Firebase Console.'
-          : 'Arsip tidak terbaca (' + (e.code || e.message)
-            + '). Dua sebab yang mungkin: aturan Firestore terbaru belum dipasang, atau profil Anda belum memuat kunci daerah — keluar lalu masuk lagi untuk melengkapinya.';
-      }
-    }
-    renderArsip();
+    /* Kembali dari panel admin: isinya harus diambil ulang dengan izin akun
+       yang sedang masuk, bukan sisa bacaan admin. */
+    if (ARSIP_ADMIN) { ARSIP_ADMIN = false; ARSIP_DIMUAT = false; }
+    await tampilkanArsip();
   },
+
+  /** Tab "Berita Acara" pada panel admin: seluruh berita acara, baca dan unduh. */
+  async renderAdmin(paksa) {
+    if (!ARSIP_ADMIN) { ARSIP_ADMIN = true; ARSIP_DIMUAT = false; }
+    if (paksa) ARSIP_DIMUAT = false;
+    await tampilkanArsip();
+  },
+
+  /** Berapa berita acara yang sudah termuat — untuk angka kecil di tab admin. */
+  jumlahArsip: () => (ARSIP_ADMIN && ARSIP_DIMUAT ? ARSIP.length : null),
 
   /** Formulir dikosongkan saat berganti akun; kunci bersama diambil lagi
       supaya akun berikutnya tidak memakai sisa kunci akun sebelumnya. */
   reset() {
     D = kosong(); FOTO = []; LANGKAH = 'identitas'; GALAT = ''; KABAR = '';
     konfigDicoba = false; AI_GALAT = ''; ARSIP_STATUS = ''; SUDAH_UNDUH = false;
-    ARSIP = []; ARSIP_DIMUAT = false; ARSIP_GALAT = '';
+    ARSIP = []; ARSIP_DIMUAT = false; ARSIP_GALAT = ''; ARSIP_ADMIN = false;
     ARSIP_CARI = ''; ARSIP_PROV = ''; ARSIP_OLEH = '';
     KEMBAR = null; DARI_ARSIP = ''; clearTimeout(jamKembar);
   }

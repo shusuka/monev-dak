@@ -551,6 +551,7 @@
     <div class="mt-7 flex flex-wrap gap-2">
       <button data-atab="test"   onclick="setTabAdmin('test')"   style="--tab:56 189 248"  class="tabnav on text-[13px]"><span class="tabdot"></span>Hasil Pre &amp; Post Test</button>
       <button data-atab="survei" onclick="setTabAdmin('survei')" style="--tab:232 121 249" class="tabnav text-[13px]"><span class="tabdot"></span>Survei Kepuasan Pemda<span id="adTabSurveiJml" class="opacity-70"></span></button>
+      <button data-atab="berita" onclick="setTabAdmin('berita')" style="--tab:52 211 153" class="tabnav text-[13px]"><span class="tabdot"></span>Berita Acara<span id="adTabBaJml" class="opacity-70"></span></button>
     </div>
 
     <div id="adPanelTest">
@@ -597,6 +598,11 @@
     <div id="adPanelSurvei" class="hidden">
       <p class="mt-7 max-w-[720px] text-[14px] leading-[1.7] text-white/60">Penilaian pemda atas pelayanan Rapat Koordinasi TW II, diisi langsung di aplikasi. Indeks kepuasan dihitung dari tujuh unsur pelayanan (nilai rata-rata × 25) mengikuti cara hitung IKM.</p>
       <div id="adSurvei" class="mt-7"></div>
+    </div>
+
+    <!-- seluruh notulensi yang disusun petugas PFID; isinya diisi oleh BA.renderAdmin() -->
+    <div id="adPanelBa" class="hidden">
+      <div id="adBa"></div>
     </div>
   </section>
 
@@ -2160,6 +2166,12 @@ async function doAdminLogin(e) {
 async function keluarAdmin() {
   ADMIN = null;
   ADATA = { peserta: [], hasil: [], gabung: [], galatPeserta: null };
+  /* Arsip yang terbaca dengan izin admin tidak boleh tertinggal untuk akun
+     berikutnya yang masuk di perangkat yang sama. */
+  if (window.BA) window.BA.reset();
+  $('#adBa').innerHTML = '';       // jangan sampai daftar admin lama sempat terlihat
+  $('#adTabBaJml').textContent = '';
+  setTabAdmin('test');
   $('#adEmail').value = ''; $('#adPass').value = '';
   try { await store.keluarAkun(); } catch (e) { console.warn(e); }
   go('landing');
@@ -2171,10 +2183,20 @@ function setTabAdmin(tab) {
   $$('[data-atab]').forEach(b => b.classList.toggle('on', b.dataset.atab === tab));
   $('#adPanelTest').classList.toggle('hidden', tab !== 'test');
   $('#adPanelSurvei').classList.toggle('hidden', tab !== 'survei');
-  $('#adJudul').textContent = tab === 'survei'
-    ? 'Hasil survei kepuasan pemda'
-    : 'Progres pengisian seluruh pemda';
+  $('#adPanelBa').classList.toggle('hidden', tab !== 'berita');
+  $('#adJudul').textContent = { survei: 'Hasil survei kepuasan pemda',
+                                berita: 'Berita acara eMonitoring' }[tab]
+                              || 'Progres pengisian seluruh pemda';
+  /* Daftarnya baru diambil saat tabnya dibuka: admin yang hanya melihat nilai
+     tidak perlu menunggu seluruh berita acara terbaca. */
+  if (tab === 'berita' && window.BA) window.BA.renderAdmin().then(tandaiJumlahBa);
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/** Angka kecil di samping nama tab, seperti pada tab survei. */
+function tandaiJumlahBa() {
+  const n = window.BA && window.BA.jumlahArsip();
+  $('#adTabBaJml').textContent = (n == null) ? '' : ' · ' + n;
 }
 
 async function muatAdmin(paksa) {
@@ -2201,6 +2223,11 @@ async function muatAdmin(paksa) {
   isiProvinsiAdmin();
   renderAdmin();
   if (window.SURVEI) window.SURVEI.renderAdmin();
+  /* Berita acara hanya ikut dimuat ulang bila tabnya memang sedang dibuka. */
+  if (window.BA && !$('#adPanelBa').classList.contains('hidden')) {
+    await window.BA.renderAdmin(true);
+    tandaiJumlahBa();
+  }
   if (paksa) toast('Data admin dimuat ulang.');
 }
 
