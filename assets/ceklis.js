@@ -180,20 +180,29 @@ function roller() {
 
 const GAYA = `
 <style id="ckGaya">
-  /* ── jalan progres ── */
-  .ck-jalan { position: relative; height: 74px; border-radius: 1.25rem; overflow: hidden;
-              background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-              border: 1px solid rgba(255,255,255,.1); }
-  /* bagian yang sudah dipadatkan: aspal gelap mengkilap */
+  /* ── jalan progres ──
+     Latarnya aspal sungguhan: satu ubin kecil yang dipotong dari foto roller
+     (assets/aspal.webp, lihat catatan di bawah) lalu diulang mendatar. Ubinnya
+     sudah dicerminkan sewaktu dibuat, jadi sambungannya tidak terlihat pada
+     lebar layar berapa pun. Rollernya sendiri sengaja tidak ikut dipotong dari
+     foto — yang berjalan mengikuti persentase tetap roller SVG di bawah ini,
+     supaya tidak ada dua roller di satu layar. */
+  .ck-jalan { position: relative; height: 150px; border-radius: 1.25rem; overflow: hidden;
+              background: #14161a url("assets/aspal.webp") repeat-x center / auto 100%;
+              border: 1px solid rgba(255,255,255,.1);
+              box-shadow: inset 0 22px 34px -18px rgba(0,0,0,.85); }
+  /* bagian yang sudah dipadatkan: aspalnya tetap terlihat, hanya bersemu hijau
+     dan sedikit lebih terang — seperti lajur yang baru selesai dikerjakan */
   .ck-aspal { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: inherit;
-              background: linear-gradient(90deg, rgba(16,185,129,.32), rgba(52,211,153,.16));
-              box-shadow: inset 0 0 40px rgba(16,185,129,.25);
+              background: linear-gradient(90deg, rgba(16,185,129,.34), rgba(52,211,153,.2));
+              box-shadow: inset 0 0 46px rgba(16,185,129,.3), 1px 0 18px rgba(52,211,153,.45);
               transition: width 1.7s cubic-bezier(.22,1,.36,1); }
-  /* marka tengah yang bergeser terus, jadi jalannya terasa hidup */
-  .ck-marka { position: absolute; left: 0; right: 0; top: 50%; height: 3px; margin-top: -1.5px;
-              background: repeating-linear-gradient(90deg, rgba(255,255,255,.5) 0 22px, transparent 22px 46px);
-              animation: ckMarka 1.6s linear infinite; opacity: .5; }
-  .ck-mesin { position: absolute; bottom: 5px; left: 0; width: 62px; margin-left: -31px;
+  /* marka yang bergeser terus, jadi jalannya terasa hidup */
+  .ck-marka { position: absolute; left: 0; right: 0; top: 68%; height: 4px; margin-top: -2px;
+              background: repeating-linear-gradient(90deg, rgba(255,255,255,.62) 0 34px, transparent 34px 78px);
+              animation: ckMarka 1.9s linear infinite; opacity: .55; }
+  .ck-mesin { position: absolute; bottom: 14px; left: 0; width: 104px; margin-left: -52px;
+              filter: drop-shadow(0 10px 14px rgba(0,0,0,.55));
               transition: left 1.7s cubic-bezier(.22,1,.36,1); animation: ckBob 1.7s ease-in-out infinite; }
   .ck-mesin-svg { width: 100%; height: auto; }
   .ck-getar  { animation: ckGetar .13s linear infinite; }
@@ -201,7 +210,8 @@ const GAYA = `
   .ck-asap   { animation: ckAsap 2.2s ease-out infinite; }
   .ck-kilau  { animation: ckKilau 2s ease-in-out infinite; }
 
-  @keyframes ckMarka  { to { background-position-x: -46px } }
+  /* satu putaran = satu jarak antar marka, supaya sambungannya tak terlihat */
+  @keyframes ckMarka  { to { background-position-x: -78px } }
   @keyframes ckBob    { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-2.5px) } }
   @keyframes ckGetar  { 0%,100% { transform: translateY(0) } 50% { transform: translateY(.7px) } }
   @keyframes ckGuling { to { transform: rotate(360deg) } }
