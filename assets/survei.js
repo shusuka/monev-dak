@@ -1054,6 +1054,8 @@ function bilahSaring() {
         ${tampil.length} dari ${REKAP.length} · hapus penyaring</button>` : ''}
       <div class="ml-auto flex flex-wrap gap-2">
         <button id="svAdmMuat" class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 transition hover:bg-white/10">Muat ulang</button>
+        <!-- jawaban yang terlanjur masuk lewat Google Formulir putaran pertama -->
+        <button id="svAdmImpor" class="rounded-full border border-sky-400/50 bg-sky-500/15 px-5 py-2.5 text-[13px] font-medium text-sky-200 transition hover:bg-sky-500/25">Impor Google Formulir</button>
         <!-- pengisian coba-coba saat uji coba perlu bisa dibuang dari rekap -->
         <button id="svAdmHapus" disabled
                 class="rounded-full border border-red-400/50 bg-red-500/15 px-5 py-2.5 text-[13px] font-medium text-red-200 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40">
@@ -1224,6 +1226,7 @@ function pasangAdminSurvei() {
   if (tutup) tutup.onclick = () => { UNSUR_PILIH = null; gambarUlang(); };
 
   el('#svAdmMuat').onclick = () => window.SURVEI.renderAdmin(true);
+  el('#svAdmImpor').onclick = () => pilihBerkasImpor();
   el('#svAdmExcel').onclick = async () => {
     const t = el('#svAdmExcel');
     t.disabled = true; t.textContent = 'Menyusun…';
@@ -1349,6 +1352,365 @@ function bukaDetail(r) {
 
 
 /* ═══════════════════════════════════════════════════════════════
+   3b. IMPOR DARI GOOGLE FORMULIR
+
+   Survei putaran pertama sempat berjalan di Google Formulir sebelum
+   kuesionernya pindah ke dalam aplikasi. Jawaban yang terlanjur masuk di
+   sana tidak boleh hilang dari rekap, jadi berkas ekspornya (.csv) bisa
+   dimuat langsung dari panel admin.
+
+   Dua hal yang membedakannya dari pengisian biasa:
+     - Respondennya belum tentu punya akun. Bila emailnya tidak ketemu di
+       daftar peserta, dibuatkan id bayangan `gform-…` supaya penilaiannya
+       tetap terhitung. Kelonggaran ini khusus survei kepuasan — nilai pre
+       dan post test tetap harus dari akun sungguhan.
+     - Daerahnya ditebak dari kolom "Instansi Daerah Asal" yang berupa teks
+       bebas, lalu dicocokkan dengan daftar penerima DAK. Tebakannya selalu
+       ditampilkan lebih dulu untuk diperiksa, tidak pernah langsung disimpan.
+   ═══════════════════════════════════════════════════════════════ */
+
+const PREFIKS_GFORM = 'gform-';
+
+/* Singkatan yang lazim dipakai daerah menuliskan instansinya. */
+const ALIAS_DAERAH = {
+  tts: 'Timor Tengah Selatan', ttu: 'Timor Tengah Utara',
+  sbd: 'Sumba Barat Daya', oki: 'Ogan Komering Ilir',
+  'oku timur': 'Ogan Komering Ulu Timur', okut: 'Ogan Komering Ulu Timur',
+  sitaro: 'Kepulauan Siau Tagulandang Biaro', pangkep: 'Pangkajene dan Kepulauan',
+  sidrap: 'Sidenreng Rappang', yapen: 'Kepulauan Yapen',
+  tanimbar: 'Kepulauan Tanimbar', mtb: 'Kepulauan Tanimbar',
+  anambas: 'Kepulauan Anambas', pegaf: 'Pegunungan Arfak'
+};
+
+/** Pembaca CSV yang mengerti tanda kutip, koma di dalam sel, dan baris
+    bersambung — kolom isian bebas Google Formulir penuh ketiganya. */
+function uraiCsv(teks) {
+  const baris = [];
+  let sel = '', satu = [], kutip = false;
+  const t = String(teks || '').replace(/^﻿/, '');
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (kutip) {
+      if (c === '"') { if (t[i + 1] === '"') { sel += '"'; i++; } else kutip = false; }
+      else sel += c;
+    } else if (c === '"') kutip = true;
+    else if (c === ',') { satu.push(sel); sel = ''; }
+    else if (c === '\r') { /* diabaikan; \n yang menutup baris */ }
+    else if (c === '\n') { satu.push(sel); baris.push(satu); satu = []; sel = ''; }
+    else sel += c;
+  }
+  if (sel !== '' || satu.length) { satu.push(sel); baris.push(satu); }
+  return baris.filter(b => b.some(x => String(x).trim() !== ''));
+}
+
+/** Nomor kolom dicari dari kata kunci judulnya, bukan urutannya, supaya
+    ekspor Google Formulir yang kolomnya bergeser tetap terbaca. */
+function petaKolom(kepala) {
+  const cari = re => kepala.findIndex(h => re.test(String(h)));
+  const k = {
+    waktu:        cari(/timestamp|stempel waktu/i),
+    nama:         cari(/^\s*nama\s*$/i),
+    instansi:     cari(/instansi/i),
+    email:        cari(/^\s*email\s*$/i),
+    hp:           cari(/handphone|no\.?\s*hp|telepon/i),
+    prosedur:     cari(/kemudahan prosedur/i),
+    persyaratan:  cari(/kesesuaian persyaratan/i),
+    kecepatan:    cari(/kecepatan pelayanan/i),
+    kompetensi:   cari(/kompetensi/i),
+    perilaku:     cari(/perilaku petugas/i),
+    pengaduan:    cari(/penanganan pengaduan/i),
+    informasi:    cari(/informasi yang didapat/i),
+    biaya:        cari(/penarikan biaya/i),
+    imbalan:      cari(/imbalan/i),
+    kurang:       cari(/kurang berkenan/i),
+    berkesan:     cari(/paling berkesan/i),
+    harapan:      cari(/harapan/i),
+    deskWilayah:  cari(/petugas desk koordinator/i),
+    deskVerifikator: cari(/petugas desk verifikator/i)
+  };
+  /* Skor dan alasan tidak punya judul yang khas — keduanya bernama sama
+     persis pada dua pasang kolom. Yang menentukan letaknya: keduanya selalu
+     mengikuti kolom nama petugasnya. */
+  if (k.deskWilayah >= 0)     { k.skorWilayah = k.deskWilayah + 1;     k.alasanWilayah = k.deskWilayah + 2; }
+  if (k.deskVerifikator >= 0) { k.skorVerifikator = k.deskVerifikator + 1; k.alasanVerifikator = k.deskVerifikator + 2; }
+  return k;
+}
+
+/** "2026/08/05 4:21:57 pm GMT+7" — bukan bentuk yang dimengerti Date(). */
+function waktuGform(s) {
+  const m = String(s || '').match(/(\d{4})\/(\d{1,2})\/(\d{1,2})[ ,]+(\d{1,2}):(\d{2}):(\d{2})\s*(am|pm)?\s*(?:GMT\s*([+-]\d{1,2}))?/i);
+  if (!m) return null;
+  let jam = Number(m[4]);
+  const ap = (m[7] || '').toLowerCase();
+  if (ap === 'pm' && jam < 12) jam += 12;
+  if (ap === 'am' && jam === 12) jam = 0;
+  const zona = Number(m[8] || 0);
+  return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], jam - zona, +m[5], +m[6]));
+}
+
+/** Daerah ditebak dari teks bebas, dicocokkan dengan penerima DAK. */
+function cocokDaerah(teks) {
+  const t = ' ' + norm(teks || '') + ' ';
+  if (t.trim() === '') return null;
+  const sebutKota = / kota /.test(t);
+  const W = window.WILAYAH || {};
+
+  /* Dua lintasan: yang pertama menuntut "kota" pada instansinya cocok dengan
+     jenis daerahnya, supaya Kota Magelang tidak tertukar dengan Kab Magelang.
+     Nama terpanjang menang — "Konawe Utara" mengalahkan "Konawe". */
+  for (const ketat of [true, false]) {
+    let terbaik = null;
+    Object.keys(W).forEach(prov => {
+      String(W[prov] || '').split(',').filter(Boolean).forEach(kab => {
+        const kota = /^Kota /.test(kab);
+        if (ketat && kota !== sebutKota) return;
+        const inti = norm(kab.replace(/^Kota /, ''));
+        if (!inti || t.indexOf(' ' + inti + ' ') < 0) return;
+        if (!terbaik || inti.length > terbaik.n) terbaik = { prov, kab, n: inti.length };
+      });
+    });
+    if (terbaik) return { prov: terbaik.prov, kab: terbaik.kab };
+  }
+
+  for (const sing of Object.keys(ALIAS_DAERAH)) {
+    if (t.indexOf(' ' + sing + ' ') < 0) continue;
+    const nama = ALIAS_DAERAH[sing];
+    const prov = Object.keys(W).find(p => String(W[p] || '').split(',').includes(nama));
+    if (prov) return { prov, kab: nama };
+  }
+  return null;
+}
+
+/** Akun peserta dengan email yang sama — supaya penilaiannya menempel pada
+    akunnya sendiri, bukan menjadi baris kembar dengan id bayangan. */
+function akunDenganEmail(email) {
+  const e = String(email || '').trim().toLowerCase();
+  if (!e || e === '-') return null;
+  const daftar = (typeof ADATA !== 'undefined' && ADATA.peserta) || [];
+  return daftar.find(p => String(p.email || '').trim().toLowerCase() === e) || null;
+}
+
+function susunImpor(teks) {
+  const baris = uraiCsv(teks);
+  if (baris.length < 2) throw new Error('Berkasnya kosong atau bukan CSV.');
+  const kol = petaKolom(baris[0]);
+  if (kol.prosedur < 0 || kol.nama < 0)
+    throw new Error('Judul kolomnya tidak dikenali. Pastikan yang diunggah ekspor CSV dari Google Formulir kuesioner ini.');
+
+  const ambil = (b, i) => (i >= 0 && i < b.length) ? String(b[i]).trim() : '';
+  const angka = v => { const n = Number(String(v).replace(/[^\d]/g, '')); return n > 0 ? n : null; };
+
+  return baris.slice(1).map(b => {
+    const nama     = ambil(b, kol.nama);
+    const instansi = ambil(b, kol.instansi);
+    const email    = ambil(b, kol.email);
+    const daerah   = cocokDaerah(instansi);
+
+    const jawaban = {
+      hp: ambil(b, kol.hp),
+      prosedur: angka(ambil(b, kol.prosedur)), persyaratan: angka(ambil(b, kol.persyaratan)),
+      kecepatan: angka(ambil(b, kol.kecepatan)), kompetensi: angka(ambil(b, kol.kompetensi)),
+      perilaku: angka(ambil(b, kol.perilaku)), pengaduan: angka(ambil(b, kol.pengaduan)),
+      informasi: angka(ambil(b, kol.informasi)),
+      biaya: ambil(b, kol.biaya), imbalan: ambil(b, kol.imbalan),
+      kurang: ambil(b, kol.kurang), berkesan: ambil(b, kol.berkesan), harapan: ambil(b, kol.harapan),
+      deskWilayah: ambil(b, kol.deskWilayah), skorWilayah: angka(ambil(b, kol.skorWilayah)),
+      alasanWilayah: ambil(b, kol.alasanWilayah),
+      deskVerifikator: ambil(b, kol.deskVerifikator), skorVerifikator: angka(ambil(b, kol.skorVerifikator)),
+      alasanVerifikator: ambil(b, kol.alasanVerifikator)
+    };
+
+    const akun = akunDenganEmail(email) || akunDenganEmail(ambil(b, 1));
+    const id = akun ? akun.pid
+             : PREFIKS_GFORM + (slug(email && email !== '-' ? email.split('@')[0] : nama) || 'tanpa-nama').slice(0, 48);
+
+    return {
+      id, akun: !!akun, instansi, nama, email: email === '-' ? '' : email,
+      prov: daerah ? daerah.prov : (akun ? akun.prov : ''),
+      kab:  daerah ? daerah.kab  : (akun ? akun.kab  : ''),
+      cocok: !!daerah,
+      waktu: waktuGform(ambil(b, kol.waktu)),
+      jawaban, indeks: indeksKepuasan(jawaban)
+    };
+  }).filter(r => r.nama || r.email);
+}
+
+async function tulisImpor(daftar) {
+  if (pakaiFirebase()) {
+    const { doc, setDoc, serverTimestamp } = store.fs;
+    for (const r of daftar) {
+      await setDoc(doc(store.db, 'survei', r.id), {
+        uid: r.id, nama: r.nama, prov: r.prov, kab: r.kab, email: r.email,
+        jawaban: r.jawaban, indeks: r.indeks,
+        /* Jejak asal-usul: dari mana datangnya, instansi apa adanya yang
+           ditulis responden, dan kapan diimpor. */
+        sumber: 'gform', instansiAsal: r.instansi, imporAt: serverTimestamp(),
+        dikirimAt: r.waktu || serverTimestamp()
+      });
+    }
+  } else {
+    const semua = bacaLokal();
+    daftar.forEach(r => {
+      semua[r.id] = { uid: r.id, nama: r.nama, prov: r.prov, kab: r.kab, email: r.email,
+        jawaban: r.jawaban, indeks: r.indeks, sumber: 'gform', instansiAsal: r.instansi,
+        dikirimAt: r.waktu ? r.waktu.getTime() : Date.now() };
+    });
+    tulisLokal(semua);
+  }
+}
+
+/** Pratinjau sebelum menyimpan: tebakan daerah dan baris yang akan tertimpa
+    harus terlihat lebih dulu, karena keduanya yang paling mungkin keliru. */
+function bukaImpor(daftar, namaBerkas) {
+  const adaId = new Set(REKAP.map(r => r.id));
+  const lolos = daftar.filter(r => r.cocok || r.akun);
+  const ragu  = daftar.filter(r => !r.cocok && !r.akun);
+
+  /* Baris yang daerahnya tidak dikenali dan pengisinya tidak punya akun
+     hampir selalu pengisian coba-coba saat menyiapkan formulir — centangnya
+     dilepas lebih dulu, tetapi tetap bisa dicentang lagi kalau memang nyata. */
+  const barisPratinjau = (r, i) => `<tr class="border-b border-white/[.06]">
+    <td class="px-3 py-2.5">
+      <input type="checkbox" class="svImporPilih h-4 w-4 cursor-pointer rounded border-white/30 bg-transparent accent-sky-400"
+             value="${i}"${(r.cocok || r.akun) ? ' checked' : ''} />
+    </td>
+    <td class="px-3 py-2.5">
+      <p class="font-medium">${aman(r.nama || '—')}</p>
+      <p class="text-[11px] text-white/40">${aman(r.email || 'tanpa email')}</p>
+    </td>
+    <td class="px-3 py-2.5 text-white/60">
+      <p class="text-[12px]">${aman(r.instansi || '—')}</p>
+      <p class="mt-0.5 text-[12px] ${r.cocok ? 'text-emerald-300' : 'text-amber-300'}">
+        ${r.cocok ? '→ ' + aman(r.kab) + ', ' + aman(r.prov) : '→ daerah tidak dikenali'}</p>
+    </td>
+    <td class="px-3 py-2.5 text-center tabular-nums">${r.indeks == null ? '—' : aman(r.indeks)}</td>
+    <td class="px-3 py-2.5 text-[12px]">
+      ${r.akun ? '<span class="text-sky-300">akun terdaftar</span>'
+               : '<span class="text-white/50">id bayangan</span>'}
+      ${adaId.has(r.id) ? '<br><span class="text-amber-300">menimpa yang ada</span>' : ''}
+    </td>
+  </tr>`;
+
+  const lama = el('#svImpor');
+  if (lama) lama.remove();
+  const m = document.createElement('div');
+  m.id = 'svImpor';
+  m.className = 'fixed inset-0 z-[92] flex items-start justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm md:p-10';
+  m.innerHTML = `
+    <div class="glass w-full max-w-4xl rounded-[2rem] p-6 md:p-8">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-[11px] uppercase tracking-[0.16em] text-white/45">Impor Google Formulir</p>
+          <p class="text-[18px] font-semibold">${daftar.length} penilaian terbaca</p>
+          <p class="text-[12px] text-white/50">${aman(namaBerkas)}</p>
+        </div>
+        <button data-tutup class="rounded-full p-2 text-white/60 transition hover:bg-white/10 hover:text-white">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-5 w-5"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      ${ragu.length ? `<div class="mt-5 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-[13px] leading-[1.7] text-amber-200/90">
+        <span class="font-semibold">${ragu.length} baris daerahnya tidak dikenali</span> dan pengisinya tidak punya akun —
+        biasanya pengisian coba-coba saat formulirnya disiapkan. Centangnya sudah dilepas; centang lagi bila memang nyata,
+        tetapi baris itu tidak akan menyalakan ceklis daerah mana pun dan tidak terhitung pada peringkat provinsi.
+      </div>` : ''}
+
+      <div class="mt-5 max-h-[52vh] overflow-y-auto rounded-2xl border border-white/10">
+        <table class="w-full min-w-[660px] text-left text-[13px]">
+          <thead class="sticky top-0 border-b border-white/10 bg-ink/95 text-[10px] uppercase tracking-[0.14em] text-white/45">
+            <tr>
+              <th class="px-3 py-3 font-semibold">
+                <input type="checkbox" id="svImporSemua" title="Pilih semua"
+                       class="h-4 w-4 cursor-pointer rounded border-white/30 bg-transparent accent-sky-400" />
+              </th>
+              <th class="px-3 py-3 font-semibold">Pengisi</th>
+              <th class="px-3 py-3 font-semibold">Instansi → daerah</th>
+              <th class="px-3 py-3 text-center font-semibold">Indeks</th>
+              <th class="px-3 py-3 font-semibold">Disimpan sebagai</th>
+            </tr>
+          </thead>
+          <tbody>${daftar.map(barisPratinjau).join('')}</tbody>
+        </table>
+      </div>
+
+      <div class="mt-5 flex flex-wrap items-center gap-3">
+        <p class="text-[12px] leading-[1.7] text-white/45">
+          ${lolos.length} dari ${daftar.length} baris menempel pada daerahnya.
+          Mengimpor ulang berkas yang sama menimpa baris lama, bukan menggandakannya.
+        </p>
+        <span class="ml-auto flex gap-2">
+          <button data-batal class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 transition hover:bg-white/10">Batal</button>
+          <button data-simpan class="cta-glow rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black">Simpan</button>
+        </span>
+      </div>
+    </div>`;
+
+  document.body.appendChild(m);
+  const tutup = () => m.remove();
+  m.querySelector('[data-tutup]').onclick = tutup;
+  m.querySelector('[data-batal]').onclick = tutup;
+  m.onclick = e => { if (e.target === m) tutup(); };
+
+  const centang = () => Array.from(m.querySelectorAll('.svImporPilih'));
+  const terpilih = () => centang().filter(c => c.checked).map(c => daftar[Number(c.value)]);
+  const tombol = m.querySelector('[data-simpan]');
+
+  const perbarui = () => {
+    const n = terpilih().length;
+    tombol.disabled = n === 0;
+    tombol.style.opacity = n ? '' : '.4';
+    tombol.textContent = n ? 'Simpan ' + n + ' penilaian' : 'Tidak ada yang dipilih';
+    const semua = m.querySelector('#svImporSemua');
+    semua.checked = n === centang().length;
+    semua.indeterminate = n > 0 && n < centang().length;
+  };
+  centang().forEach(c => c.onchange = perbarui);
+  m.querySelector('#svImporSemua').onchange = e => {
+    centang().forEach(c => c.checked = e.target.checked);
+    perbarui();
+  };
+  perbarui();
+
+  tombol.onclick = async () => {
+    const pilih = terpilih();
+    if (!pilih.length) return;
+    tombol.disabled = true; tombol.textContent = 'Menyimpan…';
+    try {
+      await tulisImpor(pilih);
+      tutup();
+      await window.SURVEI.renderAdmin(true);
+      if (window.CEKLIS) window.CEKLIS.render();
+      toast(pilih.length + ' penilaian Google Formulir masuk ke rekap.');
+    } catch (e) {
+      console.error('[MonevDAK] impor gagal:', e);
+      perbarui();
+      alert('Gagal menyimpan: ' + ((e && e.code) || e.message) +
+        (/permission/i.test(String((e && e.code) || e.message))
+          ? '\n\nFirestore menolak penulisan. Aturan koleksi `survei` harus mengizinkan admin menulis dokumen milik orang lain — publikasikan ulang firestore.rules versi terbaru dari repositori.'
+          : ''));
+    }
+  };
+}
+
+function pilihBerkasImpor() {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.csv,text/csv';
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0];
+    if (!f) return;
+    const baca = new FileReader();
+    baca.onload = () => {
+      try { bukaImpor(susunImpor(baca.result), f.name); }
+      catch (e) { console.error(e); alert('Berkasnya tidak dapat dibaca.\n\n' + e.message); }
+    };
+    baca.readAsText(f, 'utf-8');
+  };
+  inp.click();
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
    4. TITIK MASUK
    ═══════════════════════════════════════════════════════════════ */
 window.SURVEI = {
@@ -1394,6 +1756,14 @@ window.SURVEI = {
     renderAdminSurvei();
     if (paksa) toast('Rekap survei dimuat ulang.');
   },
+
+  /** Penilaian yang sudah masuk, dipakai ceklis kesiapan pemda di panel admin
+      untuk menandai daerah mana yang surveinya sudah terisi. Salinan, bukan
+      larik aslinya, supaya pemanggilnya tidak dapat mengubah rekap. */
+  rekap() { return REKAP.slice(); },
+
+  /** Keterangan galat bila rekapnya gagal terbaca; kosong berarti aman. */
+  galatRekap() { return REKAP_GALAT; },
 
   reset() {
     IDX = 0; JAWAB = {}; TERKIRIM = null; DIMUAT = false; TINJAU = false; GALAT = '';

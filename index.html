@@ -598,6 +598,7 @@
     <!-- dua kelompok hasil, dipilih dari tab di atas -->
     <div class="mt-7 flex flex-wrap gap-2">
       <button data-atab="test"   onclick="setTabAdmin('test')"   style="--tab:56 189 248"  class="tabnav on text-[13px]"><span class="tabdot"></span>Hasil Pre &amp; Post Test</button>
+      <button data-atab="ceklis" onclick="setTabAdmin('ceklis')" style="--tab:250 204 21"  class="tabnav text-[13px]"><span class="tabdot"></span>Ceklis Kesiapan Pemda<span id="adTabCeklisJml" class="opacity-70"></span></button>
       <button data-atab="survei" onclick="setTabAdmin('survei')" style="--tab:232 121 249" class="tabnav text-[13px]"><span class="tabdot"></span>Survei Kepuasan Pemda<span id="adTabSurveiJml" class="opacity-70"></span></button>
       <button data-atab="berita" onclick="setTabAdmin('berita')" style="--tab:52 211 153" class="tabnav text-[13px]"><span class="tabdot"></span>Berita Acara<span id="adTabBaJml" class="opacity-70"></span></button>
     </div>
@@ -642,6 +643,11 @@
     <p class="mt-2 max-w-[640px] text-[14px] leading-[1.7] text-white/60">Persentase jawaban benar tiap butir, dihitung dari seluruh sesi yang tersimpan. Butir dengan persentase rendah menandakan materi yang perlu diperkuat saat pendampingan.</p>
     <div id="adSoal" class="glass mt-6 overflow-hidden rounded-3xl"></div>
     </div><!-- /adPanelTest -->
+
+    <!-- ceklis pre test, post test, dan survei per pemda; diisi assets/ceklis.js -->
+    <div id="adPanelCeklis" class="hidden">
+      <div id="adCeklis"></div>
+    </div>
 
     <div id="adPanelSurvei" class="hidden">
       <p class="mt-7 max-w-[720px] text-[14px] leading-[1.7] text-white/60">Penilaian pemda atas pelayanan Rapat Koordinasi TW II, diisi langsung di aplikasi. Indeks kepuasan dihitung dari tujuh unsur pelayanan (nilai rata-rata × 25) mengikuti cara hitung IKM.</p>
@@ -1159,23 +1165,25 @@ const store = {
   }
 };
 
-/* Data contoh untuk mode lokal saja, supaya papan peringkat tidak kosong. */
+/* Data contoh untuk mode lokal saja, supaya papan peringkat tidak kosong.
+   Daerahnya diambil dari daftar penerima DAK pada assets/wilayah.js — kalau
+   memakai daerah lain, pratinjau lokalnya penuh baris "di luar daftar DAK". */
 function seedLokal(d) {
   const rows = [
-    ["Agus Purnomo","Jawa Tengah","Kebumen",13,18, 742000, 611000],
-    ["Siti Rahmawati","Jawa Barat","Garut",15,17, 690000, 655000],
+    ["Agus Purnomo","Jawa Tengah","Magelang",13,18, 742000, 611000],
+    ["Siti Rahmawati","Jawa Barat","Cianjur",15,17, 690000, 655000],
     ["Bagus Nugroho","Jawa Timur","Malang",12,18, 810000, 590000],
     ["Andi Mappe","Sulawesi Selatan","Bone",11,16, 905000, 780000],
-    ["Ratna Dewi","Bali","Buleleng",16,18, 640000, 545000],
-    ["Iwan Setiawan","Sumatera Barat","Agam",9,15, 1010000, 860000],
-    ["Yohana Tallo","Nusa Tenggara Timur","Sikka",8,14, 1120000, 940000],
+    ["Ratna Dewi","Bali","Bangli",16,18, 640000, 545000],
+    ["Iwan Setiawan","Sumatera Barat","Solok",9,15, 1010000, 860000],
+    ["Yohana Tallo","Nusa Tenggara Timur","Alor",8,14, 1120000, 940000],
     ["Rudi Hartono","Kalimantan Selatan","Banjar",13,16, 770000, 700000],
     ["Nur Aini","Aceh","Pidie",12,17, 830000, 620000],
     ["Melkior Waine","Papua","Biak Numfor",7,12, 1180000, 1005000],
-    ["Dedi Kurniawan","Lampung","Pringsewu",11,15, 880000, 815000],
+    ["Dedi Kurniawan","Lampung","Lampung Selatan",11,15, 880000, 815000],
     ["Tri Handayani","DI Yogyakarta","Bantul",15,20, 705000, 498000],
-    ["Hasan Basri","Riau","Kampar",10,14, 960000, 890000],
-    ["Lita Marlina","Banten","Lebak",12,15, 845000, 805000]
+    ["Hasan Basri","Kepulauan Riau","Kota Tanjungpinang",10,14, 960000, 890000],
+    ["Lita Marlina","Jawa Barat","Majalengka",12,15, 845000, 805000]
   ];
   rows.forEach(([nama, prov, kab, bPre, bPost, dPre, dPost], i) => {
     const pid = pesertaId(nama, prov, kab);
@@ -1488,6 +1496,25 @@ const idPfid    = nama => slug(nama).replace(/-/g, '');
 const emailPfid = nama => idPfid(nama) + '@' + DOMAIN_PFID;
 const emailIniPfid = email => String(email || '').toLowerCase().endsWith('@' + DOMAIN_PFID);
 
+/* Sebagian petugas terlanjur punya akun dengan alamat kantor yang tidak
+   berdomain PFID, padahal user id-nya memuat "jalan". firestore.rules sudah
+   memperlakukan mereka sebagai petugas PFID lewat idPfid(), jadi aplikasi
+   mengikutinya — kalau tidak, merekalah yang tidak dapat dipulihkan saat
+   dokumen pesertanya hilang. */
+const idnyaPfid = email => /jalan/i.test(String(email || '').split('@')[0]);
+
+/** Akun admin? Emailnya sendiri memuat "jalan" (pfidbidangjalan@…), padahal
+    admin memang tidak punya dokumen peserta dan tidak boleh dibuatkan satu.
+    Yang membedakannya dari petugas PFID cuma satu, dan tidak perlu ditulis
+    ulang di sini: hanya admin yang diizinkan firestore.rules membaca seluruh
+    koleksi `peserta`. Alamat pada domain PFID tidak perlu diperiksa — domain
+    itu hanya dipakai pendaftaran petugas. */
+async function iniAdmin(email) {
+  if (emailIniPfid(email) || store.mode !== 'firebase') return false;
+  try { await store.semuaPeserta(); return true; }
+  catch (e) { return false; }
+}
+
 /** Sesuaikan form daftar begitu nama diketik: akun PFID hanya butuh kata sandi. */
 function sesuaikanFormDaftar() {
   const nama = $('#inNama').value.trim();
@@ -1569,8 +1596,9 @@ async function doMasuk(e) {
     /* Kata sandinya benar, tetapi akun ini tidak punya identitas peserta.
        Untuk petugas PFID identitasnya dapat dibentuk ulang dari user id-nya,
        jadi dipulihkan diam-diam daripada menolak orangnya masuk. */
-    if (!profil && emailIniPfid(email)) {
-      try { profil = await store.pulihkanPfid(); }
+    let pulih = false;
+    if (!profil && (emailIniPfid(email) || idnyaPfid(email)) && !(await iniAdmin(email))) {
+      try { profil = await store.pulihkanPfid(); pulih = !!profil; }
       catch (ex2) { console.warn('[MonevDAK] profil PFID gagal dipulihkan:', ex2); }
     }
 
@@ -1584,7 +1612,8 @@ async function doMasuk(e) {
       return;
     }
     $('#mkSandi').value = '';
-    await mulaiSesiPeserta(profil, 'Selamat datang kembali');
+    await mulaiSesiPeserta(profil, pulih ? 'Identitas petugas PFID dipulihkan. Selamat datang'
+                                         : 'Selamat datang kembali');
   } catch (ex) {
     console.error(ex);
     ME = null;
@@ -2250,8 +2279,10 @@ async function keluarAdmin() {
   /* Arsip yang terbaca dengan izin admin tidak boleh tertinggal untuk akun
      berikutnya yang masuk di perangkat yang sama. */
   if (window.BA) window.BA.reset();
+  if (window.CEKLIS) window.CEKLIS.reset();
   $('#adBa').innerHTML = '';       // jangan sampai daftar admin lama sempat terlihat
   $('#adTabBaJml').textContent = '';
+  $('#adTabCeklisJml').textContent = '';
   setTabAdmin('test');
   $('#adEmail').value = ''; $('#adPass').value = '';
   try { await store.keluarAkun(); } catch (e) { console.warn(e); }
@@ -2263,15 +2294,26 @@ async function keluarAdmin() {
 function setTabAdmin(tab) {
   $$('[data-atab]').forEach(b => b.classList.toggle('on', b.dataset.atab === tab));
   $('#adPanelTest').classList.toggle('hidden', tab !== 'test');
+  $('#adPanelCeklis').classList.toggle('hidden', tab !== 'ceklis');
   $('#adPanelSurvei').classList.toggle('hidden', tab !== 'survei');
   $('#adPanelBa').classList.toggle('hidden', tab !== 'berita');
-  $('#adJudul').textContent = { survei: 'Hasil survei kepuasan pemda',
+  $('#adJudul').textContent = { ceklis: 'Ceklis kesiapan pemda',
+                                survei: 'Hasil survei kepuasan pemda',
                                 berita: 'Berita acara eMonitoring' }[tab]
                               || 'Progres pengisian seluruh pemda';
+  /* Digambar ulang tiap kali tabnya dibuka supaya animasi ceklisnya berjalan
+     dari awal, bukan tabel yang sudah terlanjur diam. */
+  if (tab === 'ceklis' && window.CEKLIS) window.CEKLIS.render();
   /* Daftarnya baru diambil saat tabnya dibuka: admin yang hanya melihat nilai
      tidak perlu menunggu seluruh berita acara terbaca. */
   if (tab === 'berita' && window.BA) window.BA.renderAdmin().then(tandaiJumlahBa);
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/** Angka kecil di samping nama tab ceklis: berapa daerah yang sudah lengkap. */
+function tandaiJumlahCeklis() {
+  const n = window.CEKLIS && window.CEKLIS.jumlahLengkap();
+  $('#adTabCeklisJml').textContent = n ? ' · ' + n : '';
 }
 
 /** Angka kecil di samping nama tab, seperti pada tab survei. */
@@ -2303,7 +2345,10 @@ async function muatAdmin(paksa) {
   ADATA = { peserta, hasil: hasil.filter(h => h.tw === TW_AKTIF), gabung: Object.values(map), galatPeserta };
   isiProvinsiAdmin();
   renderAdmin();
-  if (window.SURVEI) window.SURVEI.renderAdmin();
+  /* Ditunggu, bukan dilepas: ceklis kesiapan memerlukan rekap survei untuk
+     kolom ketiganya, jadi baru boleh digambar setelah rekapnya masuk. */
+  if (window.SURVEI) await window.SURVEI.renderAdmin();
+  if (window.CEKLIS) { window.CEKLIS.render(); tandaiJumlahCeklis(); }
   /* Berita acara hanya ikut dimuat ulang bila tabnya memang sedang dibuka. */
   if (window.BA && !$('#adPanelBa').classList.contains('hidden')) {
     await window.BA.renderAdmin(true);
@@ -2667,5 +2712,6 @@ function exportXLS() {
 </script>
 <script src="assets/berita-acara.js"></script>
 <script src="assets/survei.js"></script>
+<script src="assets/ceklis.js"></script>
 </body>
 </html>

@@ -175,11 +175,19 @@ service cloud.firestore {
     // pemiliknya: pemda hanya bisa menulis dan membaca penilaiannya sendiri,
     // sedangkan admin membaca semuanya untuk direkap dan diunduh ke Excel.
     // Penilaian tidak bisa saling dilihat antar pemda.
+    //
+    // Admin juga boleh MENULIS dokumen milik id lain — satu-satunya jalan
+    // memasukkan jawaban yang terlanjur diisi lewat Google Formulir putaran
+    // pertama. Sebagian pengisinya tidak punya akun sama sekali, jadi
+    // dokumennya dinamai `gform-…`, bukan uid Authentication. Kelonggaran ini
+    // hanya di koleksi survei: `hasil` tetap tidak bisa ditulis siapa pun
+    // selain pemiliknya, supaya nilai test tidak bisa dititipkan.
     match /survei/{uid} {
       allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
-      allow create, update: if request.auth != null
-        && request.auth.uid == uid
-        && request.resource.data.uid == uid;
+      allow create, update: if isAdmin()
+        || (request.auth != null
+            && request.auth.uid == uid
+            && request.resource.data.uid == uid);
       allow delete: if isAdmin();
     }
 

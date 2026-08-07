@@ -39,6 +39,8 @@ monev-dak/
 │   ├── soal-tw2.js            bank soal TW II + aturan penilaian
 │   ├── firebase-config.js     konfigurasi Firebase
 │   ├── berita-acara.js        menu Berita Acara eMonitoring (khusus akun PFID)
+│   ├── survei.js              survei kepuasan pemda + rekap admin + impor Google Formulir
+│   ├── ceklis.js              tab Ceklis Kesiapan Pemda di panel admin
 │   ├── ba-template.docx       template notulensi — JANGAN diedit di Word
 │   └── logo-pu.png            logo Kementerian PU — LETAKKAN BERKASNYA DI SINI
 ├── firestore.rules            security rules, tempel di Firebase Console
@@ -155,9 +157,27 @@ Setelah itu masuk lewat tombol **Masuk Admin** di footer halaman depan memakai e
 
 > Gerbang admin mengatur akses ke tampilan rekap dan ekspor, bukan kerahasiaan data. Koleksi `hasil` memang berstatus baca-publik karena papan peringkat peserta memerlukannya.
 
+### Tab Ceklis Kesiapan Pemda
+
+Menjawab pertanyaan yang selalu muncul menjelang laporan: **daerah mana yang sudah lengkap, dan siapa yang masih harus ditagih** (`assets/ceklis.js`).
+
+Berbeda dari tabel nilai yang isinya per orang, tab ini memakai **164 daerah penerima DAK pada `assets/wilayah.js` sebagai kerangka**. Daerah yang belum menyentuh aplikasi sama sekali tetap muncul sebagai baris kosong — justru baris itu yang paling dicari. Tiga kolom ceklisnya: pre test, post test, dan survei kepuasan; satu daerah dihitung **sudah** bila ada satu pesertanya yang mengisi. Petugas PFID tidak ikut terhitung, dan angka di samping nama tab adalah “lengkap / total”.
+
+| Bagian | Isi |
+|---|---|
+| Jalan progres | Tandem roller berjalan sampai titik persentase daerah yang lengkap tiga-tiganya; aspal di belakangnya ikut memadat |
+| Enam kartu | Daerah penerima, sudah pre, sudah post, sudah survei, lengkap 3 ceklis, belum mendaftar |
+| Tabel berkelompok | Dikelompokkan per provinsi, tiap kepala kelompok memuat “x dari y daerah lengkap” beserta bilah kemajuannya |
+| Penyaring | Provinsi, status (lengkap · sebagian · terdaftar belum mengisi · belum mendaftar), dan pencarian daerah atau nama peserta |
+| Unduhan | CSV dan Excel, mengikuti penyaring yang aktif; berisi kolom Sudah/Belum tiap tahap, kelengkapan `n/3`, dan nama pesertanya |
+
+Ceklis yang sudah digambar sebagai centang hijau yang menggambar dirinya sendiri; yang belum sebagai **kerucut lalu lintas** yang bergoyang — dan jatuh miring bila ditunjuk. Semua animasinya berhenti pada `prefers-reduced-motion`, dan tidak ada satu angka pun yang bergantung pada animasi: nilai akhirnya sudah tercetak di markah, animasinya yang mundur ke nol lalu maju lagi.
+
+> Daerah yang mendaftar sewaktu daftar wilayahnya masih seluruh Indonesia muncul di kelompok terpisah **Di luar daftar DAK** dan tidak ikut dihitung dalam persentase.
+
 ### Tab Survei Kepuasan Pemda
 
-Tab kedua di halaman admin merekap kuesioner kepuasan (`assets/survei.js`).
+Tab ketiga di halaman admin merekap kuesioner kepuasan (`assets/survei.js`).
 
 **Penyaring.** Provinsi, mutu (A–D), dan pencarian bebas atas nama pemda, penilai, email, atau nomor telepon. **Seluruh halaman ikut menyempit** — kartu ringkasan, semua grafik, tabel, dan berkas Excel yang diunduh. Tombol ungu di samping penyaring menampilkan “x dari y” sekaligus menghapus seluruh penyaring dengan sekali klik.
 
@@ -177,6 +197,24 @@ Panel **Bedah unsur** yang muncul setelah sebuah unsur diklik memperlihatkan seb
 Satu kalimat ringkasan di bawah baris grafik pertama menyebut unsur terkuat dan unsur yang paling perlu perhatian, supaya kesimpulannya terbaca tanpa menafsirkan grafik lebih dulu.
 
 > Angka pada nama tab (“Survei Kepuasan Pemda · 24”) selalu jumlah keseluruhan, bukan hasil penyaringan.
+
+#### Impor jawaban dari Google Formulir
+
+Survei putaran pertama sempat berjalan di Google Formulir sebelum kuesionernya pindah ke dalam aplikasi. Tombol **Impor Google Formulir** memuat berkas ekspor `.csv`-nya langsung ke rekap.
+
+1. Di Google Formulir buka **Tanggapan → Tautkan ke Spreadsheet**, lalu unduh sebagai **.csv**.
+2. Klik **Impor Google Formulir**, pilih berkasnya. Pratinjau muncul lebih dulu — tidak ada yang tersimpan sebelum tombol simpan ditekan.
+3. Periksa kolom **Instansi → daerah**. Kolom “Instansi Daerah Asal” berupa teks bebas, jadi daerahnya ditebak dan dicocokkan dengan daftar penerima DAK; singkatan lazim seperti TTS, Sidrap, dan Pangkep sudah dikenali.
+4. Centang baris yang hendak disimpan, lalu **Simpan**.
+
+Dua hal yang membedakannya dari pengisian biasa:
+
+- **Respondennya belum tentu punya akun.** Bila emailnya ketemu di daftar peserta, penilaiannya menempel pada akun itu. Bila tidak, dibuatkan id bayangan `gform-…` supaya tetap terhitung. Kelonggaran ini **khusus survei kepuasan** — nilai pre dan post test tetap harus dari akun sungguhan.
+- **Baris yang daerahnya tidak dikenali dan pengisinya tidak punya akun centangnya dilepas lebih dulu**, karena hampir selalu pengisian coba-coba sewaktu formulirnya disiapkan. Boleh dicentang lagi, tetapi baris itu tidak menyalakan ceklis daerah mana pun.
+
+Mengimpor ulang berkas yang sama **menimpa** baris lama, bukan menggandakannya. Dokumen hasil impor ditandai `sumber: 'gform'` beserta `instansiAsal` apa adanya, jadi asal-usulnya tetap terlacak.
+
+> Impor memerlukan `firestore.rules` versi terbaru: admin harus boleh menulis dokumen `survei` milik id lain. Bila muncul pesan penolakan izin, publikasikan ulang rules-nya dari repositori.
 
 **Batas penghapusan.** Menghapus peserta membuang dokumen `peserta` dan seluruh dokumen `hasil` miliknya, sehingga hilang dari papan peringkat dan rekap. **Akun masuknya di Authentication tidak ikut terhapus** — penghapusan akun hanya mungkin dari Firebase Console (*Authentication → Users → ⋮ → Delete account*) atau lewat Admin SDK. Selama akunnya masih ada, orang itu tetap bisa masuk tetapi akan diberi tahu bahwa akunnya bukan akun peserta, dan tidak dapat mendaftar ulang dengan email yang sama.
 
