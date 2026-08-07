@@ -157,42 +157,9 @@ Setelah itu masuk lewat tombol **Masuk Admin** di footer halaman depan memakai e
 
 > Gerbang admin mengatur akses ke tampilan rekap dan ekspor, bukan kerahasiaan data. Koleksi `hasil` memang berstatus baca-publik karena papan peringkat peserta memerlukannya.
 
-### Tab Ceklis Kesiapan Pemda
-
-Menjawab pertanyaan yang selalu muncul menjelang laporan: **daerah mana yang sudah lengkap, dan siapa yang masih harus ditagih** (`assets/ceklis.js`).
-
-Berbeda dari tabel nilai yang isinya per orang, tab ini memakai **164 daerah penerima DAK pada `assets/wilayah.js` sebagai kerangka**. Daerah yang belum menyentuh aplikasi sama sekali tetap muncul sebagai baris kosong — justru baris itu yang paling dicari. Tiga kolom ceklisnya: pre test, post test, dan survei kepuasan; satu daerah dihitung **sudah** bila ada satu pesertanya yang mengisi. Petugas PFID tidak ikut terhitung, dan angka di samping nama tab adalah “lengkap / total”.
-
-| Bagian | Isi |
-|---|---|
-| Jalan progres | Tandem roller berjalan sampai titik persentase daerah yang lengkap tiga-tiganya; aspal di belakangnya ikut memadat |
-| — aspalnya | `assets/aspal.webp` (52 KB), ubin 977×300 dari foto roller, diulang mendatar |
-| — rollernya | `assets/roller.webp` (22 KB), foto yang sama dipotong berlatar transparan |
-| Enam kartu | Daerah penerima, sudah pre, sudah post, sudah survei, lengkap 3 ceklis, belum mendaftar |
-| Tabel berkelompok | Dikelompokkan per provinsi, tiap kepala kelompok memuat “x dari y daerah lengkap” beserta bilah kemajuannya |
-| Penyaring | Provinsi, status (lengkap · sebagian · terdaftar belum mengisi · belum mendaftar), dan pencarian daerah atau nama peserta |
-| Unduhan | CSV dan Excel, mengikuti penyaring yang aktif; berisi kolom Sudah/Belum tiap tahap, kelengkapan `n/3`, dan nama pesertanya |
-
-Ceklis yang sudah digambar sebagai centang hijau yang menggambar dirinya sendiri; yang belum sebagai **kerucut lalu lintas** yang bergoyang — dan jatuh miring bila ditunjuk. Semua animasinya berhenti pada `prefers-reduced-motion`, dan tidak ada satu angka pun yang bergantung pada animasi: nilai akhirnya sudah tercetak di markah, animasinya yang mundur ke nol lalu maju lagi.
-
-#### Membuat ulang gambar jalan progres
-
-Keduanya diturunkan dari satu foto tandem roller. Skripnya ada di riwayat percakapan, bukan di repo — kalau fotonya diganti, langkah-langkah inilah yang perlu diulang (Pillow untuk aspal, OpenCV untuk roller):
-
-- **`aspal.webp`** — blok aspal bersih di kanan roller dipotong, lalu **dicerminkan** menjadi satu ubin. Pencerminan itu yang membuat sambungannya tak terlihat waktu diulang mendatar; vignette foto membuat potongan mentah bersambung sebagai garis terang-gelap. Terangnya diangkat dari rerata 33/255 ke 61 — aspal aslinya terbaca sebagai kotak hitam polos di atas panel admin yang juga gelap.
-- **`roller.webp`** — dipotong dengan **GrabCut**, berlatar transparan supaya bisa berjalan ke titik persentase (foto utuh tidak bisa: posisi rollernya sudah matang di satu tempat). Tiga hal yang perlu ditangani dan gampang terlewat bila diulang: **marka jalan** ikut terangkat karena warnanya semirip baja drum — dibedakan dari bentuknya, pita marka setinggi 12px sedangkan bagian mesin yang paling tipis jauh lebih tebal, jadi dihapus dengan pembukaan memakai batang tegak; **atap** tersambung ke badan lewat tiang gelap yang tipis, jadi yang dipertahankan bukan gumpalan terbesar melainkan setiap gumpalan yang memuat kuning badan mesin; dan **kabin** — kaca, tiang, kursi — sewarna latar foto sehingga selalu terbuang, dikembalikan dengan menutup celah tegak di bawah atap kolom demi kolom.
-
-> Drumnya tidak berputar seperti gambar SVG yang digantikannya — foto tidak bisa diputar per bagian. Sebagai gantinya seluruh mesin mengayun pelan.
-
-> Daerah yang mendaftar sewaktu daftar wilayahnya masih seluruh Indonesia muncul di kelompok terpisah **Di luar daftar DAK** dan tidak ikut dihitung dalam persentase.
-
-**Membersihkannya.** Selama masih ada daerah semacam itu, muncul tombol merah **Hapus N daerah di luar daftar**. Sekali klik membuang nilai pre/post, profil peserta, **dan penilaian surveinya** sekaligus — kalau surveinya ditinggal, daerahnya tetap muncul di ceklis lewat penilaian itu saja. Kotak konfirmasinya menyebut nama daerah dan pesertanya satu per satu sebelum apa pun dihapus. Pembersihannya ditaruh di sini, bukan di tabel nilai, karena hanya di tab ini daerah-daerah itu terkumpul jadi satu.
-
-> Seperti penghapusan peserta di tab nilai: **akun Authentication-nya tetap hidup** dan harus dihapus terpisah dari Firebase Console (*Authentication → Users*). Selama belum, orangnya masih bisa masuk dan akan menemui pesan bahwa identitas pesertanya sudah terhapus.
-
 ### Tab Survei Kepuasan Pemda
 
-Tab ketiga di halaman admin merekap kuesioner kepuasan (`assets/survei.js`).
+Tab kedua di halaman admin merekap kuesioner kepuasan (`assets/survei.js`).
 
 **Penyaring.** Provinsi, mutu (A–D), dan pencarian bebas atas nama pemda, penilai, email, atau nomor telepon. **Seluruh halaman ikut menyempit** — kartu ringkasan, semua grafik, tabel, dan berkas Excel yang diunduh. Tombol ungu di samping penyaring menampilkan “x dari y” sekaligus menghapus seluruh penyaring dengan sekali klik.
 
@@ -232,6 +199,39 @@ Mengimpor ulang berkas yang sama **menimpa** baris lama, bukan menggandakannya. 
 > Impor memerlukan `firestore.rules` versi terbaru: admin harus boleh menulis dokumen `survei` milik id lain. Bila muncul pesan penolakan izin, publikasikan ulang rules-nya dari repositori.
 
 **Batas penghapusan.** Menghapus peserta membuang dokumen `peserta` dan seluruh dokumen `hasil` miliknya, sehingga hilang dari papan peringkat dan rekap. **Akun masuknya di Authentication tidak ikut terhapus** — penghapusan akun hanya mungkin dari Firebase Console (*Authentication → Users → ⋮ → Delete account*) atau lewat Admin SDK. Selama akunnya masih ada, orang itu tetap bisa masuk tetapi akan diberi tahu bahwa akunnya bukan akun peserta, dan tidak dapat mendaftar ulang dengan email yang sama.
+
+### Tab Ceklis Kesiapan Pemda
+
+Menjawab pertanyaan yang selalu muncul menjelang laporan: **daerah mana yang sudah lengkap, dan siapa yang masih harus ditagih** (`assets/ceklis.js`).
+
+Berbeda dari tabel nilai yang isinya per orang, tab ini memakai **164 daerah penerima DAK pada `assets/wilayah.js` sebagai kerangka**. Daerah yang belum menyentuh aplikasi sama sekali tetap muncul sebagai baris kosong — justru baris itu yang paling dicari. Tiga kolom ceklisnya: pre test, post test, dan survei kepuasan; satu daerah dihitung **sudah** bila ada satu pesertanya yang mengisi. Petugas PFID tidak ikut terhitung, dan angka di samping nama tab adalah “lengkap / total”.
+
+| Bagian | Isi |
+|---|---|
+| Jalan progres | Tandem roller berjalan sampai titik persentase daerah yang lengkap tiga-tiganya; aspal di belakangnya ikut memadat |
+| — aspalnya | `assets/aspal.webp` (52 KB), ubin 977×300 dari foto roller, diulang mendatar |
+| — rollernya | `assets/roller.webp` (22 KB), foto yang sama dipotong berlatar transparan |
+| Enam kartu | Daerah penerima, sudah pre, sudah post, sudah survei, lengkap 3 ceklis, belum mendaftar |
+| Tabel berkelompok | Dikelompokkan per provinsi, tiap kepala kelompok memuat “x dari y daerah lengkap” beserta bilah kemajuannya |
+| Penyaring | Provinsi, status (lengkap · sebagian · terdaftar belum mengisi · belum mendaftar), dan pencarian daerah atau nama peserta |
+| Unduhan | CSV dan Excel, mengikuti penyaring yang aktif; berisi kolom Sudah/Belum tiap tahap, kelengkapan `n/3`, dan nama pesertanya |
+
+Ceklis yang sudah digambar sebagai centang hijau yang menggambar dirinya sendiri; yang belum sebagai **kerucut lalu lintas** yang bergoyang — dan jatuh miring bila ditunjuk. Semua animasinya berhenti pada `prefers-reduced-motion`, dan tidak ada satu angka pun yang bergantung pada animasi: nilai akhirnya sudah tercetak di markah, animasinya yang mundur ke nol lalu maju lagi.
+
+#### Membuat ulang gambar jalan progres
+
+Keduanya diturunkan dari satu foto tandem roller. Skripnya ada di riwayat percakapan, bukan di repo — kalau fotonya diganti, langkah-langkah inilah yang perlu diulang (Pillow untuk aspal, OpenCV untuk roller):
+
+- **`aspal.webp`** — blok aspal bersih di kanan roller dipotong, lalu **dicerminkan** menjadi satu ubin. Pencerminan itu yang membuat sambungannya tak terlihat waktu diulang mendatar; vignette foto membuat potongan mentah bersambung sebagai garis terang-gelap. Terangnya diangkat dari rerata 33/255 ke 61 — aspal aslinya terbaca sebagai kotak hitam polos di atas panel admin yang juga gelap.
+- **`roller.webp`** — dipotong dengan **GrabCut**, berlatar transparan supaya bisa berjalan ke titik persentase (foto utuh tidak bisa: posisi rollernya sudah matang di satu tempat). Tiga hal yang perlu ditangani dan gampang terlewat bila diulang: **marka jalan** ikut terangkat karena warnanya semirip baja drum — dibedakan dari bentuknya, pita marka setinggi 12px sedangkan bagian mesin yang paling tipis jauh lebih tebal, jadi dihapus dengan pembukaan memakai batang tegak; **atap** tersambung ke badan lewat tiang gelap yang tipis, jadi yang dipertahankan bukan gumpalan terbesar melainkan setiap gumpalan yang memuat kuning badan mesin; dan **kabin** — kaca, tiang, kursi — sewarna latar foto sehingga selalu terbuang, dikembalikan dengan menutup celah tegak di bawah atap kolom demi kolom.
+
+> Drumnya tidak berputar seperti gambar SVG yang digantikannya — foto tidak bisa diputar per bagian. Sebagai gantinya seluruh mesin mengayun pelan.
+
+> Daerah yang mendaftar sewaktu daftar wilayahnya masih seluruh Indonesia muncul di kelompok terpisah **Di luar daftar DAK** dan tidak ikut dihitung dalam persentase.
+
+**Membersihkannya.** Selama masih ada daerah semacam itu, muncul tombol merah **Hapus N daerah di luar daftar**. Sekali klik membuang nilai pre/post, profil peserta, **dan penilaian surveinya** sekaligus — kalau surveinya ditinggal, daerahnya tetap muncul di ceklis lewat penilaian itu saja. Kotak konfirmasinya menyebut nama daerah dan pesertanya satu per satu sebelum apa pun dihapus. Pembersihannya ditaruh di sini, bukan di tabel nilai, karena hanya di tab ini daerah-daerah itu terkumpul jadi satu.
+
+> Seperti penghapusan peserta di tab nilai: **akun Authentication-nya tetap hidup** dan harus dihapus terpisah dari Firebase Console (*Authentication → Users*). Selama belum, orangnya masih bisa masuk dan akan menemui pesan bahwa identitas pesertanya sudah terhapus.
 
 ---
 

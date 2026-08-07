@@ -595,11 +595,13 @@
     <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Rekapitulasi · Triwulan II</p>
     <h1 id="adJudul" class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[38px]">Progres pengisian seluruh pemda</h1>
 
-    <!-- dua kelompok hasil, dipilih dari tab di atas -->
+    <!-- empat kelompok hasil, dipilih dari tab di atas. Urutannya mengikuti
+         urutan kerja: nilai peserta dulu, lalu penilaian mereka atas
+         pelayanan, baru rekap kesiapan daerah, terakhir notulensinya. -->
     <div class="mt-7 flex flex-wrap gap-2">
       <button data-atab="test"   onclick="setTabAdmin('test')"   style="--tab:56 189 248"  class="tabnav on text-[13px]"><span class="tabdot"></span>Hasil Pre &amp; Post Test</button>
-      <button data-atab="ceklis" onclick="setTabAdmin('ceklis')" style="--tab:250 204 21"  class="tabnav text-[13px]"><span class="tabdot"></span>Ceklis Kesiapan Pemda<span id="adTabCeklisJml" class="opacity-70"></span></button>
       <button data-atab="survei" onclick="setTabAdmin('survei')" style="--tab:232 121 249" class="tabnav text-[13px]"><span class="tabdot"></span>Survei Kepuasan Pemda<span id="adTabSurveiJml" class="opacity-70"></span></button>
+      <button data-atab="ceklis" onclick="setTabAdmin('ceklis')" style="--tab:250 204 21"  class="tabnav text-[13px]"><span class="tabdot"></span>Ceklis Kesiapan Pemda<span id="adTabCeklisJml" class="opacity-70"></span></button>
       <button data-atab="berita" onclick="setTabAdmin('berita')" style="--tab:52 211 153" class="tabnav text-[13px]"><span class="tabdot"></span>Berita Acara<span id="adTabBaJml" class="opacity-70"></span></button>
     </div>
 
@@ -644,14 +646,14 @@
     <div id="adSoal" class="glass mt-6 overflow-hidden rounded-3xl"></div>
     </div><!-- /adPanelTest -->
 
-    <!-- ceklis pre test, post test, dan survei per pemda; diisi assets/ceklis.js -->
-    <div id="adPanelCeklis" class="hidden">
-      <div id="adCeklis"></div>
-    </div>
-
     <div id="adPanelSurvei" class="hidden">
       <p class="mt-7 max-w-[720px] text-[14px] leading-[1.7] text-white/60">Penilaian pemda atas pelayanan Rapat Koordinasi TW II, diisi langsung di aplikasi. Indeks kepuasan dihitung dari tujuh unsur pelayanan (nilai rata-rata × 25) mengikuti cara hitung IKM.</p>
       <div id="adSurvei" class="mt-7"></div>
+    </div>
+
+    <!-- ceklis pre test, post test, dan survei per pemda; diisi assets/ceklis.js -->
+    <div id="adPanelCeklis" class="hidden">
+      <div id="adCeklis"></div>
     </div>
 
     <!-- seluruh notulensi yang disusun petugas PFID; isinya diisi oleh BA.renderAdmin() -->
@@ -2294,11 +2296,11 @@ async function keluarAdmin() {
 function setTabAdmin(tab) {
   $$('[data-atab]').forEach(b => b.classList.toggle('on', b.dataset.atab === tab));
   $('#adPanelTest').classList.toggle('hidden', tab !== 'test');
-  $('#adPanelCeklis').classList.toggle('hidden', tab !== 'ceklis');
   $('#adPanelSurvei').classList.toggle('hidden', tab !== 'survei');
+  $('#adPanelCeklis').classList.toggle('hidden', tab !== 'ceklis');
   $('#adPanelBa').classList.toggle('hidden', tab !== 'berita');
-  $('#adJudul').textContent = { ceklis: 'Ceklis kesiapan pemda',
-                                survei: 'Hasil survei kepuasan pemda',
+  $('#adJudul').textContent = { survei: 'Hasil survei kepuasan pemda',
+                                ceklis: 'Ceklis kesiapan pemda',
                                 berita: 'Berita acara eMonitoring' }[tab]
                               || 'Progres pengisian seluruh pemda';
   /* Digambar ulang tiap kali tabnya dibuka supaya animasi ceklisnya berjalan
