@@ -166,12 +166,23 @@ Berbeda dari tabel nilai yang isinya per orang, tab ini memakai **164 daerah pen
 | Bagian | Isi |
 |---|---|
 | Jalan progres | Tandem roller berjalan sampai titik persentase daerah yang lengkap tiga-tiganya; aspal di belakangnya ikut memadat |
+| — aspalnya | `assets/aspal.webp` (52 KB), ubin 977×300 dari foto roller, diulang mendatar |
+| — rollernya | `assets/roller.webp` (22 KB), foto yang sama dipotong berlatar transparan |
 | Enam kartu | Daerah penerima, sudah pre, sudah post, sudah survei, lengkap 3 ceklis, belum mendaftar |
 | Tabel berkelompok | Dikelompokkan per provinsi, tiap kepala kelompok memuat “x dari y daerah lengkap” beserta bilah kemajuannya |
 | Penyaring | Provinsi, status (lengkap · sebagian · terdaftar belum mengisi · belum mendaftar), dan pencarian daerah atau nama peserta |
 | Unduhan | CSV dan Excel, mengikuti penyaring yang aktif; berisi kolom Sudah/Belum tiap tahap, kelengkapan `n/3`, dan nama pesertanya |
 
 Ceklis yang sudah digambar sebagai centang hijau yang menggambar dirinya sendiri; yang belum sebagai **kerucut lalu lintas** yang bergoyang — dan jatuh miring bila ditunjuk. Semua animasinya berhenti pada `prefers-reduced-motion`, dan tidak ada satu angka pun yang bergantung pada animasi: nilai akhirnya sudah tercetak di markah, animasinya yang mundur ke nol lalu maju lagi.
+
+#### Membuat ulang gambar jalan progres
+
+Keduanya diturunkan dari satu foto tandem roller. Skripnya ada di riwayat percakapan, bukan di repo — kalau fotonya diganti, langkah-langkah inilah yang perlu diulang (Pillow untuk aspal, OpenCV untuk roller):
+
+- **`aspal.webp`** — blok aspal bersih di kanan roller dipotong, lalu **dicerminkan** menjadi satu ubin. Pencerminan itu yang membuat sambungannya tak terlihat waktu diulang mendatar; vignette foto membuat potongan mentah bersambung sebagai garis terang-gelap. Terangnya diangkat dari rerata 33/255 ke 61 — aspal aslinya terbaca sebagai kotak hitam polos di atas panel admin yang juga gelap.
+- **`roller.webp`** — dipotong dengan **GrabCut**, berlatar transparan supaya bisa berjalan ke titik persentase (foto utuh tidak bisa: posisi rollernya sudah matang di satu tempat). Tiga hal yang perlu ditangani dan gampang terlewat bila diulang: **marka jalan** ikut terangkat karena warnanya semirip baja drum — dibedakan dari bentuknya, pita marka setinggi 12px sedangkan bagian mesin yang paling tipis jauh lebih tebal, jadi dihapus dengan pembukaan memakai batang tegak; **atap** tersambung ke badan lewat tiang gelap yang tipis, jadi yang dipertahankan bukan gumpalan terbesar melainkan setiap gumpalan yang memuat kuning badan mesin; dan **kabin** — kaca, tiang, kursi — sewarna latar foto sehingga selalu terbuang, dikembalikan dengan menutup celah tegak di bawah atap kolom demi kolom.
+
+> Drumnya tidak berputar seperti gambar SVG yang digantikannya — foto tidak bisa diputar per bagian. Sebagai gantinya seluruh mesin mengayun pelan.
 
 > Daerah yang mendaftar sewaktu daftar wilayahnya masih seluruh Indonesia muncul di kelompok terpisah **Di luar daftar DAK** dan tidak ikut dihitung dalam persentase.
 

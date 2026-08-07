@@ -148,34 +148,17 @@ function tandaBelum(tunda) {
 
 const sel = (ada, tunda) => ada ? tandaSudah(tunda) : tandaBelum(tunda);
 
-/* Tandem roller kecil, saudara dari yang mondar-mandir di layar tunggu AI
-   pada assets/berita-acara.js. Di sini ia berjalan ke titik persentase
-   daerah yang sudah lengkap, memadatkan jalan yang dilewatinya. */
+/* Tandem roller sungguhan, dipotong dari foto yang dikirim user menjadi
+   gambar berlatar transparan — assets/roller.webp, cara pembuatannya dicatat
+   di README. Justru karena latarnya transparan ia tetap bisa berjalan ke
+   titik persentase, hal yang tidak mungkin dilakukan foto utuh yang posisi
+   rollernya sudah matang di satu tempat.
+
+   Drumnya tidak lagi berputar seperti pada gambar SVG yang digantikannya —
+   foto tidak bisa diputar per bagian. Sebagai gantinya seluruh mesin
+   mengayun pelan, cukup untuk memberi kesan bekerja. */
 function roller() {
-  return `<svg viewBox="0 0 74 48" class="ck-mesin-svg" fill="none">
-    <g class="ck-getar">
-      <rect x="14" y="22" width="30" height="10" rx="2.5" fill="rgba(253,230,138,.95)"/>
-      <rect x="12" y="32" width="34" height="4" rx="2" fill="rgba(255,255,255,.3)"/>
-      <rect x="19" y="4" width="20" height="19" rx="4.5" fill="rgba(253,230,138,1)"/>
-      <rect x="22" y="7.5" width="14" height="9.5" rx="2" fill="rgba(125,211,252,.5)"/>
-      <rect x="17" y="1.5" width="24" height="3" rx="1.5" fill="rgba(253,230,138,.75)"/>
-      <rect x="41.5" y="7" width="3.4" height="10" rx="1.7" fill="rgba(255,255,255,.5)"/>
-      <g fill="rgba(255,255,255,.6)">
-        <circle class="ck-asap" cx="43" cy="4.5" r="2.6"/>
-        <circle class="ck-asap" cx="43" cy="4.5" r="2.1" style="animation-delay:.9s"/>
-      </g>
-      <circle cx="12" cy="38" r="9" fill="rgba(226,232,240,.95)"/>
-      <circle cx="12" cy="38" r="9" fill="none" stroke="rgba(15,17,20,.4)" stroke-width="1.6"/>
-      <g class="ck-guling" style="transform-origin:12px 38px" stroke="rgba(15,17,20,.4)" stroke-width="1.6">
-        <path d="M12 29.5v17M3.5 38h17"/>
-      </g>
-      <circle cx="46" cy="38" r="9" fill="rgba(226,232,240,.95)"/>
-      <circle cx="46" cy="38" r="9" fill="none" stroke="rgba(15,17,20,.4)" stroke-width="1.6"/>
-      <g class="ck-guling" style="transform-origin:46px 38px" stroke="rgba(15,17,20,.4)" stroke-width="1.6">
-        <path d="M46 29.5v17M37.5 38h17"/>
-      </g>
-    </g>
-  </svg>`;
+  return `<img src="assets/roller.webp" alt="" class="ck-mesin-img" />`;
 }
 
 const GAYA = `
@@ -201,23 +184,15 @@ const GAYA = `
   .ck-marka { position: absolute; left: 0; right: 0; top: 68%; height: 4px; margin-top: -2px;
               background: repeating-linear-gradient(90deg, rgba(255,255,255,.62) 0 34px, transparent 34px 78px);
               animation: ckMarka 1.9s linear infinite; opacity: .55; }
-  .ck-mesin { position: absolute; bottom: 14px; left: 0; width: 104px; margin-left: -52px;
-              filter: drop-shadow(0 10px 14px rgba(0,0,0,.55));
+  .ck-mesin { position: absolute; bottom: 10px; left: 0; width: 132px; margin-left: -66px;
+              filter: drop-shadow(0 12px 16px rgba(0,0,0,.6));
               transition: left 1.7s cubic-bezier(.22,1,.36,1); animation: ckBob 1.7s ease-in-out infinite; }
-  .ck-mesin-svg { width: 100%; height: auto; }
-  .ck-getar  { animation: ckGetar .13s linear infinite; }
-  .ck-guling { animation: ckGuling 1.1s linear infinite; }
-  .ck-asap   { animation: ckAsap 2.2s ease-out infinite; }
+  .ck-mesin-img { display: block; width: 100%; height: auto; }
   .ck-kilau  { animation: ckKilau 2s ease-in-out infinite; }
 
   /* satu putaran = satu jarak antar marka, supaya sambungannya tak terlihat */
   @keyframes ckMarka  { to { background-position-x: -78px } }
   @keyframes ckBob    { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-2.5px) } }
-  @keyframes ckGetar  { 0%,100% { transform: translateY(0) } 50% { transform: translateY(.7px) } }
-  @keyframes ckGuling { to { transform: rotate(360deg) } }
-  @keyframes ckAsap   { 0% { opacity: 0; transform: translate(0,0) scale(.5) }
-                        30% { opacity: .5 }
-                        100% { opacity: 0; transform: translate(-6px,-17px) scale(1.3) } }
   @keyframes ckKilau  { 0%,100% { opacity: .2; transform: scale(.7) } 50% { opacity: 1; transform: scale(1) } }
 
   /* ── tanda ceklis ── */
@@ -250,7 +225,7 @@ const GAYA = `
   .ck-kosong td { opacity: .62; }
 
   @media (prefers-reduced-motion: reduce) {
-    .ck-marka, .ck-mesin, .ck-getar, .ck-guling, .ck-asap, .ck-kilau,
+    .ck-marka, .ck-mesin, .ck-kilau,
     .ck-sudah, .ck-garis, .ck-denyut, .ck-belum svg { animation: none; }
     .ck-aspal, .ck-mesin { transition: none; }
     .ck-garis { stroke-dashoffset: 0; }
