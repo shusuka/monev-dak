@@ -90,6 +90,31 @@
   .glass-hover { transition: background .25s ease, border-color .25s ease, transform .25s ease; }
   .glass-hover:hover { background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.22); transform: translateY(-2px); }
 
+  /* ---------- kartu ringkasan berwarna tab ----------
+     Tiap tab panel admin punya warnanya sendiri pada tombolnya. Warna itu
+     dibawa turun ke kartu ringkasannya, jadi sekali lihat sudah ketahuan
+     sedang membaca rekap yang mana — pre/post test, survei, atau ceklis.
+     Warnanya diwarisi dari --tab yang dipasang di panelnya, sehingga kartu
+     tidak perlu tahu sedang berada di tab mana. */
+  .kartu-tab {
+    background:
+      linear-gradient(155deg, rgb(var(--tab) / .14), rgb(var(--tab) / .04) 55%, rgba(255,255,255,.03));
+    border: 1px solid rgb(var(--tab) / .3);
+    box-shadow: 0 14px 34px -22px rgb(var(--tab) / .75);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    transition: border-color .25s ease, transform .25s ease;
+  }
+  .kartu-tab:hover { border-color: rgb(var(--tab) / .5); transform: translateY(-2px); }
+  /* judul kecil di atas angka ikut berwarna, tetapi tetap redup supaya
+     angkanya yang pertama terbaca */
+  .kartu-tab .kartu-judul { color: rgb(var(--tab) / .82); }
+  /* Angka yang tidak membawa arti baik/buruk memakai warna tabnya. Yang
+     membawa arti — hijau untuk sudah, merah untuk tertinggal — dibiarkan
+     seperti apa adanya, karena artinya lebih penting daripada warna tab. */
+  .kartu-tab .kartu-angka { color: rgb(var(--tab)); }
+
+  @media (prefers-reduced-motion: reduce) { .kartu-tab:hover { transform: none; } }
+
   /* ---------- conic gradient submit button ---------- */
   .gbtn { position: relative; width: 52px; height: 52px; flex: 0 0 52px; border-radius: 9999px; }
   .gbtn__ring, .gbtn__glow { position: absolute; border-radius: 9999px; background: conic-gradient(from 0deg, #00c6ff, #0072ff, #ff007a, #ff8a00, #00c6ff); }
@@ -605,7 +630,7 @@
       <button data-atab="berita" onclick="setTabAdmin('berita')" style="--tab:52 211 153" class="tabnav text-[13px]"><span class="tabdot"></span>Berita Acara<span id="adTabBaJml" class="opacity-70"></span></button>
     </div>
 
-    <div id="adPanelTest">
+    <div id="adPanelTest" style="--tab:56 189 248">
     <div id="adNotice" class="mt-6 hidden"></div>
     <div id="adStats" class="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"></div>
 
@@ -646,13 +671,13 @@
     <div id="adSoal" class="glass mt-6 overflow-hidden rounded-3xl"></div>
     </div><!-- /adPanelTest -->
 
-    <div id="adPanelSurvei" class="hidden">
+    <div id="adPanelSurvei" class="hidden" style="--tab:232 121 249">
       <p class="mt-7 max-w-[720px] text-[14px] leading-[1.7] text-white/60">Penilaian pemda atas pelayanan Rapat Koordinasi TW II, diisi langsung di aplikasi. Indeks kepuasan dihitung dari tujuh unsur pelayanan (nilai rata-rata × 25) mengikuti cara hitung IKM.</p>
       <div id="adSurvei" class="mt-7"></div>
     </div>
 
     <!-- ceklis pre test, post test, dan survei per pemda; diisi assets/ceklis.js -->
-    <div id="adPanelCeklis" class="hidden">
+    <div id="adPanelCeklis" class="hidden" style="--tab:250 204 21">
       <div id="adCeklis"></div>
     </div>
 
@@ -2412,9 +2437,11 @@ function renderAdmin() {
     </div>`;
   } else notis.classList.add('hidden');
 
-  const kartu = (label, isi, sub, warna) => `<div class="glass rounded-3xl p-5">
-    <p class="text-[11px] uppercase tracking-[0.14em] text-white/50">${label}</p>
-    <p class="mt-2.5 text-[28px] font-semibold tabular-nums ${warna || ''}">${isi}</p>
+  /* `warna` diisi hanya bila angkanya membawa arti baik/buruk; selebihnya
+     kartunya memakai warna tab, lihat .kartu-tab pada <style> di atas. */
+  const kartu = (label, isi, sub, warna) => `<div class="kartu-tab rounded-3xl p-5">
+    <p class="kartu-judul text-[11px] uppercase tracking-[0.14em]">${label}</p>
+    <p class="mt-2.5 text-[28px] font-semibold tabular-nums ${warna || 'kartu-angka'}">${isi}</p>
     <p class="mt-1 text-[11px] text-white/50">${sub}</p>
   </div>`;
 

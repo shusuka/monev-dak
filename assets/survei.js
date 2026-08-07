@@ -687,10 +687,13 @@ const GAYA_ADM = `
            box-shadow: 0 18px 40px -16px rgba(0,0,0,.9); transition: opacity .12s ease; max-width: 260px }
 </style>`;
 
+/* Warnanya mengikuti tab survei, diwarisi dari --tab pada #adPanelSurvei —
+   lihat .kartu-tab pada <style> di index.html. `warna` hanya diisi bila
+   angkanya membawa arti tersendiri, seperti mutu A–D atau laporan pungutan. */
 function kartuAngka(judul, nilai, keterangan, warna) {
-  return `<div class="glass sva-naik rounded-3xl p-5">
-    <p class="text-[11px] uppercase tracking-[0.16em] text-white/45">${aman(judul)}</p>
-    <p class="mt-2 text-[28px] font-semibold tabular-nums leading-none ${warna || ''}">${aman(nilai)}</p>
+  return `<div class="kartu-tab sva-naik rounded-3xl p-5">
+    <p class="kartu-judul text-[11px] uppercase tracking-[0.16em]">${aman(judul)}</p>
+    <p class="mt-2 text-[28px] font-semibold tabular-nums leading-none ${warna || 'kartu-angka'}">${aman(nilai)}</p>
     ${keterangan ? `<p class="mt-1.5 text-[12px] text-white/45">${aman(keterangan)}</p>` : ''}
   </div>`;
 }

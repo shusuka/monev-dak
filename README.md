@@ -149,6 +149,10 @@ Setelah itu masuk lewat tombol **Masuk Admin** di footer halaman depan memakai e
 
 ### Isi halaman admin
 
+Tiap tab punya warnanya sendiri — **biru langit** untuk pre/post test, **ungu terang** untuk survei, **kuning** untuk ceklis, **hijau** untuk berita acara. Warna itu tidak berhenti di tombol tabnya: bingkai, semburat latar, dan judul kecil pada kartu ringkasannya ikut memakainya, jadi sekali lihat sudah ketahuan sedang membaca rekap yang mana. Angka yang membawa arti — hijau untuk sudah, merah untuk tertinggal — dibiarkan apa adanya, karena artinya lebih penting daripada warna tab.
+
+> Kartunya tidak perlu tahu sedang berada di tab mana: warnanya diwarisi lewat `--tab` yang dipasang di panelnya (`#adPanelTest`, `#adPanelSurvei`, `#adPanelCeklis`), dan `.kartu-tab` pada `<style>` di `index.html` yang mengerjakan sisanya.
+
 - **Enam kartu ringkasan** — peserta terdaftar, sudah pre test, sudah post test, belum mengisi, rata-rata nilai pre → post, rata-rata peningkatan.
 - **Tabel seluruh peserta** dengan penyaring status, provinsi, pengurutan, dan pencarian. Tombol **Detail** menampilkan jawaban peserta butir demi butir beserta kuncinya.
 - **Analisis butir soal** — persentase jawaban benar tiap butir, diurutkan dari yang paling sering salah, untuk menentukan materi yang perlu diperkuat saat pendampingan.

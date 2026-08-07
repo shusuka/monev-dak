@@ -238,10 +238,12 @@ const GAYA = `
    3. TAMPILAN
    ═══════════════════════════════════════════════════════════════ */
 
+/* Warnanya mengikuti tab ceklis, diwarisi dari --tab pada #adPanelCeklis —
+   lihat .kartu-tab pada <style> di index.html. */
 function kartu(label, angka, sub, warna) {
-  return `<div class="glass rounded-3xl p-5">
-    <p class="text-[11px] uppercase tracking-[0.14em] text-white/50">${aman(label)}</p>
-    <p class="mt-2.5 text-[28px] font-semibold tabular-nums ${warna || ''}" data-naik="${angka}">${angka}</p>
+  return `<div class="kartu-tab rounded-3xl p-5">
+    <p class="kartu-judul text-[11px] uppercase tracking-[0.14em]">${aman(label)}</p>
+    <p class="mt-2.5 text-[28px] font-semibold tabular-nums ${warna || 'kartu-angka'}" data-naik="${angka}">${angka}</p>
     <p class="mt-1 text-[11px] text-white/50">${sub}</p>
   </div>`;
 }
