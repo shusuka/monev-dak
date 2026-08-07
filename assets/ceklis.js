@@ -366,7 +366,7 @@ function gambar() {
   </div>
 
   <div class="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-    ${kartu('Daerah penerima DAK', r.total, 'kerangka ceklis')}
+    ${kartu('Daerah penerima DAK', r.total, r.luar ? 'kerangka ceklis · +' + r.luar + ' di luar daftar' : 'kerangka ceklis')}
     ${kartu('Sudah pre test', r.pre, r.total ? Math.round(r.pre / r.total * 100) + '% daerah' : '—', 'text-emerald-400')}
     ${kartu('Sudah post test', r.post, r.total ? Math.round(r.post / r.total * 100) + '% daerah' : '—', 'text-emerald-400')}
     ${kartu('Sudah survei', r.survei, r.total ? Math.round(r.survei / r.total * 100) + '% daerah' : '—', 'text-emerald-400')}
@@ -419,9 +419,12 @@ function gambar() {
       </table>
     </div>
     <p class="border-t border-white/10 px-5 py-4 text-[12px] leading-[1.7] text-white/40">
-      Menampilkan ${rows.length} dari ${semua.length} daerah. Tombol unduh mengikuti penyaring yang sedang aktif.<br>
+      Menampilkan ${rows.length} baris dari ${r.total} daerah penerima DAK${r.luar ? ' ditambah ' + r.luar + ' daerah di luar daftar' : ''}.
+      Tombol unduh mengikuti penyaring yang sedang aktif.<br>
       Kolom Peserta adalah jumlah akun terdaftar dari daerah itu; ceklis menyala bila salah satunya sudah mengisi.
-      ${r.luar ? 'Ada ' + r.luar + ' daerah di luar daftar penerima DAK, dari pendaftaran lama sewaktu daftar wilayahnya masih seluruh Indonesia — tidak ikut dihitung dalam persentase.' : ''}
+      ${r.luar ? 'Daerah di luar daftar berasal dari pendaftaran sewaktu daftar wilayahnya masih seluruh Indonesia. '
+               + 'Seluruh persentase, kartu ringkasan, dan jalan progres di atas hanya menghitung ' + r.total + ' daerah penerima — '
+               + 'pilih “Di luar daftar DAK” pada penyaring status untuk melihat yang ' + r.luar + ' itu.' : ''}
     </p>
   </div>`;
 
