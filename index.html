@@ -838,8 +838,9 @@
 /* ═══════════════════════════════════════════════════════════════
    1. WILAYAH
    ═══════════════════════════════════════════════════════════════ */
-/* Daftar wilayahnya tersusun menurut letak geografis; saran yang muncul di
-   layar diurutkan menurut abjad supaya lebih cepat ditemukan. */
+/* Hanya daerah penerima DAK Fisik Bidang Jalan, bukan seluruh Indonesia —
+   lihat assets/wilayah.js. Pendaftaran menolak daerah di luar daftar ini,
+   dan seluruh menu hanya menawarkan isinya. */
 const PROVINSI = Object.keys(window.WILAYAH).sort((a, b) => a.localeCompare(b, 'id'));
 const KAB_OF = p => (window.WILAYAH[p] || "").split(",").filter(Boolean);
 const ALL_KAB = PROVINSI.flatMap(p => KAB_OF(p).map(k => ({ kab: k, prov: p })));

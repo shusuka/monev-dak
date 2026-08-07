@@ -35,7 +35,7 @@ Mengubah/menambah soal: `assets/soal-tw2.js` → array `window.SOAL_TW2`.
 monev-dak/
 ├── index.html                 aplikasi (landing, login, kuis, hasil, peringkat)
 ├── assets/
-│   ├── wilayah.js             38 provinsi + kabupaten/kota (autocomplete)
+│   ├── wilayah.js             164 daerah penerima DAK di 33 provinsi (autocomplete)
 │   ├── soal-tw2.js            bank soal TW II + aturan penilaian
 │   ├── firebase-config.js     konfigurasi Firebase
 │   ├── berita-acara.js        menu Berita Acara eMonitoring (khusus akun PFID)
@@ -280,4 +280,5 @@ Klik **Deploy**. Setelah live, jangan lupa menambahkan domain Vercel ke **Author
 - **Kunci Web API Firebase memang tampil di sisi klien** dan bukan rahasia. Yang mengamankan data adalah `firestore.rules`.
 - **Penilaian dihitung di peramban.** Peserta yang paham DevTools secara teori bisa mengirim `benar` yang tidak sesuai. Rules sudah membatasi rentang nilai, `nilai == benar * 5`, dan durasi maksimal, serta melarang update — cukup untuk konteks monev internal. Bila diperlukan penilaian yang tidak dapat dimanipulasi, pindahkan pemeriksaan kunci jawaban ke Cloud Function dan simpan kunci di luar klien.
 - **Identitas peserta = nama + provinsi + kabupaten/kota.** Dua orang dengan kombinasi identik akan dianggap satu peserta. Tambahkan NIP pada form bila hal ini menjadi masalah.
+- **Hanya 164 daerah penerima DAK Fisik Bidang Jalan yang terdaftar** di `assets/wilayah.js`, tersebar di 33 provinsi. Daerah di luar daftar itu tidak muncul di mana pun — tidak di saran provinsi/kabupaten saat mendaftar, tidak pula di pemilih daerah pada Berita Acara — dan pendaftarannya ditolak. Riau, Bengkulu, Banten, DKI Jakarta, dan Kalimantan Tengah tidak menerima DAK bidang jalan, jadi kelima provinsi itu memang tidak ada. Bila daftar penerimanya berubah tahun depan, cukup berkas itu yang disunting. Ejaan namanya jangan diubah: `kunciKab` pada profil peserta dan `kunciDaerah` pada berita acara dibentuk dari nama tersebut, sehingga daerah yang berganti ejaan akan kehilangan arsipnya.
 - Video latar memakai `https://jumpshare.com/s/6t6K21KuNJZrELSewqEK` sebagai sumber pertama. URL tersebut adalah halaman berbagi, bukan berkas mp4, sehingga tidak dapat diputar oleh elemen `<video>`; sumber kedua (mp4) dan gradien CSS berfungsi sebagai cadangan. Ganti sumber pertama bila sudah ada tautan mp4 langsung.
