@@ -1006,6 +1006,10 @@ const store = {
     if (this.mode !== 'firebase') return this.daftarLokal(email, profil);
     const cred = await this.authMod.createUserWithEmailAndPassword(this.auth, email, pass);
     this.user = cred.user; this.uid = cred.user.uid; this.cacheHasil = null;
+    /* Nama ikut dititipkan ke Authentication. Dokumen `peserta` bisa hilang —
+       terhapus dari panel admin, atau gagal tersimpan sewaktu mendaftar —
+       dan salinan ini yang dipakai memulihkannya. Lihat pulihkanPfid(). */
+    try { await this.authMod.updateProfile(cred.user, { displayName: profil.nama }); } catch (e) {}
     const p = { pid: this.uid, uid: this.uid, nama: profil.nama, prov: profil.prov, kab: profil.kab, email };
     await this.simpanPeserta(p);
     return p;
@@ -1016,6 +1020,25 @@ const store = {
     const cred = await this.authMod.signInWithEmailAndPassword(this.auth, email, pass);
     this.user = cred.user; this.uid = cred.user.uid; this.cacheHasil = null;
     return await this.profilSaya();
+  },
+
+  /** Petugas PFID yang akun Authentication-nya masih ada tetapi dokumen
+      `peserta`-nya hilang. Penghapusan dari panel admin memang hanya membuang
+      dokumennya — akun masuknya tetap hidup, sehingga kata sandinya diterima
+      tetapi identitasnya kosong dan aplikasi menolaknya sebagai bukan peserta.
+      Profil PFID tidak memuat keterangan yang tidak dapat dibentuk ulang:
+      wilayahnya tetap, dan namanya tersimpan di Authentication. */
+  async pulihkanPfid() {
+    if (this.mode !== 'firebase' || !this.user) return null;
+    const nama = (this.user.displayName || '').trim()
+              || String(this.user.email || '').split('@')[0];
+    if (nama.length < 3) return null;
+    const p = {
+      pid: this.uid, uid: this.uid, nama,
+      prov: PROV_PFID, kab: KAB_PFID, email: this.user.email || ''
+    };
+    await this.simpanPeserta(p);
+    return { ...p, kunciKab: slug(KAB_PFID) };
   },
 
   /** Identitas peserta yang sedang masuk, dibaca dari koleksi `peserta`. */
@@ -1540,13 +1563,22 @@ async function doMasuk(e) {
   const btn = $('#mkBtn');
   btn.disabled = true;
   try {
-    const profil = await store.masukAkun(email, sandi);
+    let profil = await store.masukAkun(email, sandi);
+
+    /* Kata sandinya benar, tetapi akun ini tidak punya identitas peserta.
+       Untuk petugas PFID identitasnya dapat dibentuk ulang dari user id-nya,
+       jadi dipulihkan diam-diam daripada menolak orangnya masuk. */
+    if (!profil && emailIniPfid(email)) {
+      try { profil = await store.pulihkanPfid(); }
+      catch (ex2) { console.warn('[MonevDAK] profil PFID gagal dipulihkan:', ex2); }
+    }
+
     if (!profil) {
-      /* Kata sandinya benar, tetapi akun ini tidak punya identitas peserta —
-         hampir selalu karena akun admin memakai pintu masuk peserta. */
+      /* Sisanya hampir selalu akun admin yang memakai pintu masuk peserta. */
       await store.keluarAkun();
       err.innerHTML = 'Akun ini terdaftar, tetapi bukan akun peserta. Bila ini akun admin, masuklah lewat '
-        + '<button type="button" onclick="go(\'adminlogin\')" class="underline underline-offset-2 font-semibold">halaman admin</button>.';
+        + '<button type="button" onclick="go(\'adminlogin\')" class="underline underline-offset-2 font-semibold">halaman admin</button>. '
+        + 'Bila bukan, identitas pesertanya sudah terhapus — hubungi admin untuk dibuatkan lagi.';
       err.classList.remove('hidden');
       return;
     }
