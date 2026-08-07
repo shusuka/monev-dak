@@ -1765,6 +1765,12 @@ window.SURVEI = {
   /** Keterangan galat bila rekapnya gagal terbaca; kosong berarti aman. */
   galatRekap() { return REKAP_GALAT; },
 
+  /** Buang satu penilaian. Dipakai ceklis kesiapan pemda sewaktu
+      membersihkan daerah yang bukan penerima DAK — profil peserta dan
+      penilaian surveinya harus ikut terbuang bersama, kalau tidak daerahnya
+      tetap muncul di ceklis lewat surveinya saja. */
+  async hapus(id) { await hapusSurvei(id); },
+
   reset() {
     IDX = 0; JAWAB = {}; TERKIRIM = null; DIMUAT = false; TINJAU = false; GALAT = '';
   }

@@ -175,6 +175,10 @@ Ceklis yang sudah digambar sebagai centang hijau yang menggambar dirinya sendiri
 
 > Daerah yang mendaftar sewaktu daftar wilayahnya masih seluruh Indonesia muncul di kelompok terpisah **Di luar daftar DAK** dan tidak ikut dihitung dalam persentase.
 
+**Membersihkannya.** Selama masih ada daerah semacam itu, muncul tombol merah **Hapus N daerah di luar daftar**. Sekali klik membuang nilai pre/post, profil peserta, **dan penilaian surveinya** sekaligus — kalau surveinya ditinggal, daerahnya tetap muncul di ceklis lewat penilaian itu saja. Kotak konfirmasinya menyebut nama daerah dan pesertanya satu per satu sebelum apa pun dihapus. Pembersihannya ditaruh di sini, bukan di tabel nilai, karena hanya di tab ini daerah-daerah itu terkumpul jadi satu.
+
+> Seperti penghapusan peserta di tab nilai: **akun Authentication-nya tetap hidup** dan harus dihapus terpisah dari Firebase Console (*Authentication → Users*). Selama belum, orangnya masih bisa masuk dan akan menemui pesan bahwa identitas pesertanya sudah terhapus.
+
 ### Tab Survei Kepuasan Pemda
 
 Tab ketiga di halaman admin merekap kuesioner kepuasan (`assets/survei.js`).

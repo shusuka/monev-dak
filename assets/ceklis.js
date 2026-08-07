@@ -392,6 +392,8 @@ function gambar() {
       <input id="ckCari" value="${aman(SARING.cari)}" placeholder="Cari daerah atau nama peserta" class="w-52 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
     </div>
     <div class="ml-auto flex flex-wrap gap-2">
+      ${r.luar ? `<button id="ckBersih" class="rounded-full border border-red-400/50 bg-red-500/15 px-5 py-2.5 text-[13px] font-medium text-red-200 transition hover:bg-red-500/25">
+        Hapus ${r.luar} daerah di luar daftar</button>` : ''}
       <button id="ckCsv" class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 transition hover:bg-white/10">Unduh CSV</button>
       <button id="ckXls" class="cta-glow rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black">Unduh Excel</button>
     </div>
@@ -498,6 +500,77 @@ function pasang() {
 
   el('#ckCsv').onclick = () => unduhCsv();
   el('#ckXls').onclick = () => unduhExcel();
+
+  const bersih = el('#ckBersih');
+  if (bersih) bersih.onclick = () => bersihkanLuar();
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   3b. MEMBERSIHKAN DAERAH DI LUAR DAFTAR DAK
+
+   Sisa pendaftaran sewaktu daftar wilayahnya masih seluruh Indonesia.
+   Membersihkannya dari tab ini, bukan dari tabel nilai, karena hanya di
+   sini daerah-daerah itu terkumpul jadi satu — di tabel nilai mereka
+   berserak dan harus dicari satu per satu.
+
+   Yang dibuang sekaligus: nilai pre/post, profil peserta, dan penilaian
+   surveinya. Kalau surveinya ditinggal, daerahnya tetap muncul di ceklis
+   lewat penilaian itu saja.
+   ═══════════════════════════════════════════════════════════════ */
+async function bersihkanLuar() {
+  const luar = susunDaerah().filter(d => d.luar);
+  if (!luar.length) return;
+
+  const rekap = (window.SURVEI && window.SURVEI.rekap) ? window.SURVEI.rekap() : [];
+  const kunciLuar = new Set(luar.map(d => kunci(d.prov, d.kab)));
+  const survei = rekap.filter(x => kunciLuar.has(kunci(x.prov, x.kab)));
+  const orang = luar.flatMap(d => d.orang);
+  const bernilai = orang.filter(o => o.pre || o.post).length;
+
+  const rincian = luar.map(d => '• ' + d.kab + ', ' + d.prov + ' — '
+    + (d.orang.length ? d.orang.map(o => o.nama).join(', ') : 'tanpa akun peserta')).join('\n');
+
+  if (!confirm(
+    'Hapus ' + luar.length + ' daerah di luar daftar penerima DAK?\n\n' + rincian +
+    '\n\nYang dibuang: ' + orang.length + ' profil peserta'
+    + (bernilai ? ' (' + bernilai + ' di antaranya sudah punya nilai pre/post)' : '')
+    + (survei.length ? ' dan ' + survei.length + ' penilaian survei' : '') + '.' +
+    '\n\nNilainya hilang dari papan peringkat dan seluruh rekap, dan TIDAK dapat dipulihkan.' +
+    '\n\nAkun masuknya tetap ada di Firebase Authentication dan harus dihapus terpisah dari Console. ' +
+    'Selama belum dihapus, orangnya masih bisa masuk dan akan menemui pesan bahwa identitas pesertanya sudah terhapus.'
+  )) return;
+
+  const tombol = el('#ckBersih');
+  if (tombol) { tombol.disabled = true; tombol.textContent = 'Menghapus…'; }
+
+  const gagal = [];
+  let sukses = 0;
+
+  for (const o of orang) {
+    try { await store.hapusPeserta(o.pid); sukses++; }
+    catch (e) { console.error('[MonevDAK] peserta gagal dihapus', o.pid, e); gagal.push({ nama: o.nama, kode: (e && e.code) || e.message }); }
+  }
+  for (const s of survei) {
+    try { await window.SURVEI.hapus(s.id); }
+    catch (e) { console.error('[MonevDAK] survei gagal dihapus', s.id, e); gagal.push({ nama: (s.kab || s.nama) + ' (survei)', kode: (e && e.code) || e.message }); }
+  }
+
+  /* Seluruh panel dimuat ulang: tabel nilai, rekap survei, dan ceklis
+     membaca sumber yang sama, jadi ketiganya harus ikut menyusut. */
+  if (typeof muatAdmin === 'function') await muatAdmin(false);
+  else gambar();
+
+  if (!gagal.length) {
+    toast(sukses + ' peserta dan ' + survei.length + ' penilaian dari luar daftar DAK dihapus.');
+  } else {
+    const izin = gagal.some(x => /permission/.test(String(x.kode)));
+    alert(
+      sukses + ' peserta dihapus, ' + gagal.length + ' gagal.\n\n' +
+      gagal.slice(0, 6).map(x => '• ' + x.nama + ' (' + x.kode + ')').join('\n') +
+      (izin ? '\n\nFirestore menolak penghapusan. Publikasikan ulang firestore.rules versi terbaru dan pastikan email admin ini terdaftar pada adminEmail().' : '')
+    );
+  }
 }
 
 
