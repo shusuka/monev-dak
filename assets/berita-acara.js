@@ -773,6 +773,44 @@ let SUDAH_UNDUH  = false;     // Word-nya sudah diunduh, daerah ini boleh ditutu
 const idArsip = () => (window.slug ? window.slug(D.daerah || 'daerah') : String(D.daerah || 'daerah')
   .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')) + '__' + D.tanggalIso;
 
+/* ── penjaga tumpang tindih ─────────────────────────────────────
+   Nama dokumen arsip adalah daerah + tanggal, jadi dua petugas PFID yang
+   menggarap daerah yang sama pada tanggal yang sama menulis ke dokumen yang
+   sama persis. Formulirnya digarap di peramban masing-masing dan tidak ada
+   yang saling mengabari, sehingga yang menyimpan belakangan akan menghapus
+   pekerjaan yang menyimpan lebih dulu tanpa siapa pun tahu.
+
+   Yang dipasang di sini penguncian optimistis: tiap simpanan membubuhkan
+   nomor revisi acak, dan penyimpanan berikutnya hanya boleh lewat bila
+   revisi di server masih sama dengan yang terakhir dilihat peramban ini.
+   Pemeriksaan dan penulisannya satu transaksi, jadi tidak ada celah walau
+   keduanya menekan simpan pada detik yang sama. Bila revisinya sudah
+   berganti, petugas ditanya lebih dulu — tidak pernah ditimpa diam-diam.
+
+   `null` berarti dokumennya memang belum pernah ada; kalau ternyata sudah
+   ada, itu pun bentrokan: berarti petugas lain mendahului membuatnya. */
+let ARSIP_DASAR = null;   // { rev, waktu } dokumen sebagaimana terakhir dilihat
+
+const revBaru = () => Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+
+const dasarDari = r => ({ rev: (r && r.rev) || null, waktu: waktuAngka(r && r.diperbaruiAt) });
+
+/** Dokumen di server sudah bergerak sejak terakhir dilihat peramban ini? */
+function sudahBerubah(tersimpan) {
+  if (!tersimpan) return false;               // belum ada, tidak mungkin bentrok
+  if (!ARSIP_DASAR) return true;              // ada, padahal kita mengira baru
+  if (ARSIP_DASAR.rev && tersimpan.rev) return tersimpan.rev !== ARSIP_DASAR.rev;
+  /* Arsip lama belum bernomor revisi; waktu simpannya yang dibandingkan. */
+  return waktuAngka(tersimpan.diperbaruiAt) !== ARSIP_DASAR.waktu;
+}
+
+const galatBentrok = tersimpan => Object.assign(new Error('bentrok'), {
+  code: 'bentrok',
+  oleh: (tersimpan && tersimpan.penyusun) || 'petugas lain',
+  waktu: waktuArsip(tersimpan && tersimpan.diperbaruiAt),
+  baru: !ARSIP_DASAR
+});
+
 const pakaiFirebase = () => store.mode === 'firebase' && !!store.db;
 
 const bacaLokal = () => { try { return JSON.parse(localStorage.getItem(LS_ARSIP) || '{}'); } catch (e) { return {}; } };
@@ -822,28 +860,46 @@ function ringkasArsip() {
   };
 }
 
-/** Simpan berita acara yang sedang dikerjakan. `diam` untuk simpan otomatis. */
-async function simpanArsip(diam) {
+/** Simpan berita acara yang sedang dikerjakan.
+    `diam`    — simpan otomatis, tidak boleh menimpa dan tidak menyela layar.
+    `paksa`   — petugas sudah diberi tahu ada bentrokan dan memilih menimpa.
+    `salinan` — disimpan sebagai dokumen terpisah, supaya kedua pekerjaan utuh. */
+async function simpanArsip(diam, paksa, salinan) {
   if (!D.daerah.trim()) {
     if (!diam) throw new Error('Daerah belum diisi, arsip perlu nama daerah.');
     return null;
   }
-  const id = idArsip();
+  const id = salinan ? idSalinan() : idBerjalan();
   const ringkas = ringkasArsip();
+  const rev = revBaru();
   /* Tiga foto pertama saja: hanya itu yang tercetak di halaman dokumentasi. */
   const foto = [];
   for (const f of FOTO.slice(0, 3)) {
     try { const u = await fotoArsip(f.url); if (u) foto.push(u); } catch (e) { /* lewati */ }
   }
 
+  /* Salinan adalah dokumen baru, jadi tidak membandingkan diri dengan apa pun. */
+  if (salinan) ARSIP_DASAR = null;
+
   if (pakaiFirebase()) {
-    const { doc, setDoc, deleteDoc, collection, getDocs, serverTimestamp } = store.fs;
-    await setDoc(doc(store.db, 'beritaAcara', id), {
+    const { doc, setDoc, deleteDoc, collection, getDocs, serverTimestamp, runTransaction } = store.fs;
+    const acuan = doc(store.db, 'beritaAcara', id);
+    const isi = {
       ...ringkas,
       uid: store.uid || '',
       jumlahFoto: foto.length,
       data: D,
+      rev,
       diperbaruiAt: serverTimestamp()
+    };
+    /* Membaca lalu menulis dalam satu transaksi: kalau petugas lain menyimpan
+       di sela keduanya, Firestore mengulang transaksinya sehingga
+       pemeriksaannya tidak pernah memakai keadaan yang basi. */
+    await runTransaction(store.db, async tx => {
+      const kini = await tx.get(acuan);
+      const tersimpan = kini.exists() ? kini.data() : null;
+      if (!paksa && !salinan && sudahBerubah(tersimpan)) throw galatBentrok(tersimpan);
+      tx.set(acuan, isi);
     });
     /* Foto ditaruh satu per dokumen; satu dokumen Firestore tidak muat tiga. */
     const lama = await getDocs(collection(store.db, 'beritaAcara', id, 'foto'));
@@ -853,7 +909,8 @@ async function simpanArsip(diam) {
     await tulisIndeks(id, { ...ringkas, jumlahFoto: foto.length });
   } else {
     const semua = bacaLokal();
-    semua[id] = { ...ringkas, jumlahFoto: foto.length, data: D, foto, diperbaruiAt: Date.now() };
+    if (!paksa && !salinan && sudahBerubah(semua[id])) throw galatBentrok(semua[id]);
+    semua[id] = { ...ringkas, jumlahFoto: foto.length, data: D, foto, rev, diperbaruiAt: Date.now() };
     if (!tulisLokal(semua)) {
       /* Ruang localStorage habis: simpan tanpa foto daripada gagal seluruhnya. */
       semua[id] = { ...semua[id], foto: [], jumlahFoto: 0 };
@@ -863,9 +920,34 @@ async function simpanArsip(diam) {
 
   ARSIP_DIMUAT = false;
   DARI_ARSIP = id;          // sejak tersimpan, ini dokumennya sendiri
-  ARSIP_STATUS = 'Tersimpan di arsip ' + waktuArsip(Date.now())
+  /* Nomor revisi yang baru saja ditulis menjadi acuan simpanan berikutnya.
+     Stempel waktunya diisi server dan belum diketahui di sini, tetapi tidak
+     diperlukan lagi — sejak sekarang dokumen ini sudah bernomor revisi. */
+  ARSIP_DASAR = { rev, waktu: 0 };
+  ARSIP_STATUS = (salinan ? 'Tersimpan sebagai salinan terpisah ' : 'Tersimpan di arsip ') + waktuArsip(Date.now())
                + (foto.length < Math.min(FOTO.length, 3) ? ' (sebagian foto terlalu besar, tidak ikut tersimpan)' : '');
   return id;
+}
+
+/** Nama dokumen untuk salinan: nama penyusunnya dibubuhkan supaya kedua
+    berita acara daerah yang sama tetap bisa dibedakan di daftar arsip. */
+function idSalinan() {
+  const oleh = (window.slug ? window.slug((ME && ME.nama) || 'salinan') : 'salinan') || 'salinan';
+  return idArsip() + '--' + oleh.slice(0, 24);
+}
+
+/** Dokumen mana yang sedang digarap.
+
+    Biasanya sama dengan idArsip(), yaitu daerah + tanggal. Yang perlu
+    diingat: begitu sebuah berita acara disimpan sebagai salinan, namanya
+    berakhiran `--penyusun` dan tidak bisa disusun ulang oleh idArsip().
+    Tanpa pengecualian ini, simpanan berikutnya akan berbalik menyasar
+    dokumen asli milik petugas lain — persis tumpang tindih yang hendak
+    dicegah. Bila daerah atau tanggalnya diganti, awalannya tidak cocok lagi
+    dan memang seharusnya menjadi dokumen baru. */
+function idBerjalan() {
+  const dasar = idArsip();
+  return (DARI_ARSIP && DARI_ARSIP.indexOf(dasar + '--') === 0) ? DARI_ARSIP : dasar;
 }
 
 const waktuAngka = t => (t && typeof t.toMillis === 'function') ? t.toMillis() : Number(t || 0);
@@ -1069,11 +1151,59 @@ async function bukaArsip(id) {
   const { rekaman, foto } = await ambilArsip(id);
   D = dataArsip(rekaman);
   FOTO = foto.map(url => ({ url, urlAi: url }));
-  ARSIP_STATUS = 'Dibuka dari arsip, terakhir disimpan ' + waktuArsip(rekaman.diperbaruiAt) + '.';
+  ARSIP_STATUS = 'Dibuka dari arsip, terakhir disimpan ' + waktuArsip(rekaman.diperbaruiAt)
+               + ' oleh ' + (rekaman.penyusun || 'petugas lain') + '.';
   LANGKAH = 'periksa';
   GALAT = ''; KABAR = ''; SUDAH_UNDUH = false;
+  /* Keadaan dokumen saat dibuka menjadi acuan: simpanan nanti hanya lewat
+     bila server masih pada revisi ini. Lihat ARSIP_DASAR. */
+  ARSIP_DASAR = dasarDari(rekaman);
   /* Yang sedang dikerjakan tidak boleh dilaporkan sebagai daerah kembar. */
   DARI_ARSIP = id; KEMBAR = null;
+}
+
+/* ── bentrokan simpan ───────────────────────────────────────────
+   Muncul hanya bila dokumennya benar-benar sudah berpindah tangan. Tidak ada
+   pilihan bawaan yang membuang pekerjaan siapa pun: yang paling aman —
+   menyimpan sebagai salinan — ditaruh sebagai tombol utama, dan menimpa
+   harus dipilih sendiri setelah membaca siapa yang menyimpan terakhir. */
+function tanyaBentrok(e) {
+  return new Promise(pilih => {
+    const lama = el('#baBentrok');
+    if (lama) lama.remove();
+    const m = document.createElement('div');
+    m.id = 'baBentrok';
+    m.className = 'fixed inset-0 z-[95] flex items-center justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm';
+    m.innerHTML = `
+      <div class="glass w-full max-w-lg rounded-[2rem] p-6 md:p-8">
+        <p class="text-[11px] uppercase tracking-[0.16em] text-amber-300">Berita acara ini sudah berubah</p>
+        <p class="mt-2 text-[18px] font-semibold">${aman(D.daerah)}</p>
+        <p class="mt-3 text-[14px] leading-[1.7] text-white/70">
+          ${e.baru
+            ? `Petugas lain sudah lebih dulu membuat berita acara untuk daerah dan tanggal ini.`
+            : `Sejak Anda membukanya, berita acara ini disimpan ulang oleh <span class="font-semibold text-white">${aman(e.oleh)}</span>.`}
+          ${e.waktu ? `Simpanan terakhirnya ${aman(e.waktu)}.` : ''}
+          Menyimpan sekarang akan menghapus pekerjaan itu, dan tidak dapat dikembalikan.
+        </p>
+        <div class="mt-6 flex flex-col gap-2">
+          <button data-pilih="salinan" class="cta-glow rounded-full bg-white px-5 py-3 text-[13px] font-medium text-black">
+            Simpan sebagai salinan terpisah — kedua pekerjaan utuh
+          </button>
+          <button data-pilih="muat" class="rounded-full border border-white/20 px-5 py-3 text-[13px] font-medium text-white/85 transition hover:bg-white/10">
+            Buka versi terbaru — isian saya di layar dibuang
+          </button>
+          <button data-pilih="timpa" class="rounded-full border border-red-400/50 bg-red-500/15 px-5 py-3 text-[13px] font-medium text-red-200 transition hover:bg-red-500/25">
+            Timpa dengan isian saya
+          </button>
+          <button data-pilih="batal" class="rounded-full px-5 py-2.5 text-[13px] font-medium text-white/50 transition hover:text-white">
+            Batal, jangan simpan dulu
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(m);
+    m.querySelectorAll('[data-pilih]').forEach(b => b.onclick = () => { m.remove(); pilih(b.dataset.pilih); });
+    m.onclick = ev => { if (ev.target === m) { m.remove(); pilih('batal'); } };
+  });
 }
 
 async function hapusArsip(id) {
@@ -1186,13 +1316,50 @@ async function unduhArsip(id) {
 }
 
 /** Simpan otomatis sesudah AI selesai membaca; kegagalannya tidak menghentikan
-    pekerjaan, cukup dicatat supaya petugas tahu arsipnya belum tersimpan. */
+    pekerjaan, cukup dicatat supaya petugas tahu arsipnya belum tersimpan.
+
+    Simpan otomatis tidak pernah menimpa dan tidak pernah menyela dengan
+    kotak pertanyaan — petugas sedang menunggu hasil pembacaan AI, bukan
+    sedang memutuskan apa pun. Bentrokannya cukup dilaporkan pada baris
+    keterangan, lalu diselesaikan saat ia menekan simpan sendiri. */
 async function simpanDiam() {
   try {
     await simpanArsip(true);
   } catch (e) {
     console.warn('[MonevDAK] arsip tidak tersimpan:', e);
-    ARSIP_STATUS = 'Belum tersimpan di arsip: ' + (e.code || e.message);
+    ARSIP_STATUS = e.code === 'bentrok'
+      ? 'Belum tersimpan: berita acara ini sudah disimpan ulang oleh ' + e.oleh
+        + (e.waktu ? ' ' + e.waktu : '') + '. Tekan Simpan ke arsip untuk memilih apa yang dilakukan.'
+      : 'Belum tersimpan di arsip: ' + (e.code || e.message);
+  }
+}
+
+/** Tindak lanjut bentrokan sesuai pilihan petugas. */
+async function selesaikanBentrok(e) {
+  const pilihan = await tanyaBentrok(e);
+
+  if (pilihan === 'batal') {
+    ARSIP_STATUS = 'Belum tersimpan — berita acara ini sudah berubah di arsip.';
+    return;
+  }
+
+  if (pilihan === 'muat') {
+    try {
+      await bukaArsip(DARI_ARSIP || idArsip());
+      toast('Versi terbaru dari arsip dibuka.');
+    } catch (ex) {
+      ARSIP_STATUS = 'Versi terbaru gagal dibuka: ' + (ex.code || ex.message);
+    }
+    return;
+  }
+
+  try {
+    await simpanArsip(false, pilihan === 'timpa', pilihan === 'salinan');
+    toast(pilihan === 'salinan'
+      ? 'Tersimpan sebagai salinan terpisah; pekerjaan ' + e.oleh + ' tetap utuh.'
+      : 'Berita acara ' + D.daerah + ' ditimpa dengan isian Anda.');
+  } catch (ex) {
+    ARSIP_STATUS = 'Gagal menyimpan: ' + (ex.code || ex.message);
   }
 }
 
@@ -1913,7 +2080,7 @@ function mulaiBaru() {
   FOTO = [];
   LANGKAH = 'identitas';
   GALAT = ''; KABAR = ''; ARSIP_STATUS = ''; SUDAH_UNDUH = false;
-  KEMBAR = null; DARI_ARSIP = ''; clearTimeout(jamKembar);
+  KEMBAR = null; DARI_ARSIP = ''; ARSIP_DASAR = null; clearTimeout(jamKembar);
 }
 
 function viewPeriksa() {
@@ -2055,7 +2222,8 @@ function pasangPeriksa() {
       await simpanArsip(false);
       toast('Berita acara ' + D.daerah + ' tersimpan di arsip.');
     } catch (e) {
-      ARSIP_STATUS = 'Gagal menyimpan: ' + (e.code || e.message);
+      if (e.code === 'bentrok') await selesaikanBentrok(e);
+      else ARSIP_STATUS = 'Gagal menyimpan: ' + (e.code || e.message);
     }
     render();
   };
@@ -2375,7 +2543,7 @@ window.BA = {
     konfigDicoba = false; AI_GALAT = ''; ARSIP_STATUS = ''; SUDAH_UNDUH = false;
     ARSIP = []; ARSIP_DIMUAT = false; ARSIP_GALAT = ''; ARSIP_ADMIN = false;
     ARSIP_CARI = ''; ARSIP_PROV = ''; ARSIP_OLEH = '';
-    KEMBAR = null; DARI_ARSIP = ''; clearTimeout(jamKembar);
+    KEMBAR = null; DARI_ARSIP = ''; ARSIP_DASAR = null; clearTimeout(jamKembar);
   }
 };
 

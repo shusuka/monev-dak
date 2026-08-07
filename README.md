@@ -250,6 +250,20 @@ Alurnya empat langkah:
 4. **Periksa & unduh** — seluruh sel dapat dikoreksi sebelum dokumen dibuat, lalu
    diunduh sebagai `.docx`.
 
+**Dua petugas menggarap daerah yang sama.** Nama dokumen arsip adalah *daerah + tanggal*, jadi dua petugas PFID yang menggarap Magelang 5 Agustus menulis ke dokumen yang **sama persis**. Formulirnya digarap di peramban masing-masing dan **tidak saling tampil langsung** — yang satu tidak melihat ketikan yang lain sementara diketik.
+
+Yang dijaga adalah akibatnya. Tiap simpanan membubuhkan **nomor revisi**, dan penyimpanan berikutnya hanya lewat bila revisi di server masih sama dengan yang terakhir dilihat peramban itu. Pemeriksaan dan penulisannya satu transaksi Firestore, jadi tidak ada celah walau keduanya menekan Simpan pada detik yang sama. Bila revisinya sudah berganti, muncul pertanyaan dengan **nama petugas yang menyimpan terakhir dan jamnya**, beserta tiga pilihan:
+
+| Pilihan | Akibat |
+|---|---|
+| **Simpan sebagai salinan terpisah** *(tombol utama)* | Dokumen baru berakhiran `--nama-penyusun`; kedua pekerjaan utuh dan keduanya muncul di daftar arsip |
+| **Buka versi terbaru** | Isian di layar dibuang, diganti isi terbaru dari arsip |
+| **Timpa dengan isian saya** | Pekerjaan petugas lain hilang — harus dipilih sendiri setelah membaca peringatannya |
+
+Tidak ada jalan menimpa tanpa melihat peringatan ini. **Simpan otomatis** sesudah AI membaca tidak pernah menimpa dan tidak pernah menyela dengan kotak pertanyaan; bentrokannya cukup dilaporkan di baris keterangan, lalu diselesaikan saat petugas menekan Simpan sendiri. Arsip lama yang belum bernomor revisi ikut terjaga lewat perbandingan waktu simpannya.
+
+> Membuat berita acara dari nol untuk daerah dan tanggal yang sudah ada juga dihitung bentrokan — pesannya berbunyi bahwa petugas lain sudah lebih dulu membuatnya.
+
 **Penyedia AI.** Ada empat pilihan, semuanya dipanggil langsung dari peramban tanpa
 server perantara:
 
