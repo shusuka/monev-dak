@@ -1190,16 +1190,16 @@ function kotakKembar() {
   return `
   <div class="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-5 py-4">
     <div class="flex items-start gap-3">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="mt-0.5 h-5 w-5 shrink-0 text-amber-300"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="mt-0.5 h-5 w-5 shrink-0 text-amber-700"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
       <div class="min-w-0">
-        <p class="text-[13px] font-semibold text-amber-100">${aman(r.daerah)} sudah pernah dibuat.</p>
-        <p class="mt-1 text-[12px] leading-relaxed text-amber-100/75">
+        <p class="text-[13px] font-semibold text-amber-800">${aman(r.daerah)} sudah pernah dibuat.</p>
+        <p class="mt-1 text-[12px] leading-relaxed text-amber-900">
           ${aman(r.tanggalTeks || tanggalIndo(r.tanggalIso))} oleh ${aman(r.penyusun || '—')} · ${r.jumlahRuas || 0} ruas${lain ? ` · masih ada ${lain} berita acara lain untuk daerah ini` : ''}.
           Buka yang tersimpan saja: isinya bisa langsung diperbaiki, tanpa menempel ulang screenshot dan tanpa memakai token AI lagi.
         </p>
         <div class="mt-3 flex flex-wrap gap-2">
-          <button data-buka-kembar="${aman(r.id)}" class="rounded-full bg-amber-300/90 px-4 py-1.5 text-[12px] font-semibold text-black transition hover:bg-amber-200">Buka yang tersimpan</button>
-          <button data-arsip-kembar class="rounded-full border border-amber-300/40 px-4 py-1.5 text-[12px] font-medium text-amber-100 transition hover:bg-amber-300/10">Lihat di arsip</button>
+          <button data-buka-kembar="${aman(r.id)}" class="rounded-full bg-amber-300/90 px-4 py-1.5 text-[12px] font-semibold text-ink transition hover:bg-amber-200">Buka yang tersimpan</button>
+          <button data-arsip-kembar class="rounded-full border border-amber-300/40 px-4 py-1.5 text-[12px] font-medium text-amber-800 transition hover:bg-amber-300/10">Lihat di arsip</button>
         </div>
       </div>
     </div>
@@ -1290,29 +1290,29 @@ function tanyaBentrok(e) {
     if (lama) lama.remove();
     const m = document.createElement('div');
     m.id = 'baBentrok';
-    m.className = 'fixed inset-0 z-[95] flex items-center justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm';
+    m.className = 'fixed inset-0 z-[95] flex items-center justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm';
     m.innerHTML = `
       <div class="glass w-full max-w-lg rounded-[2rem] p-6 md:p-8">
-        <p class="text-[11px] uppercase tracking-[0.16em] text-amber-300">Berita acara ini sudah berubah</p>
+        <p class="text-[11px] uppercase tracking-[0.16em] text-amber-700">Berita acara ini sudah berubah</p>
         <p class="mt-2 text-[18px] font-semibold">${aman(D.daerah)}</p>
-        <p class="mt-3 text-[14px] leading-[1.7] text-white/70">
+        <p class="mt-3 text-[14px] leading-[1.7] text-slate-600">
           ${e.baru
             ? `Petugas lain sudah lebih dulu membuat berita acara untuk daerah dan tanggal ini.`
-            : `Sejak Anda membukanya, berita acara ini disimpan ulang oleh <span class="font-semibold text-white">${aman(e.oleh)}</span>.`}
+            : `Sejak Anda membukanya, berita acara ini disimpan ulang oleh <span class="font-semibold text-ink">${aman(e.oleh)}</span>.`}
           ${e.waktu ? `Simpanan terakhirnya ${aman(e.waktu)}.` : ''}
           Menyimpan sekarang akan menghapus pekerjaan itu, dan tidak dapat dikembalikan.
         </p>
         <div class="mt-6 flex flex-col gap-2">
-          <button data-pilih="salinan" class="cta-glow rounded-full bg-white px-5 py-3 text-[13px] font-medium text-black">
+          <button data-pilih="salinan" class="cta-glow rounded-full bg-ink px-5 py-3 text-[13px] font-medium text-white">
             Simpan sebagai salinan terpisah — kedua pekerjaan utuh
           </button>
-          <button data-pilih="muat" class="rounded-full border border-white/20 px-5 py-3 text-[13px] font-medium text-white/85 transition hover:bg-white/10">
+          <button data-pilih="muat" class="rounded-full border border-slate-300 px-5 py-3 text-[13px] font-medium text-slate-700 transition hover:bg-slate-100">
             Buka versi terbaru — isian saya di layar dibuang
           </button>
-          <button data-pilih="timpa" class="rounded-full border border-red-400/50 bg-red-500/15 px-5 py-3 text-[13px] font-medium text-red-200 transition hover:bg-red-500/25">
+          <button data-pilih="timpa" class="rounded-full border border-red-400/50 bg-red-500/15 px-5 py-3 text-[13px] font-medium text-red-700 transition hover:bg-red-500/25">
             Timpa dengan isian saya
           </button>
-          <button data-pilih="batal" class="rounded-full px-5 py-2.5 text-[13px] font-medium text-white/50 transition hover:text-white">
+          <button data-pilih="batal" class="rounded-full px-5 py-2.5 text-[13px] font-medium text-slate-500 transition hover:text-ink">
             Batal, jangan simpan dulu
           </button>
         </div>
@@ -1357,17 +1357,17 @@ function bingkaiPratinjau(judul, isi) {
   tutupPratinjau();
   const m = document.createElement('div');
   m.id = 'baPratinjau';
-  m.className = 'fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm md:p-8';
+  m.className = 'fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm md:p-8';
   m.innerHTML = `
-    <div class="w-full max-w-[900px] overflow-hidden rounded-3xl border border-white/15 bg-ink shadow-2xl">
-      <div class="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-4">
+    <div class="w-full max-w-[900px] overflow-hidden rounded-3xl border border-slate-200 bg-ink shadow-2xl">
+      <div class="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
         <div class="min-w-0">
-          <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">Pratinjau dokumen</p>
-          <p class="truncate text-[15px] font-semibold text-white">${aman(judul)}</p>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Pratinjau dokumen</p>
+          <p class="truncate text-[15px] font-semibold text-ink">${aman(judul)}</p>
         </div>
         <div class="flex shrink-0 items-center gap-2">
-          <button data-unduh-pratinjau disabled class="rounded-full border border-white/20 px-3.5 py-1.5 text-[12px] font-medium text-white/80 transition hover:bg-white/10 disabled:opacity-40">Unduh Word</button>
-          <button data-tutup class="rounded-full border border-white/20 p-2 text-white/70 transition hover:bg-white/10 hover:text-white" title="Tutup (Esc)">
+          <button data-unduh-pratinjau disabled class="rounded-full border border-slate-300 px-3.5 py-1.5 text-[12px] font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-40">Unduh Word</button>
+          <button data-tutup class="rounded-full border border-slate-300 p-2 text-slate-600 transition hover:bg-slate-100 hover:text-ink" title="Tutup (Esc)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-4 w-4"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
         </div>
@@ -1383,8 +1383,8 @@ function bingkaiPratinjau(judul, isi) {
 
 const MEMUAT_PRATINJAU = `
   <div class="px-6 py-16 text-center">
-    <div class="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
-    <p class="mt-5 text-[14px] text-white/70">Menyusun dokumen…</p>
+    <div class="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-slate-300 border-t-white"></div>
+    <p class="mt-5 text-[14px] text-slate-600">Menyusun dokumen…</p>
   </div>`;
 
 /* Kertas putih dengan huruf hitam supaya terbaca seperti dokumen aslinya. */
@@ -1419,7 +1419,7 @@ async function pratinjauArsip(id, judul) {
     }
   } catch (e) {
     const wadah = el('#baPratinjauIsi');
-    if (wadah) wadah.innerHTML = `<div class="px-6 py-14 text-center text-[13px] text-rose-200">Dokumen tidak dapat ditampilkan: ${aman(e.message)}</div>`;
+    if (wadah) wadah.innerHTML = `<div class="px-6 py-14 text-center text-[13px] text-rose-700">Dokumen tidak dapat ditampilkan: ${aman(e.message)}</div>`;
   }
 }
 
@@ -1484,10 +1484,10 @@ async function selesaikanBentrok(e) {
 /* ═══════════════════════════════════════════════════════════════
    6. TAMPILAN
    ═══════════════════════════════════════════════════════════════ */
-const KELAS_INPUT = 'w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-[13px] text-white outline-none transition placeholder:text-white/30 focus:border-white/40';
-const KELAS_SEL   = KELAS_INPUT + ' [&>option]:bg-ink';
-const KELAS_TOMBOL= 'rounded-full border border-white/20 px-4 py-2 text-[13px] font-medium text-white/80 transition hover:bg-white/10';
-const KELAS_UTAMA = 'cta-glow rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black transition disabled:opacity-40';
+const KELAS_INPUT = 'w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-[13px] text-ink outline-none transition placeholder:text-slate-500 focus:border-slate-300';
+const KELAS_SEL   = KELAS_INPUT + ' [&>option]:bg-white [&>option]:text-ink';
+const KELAS_TOMBOL= 'rounded-full border border-slate-300 px-4 py-2 text-[13px] font-medium text-slate-700 transition hover:bg-slate-100';
+const KELAS_UTAMA = 'cta-glow rounded-full bg-ink px-6 py-3 text-[14px] font-medium text-white transition disabled:opacity-40';
 
 /* Penunjuk alur: tiap langkah punya lambang sendiri dan bisa diklik untuk
    melompat mundur atau maju, selama syarat langkahnya sudah terpenuhi. */
@@ -1527,13 +1527,13 @@ function penunjukLangkah() {
         const aktif = k === LANGKAH;
         const lewat = i < kini;
         const halangan = halanganLangkah(k);
-        const warnaBulat = aktif ? 'bg-white text-black'
-                         : lewat ? 'bg-emerald-400/20 text-emerald-200 ring-1 ring-emerald-300/30'
-                         : 'bg-white/10 text-white/50';
-        const warnaTeks = aktif ? 'font-semibold text-white' : lewat ? 'text-white/70' : 'text-white/40';
+        const warnaBulat = aktif ? 'bg-ink text-white'
+                         : lewat ? 'bg-emerald-400/20 text-emerald-700 ring-1 ring-emerald-300/30'
+                         : 'bg-slate-100 text-slate-500';
+        const warnaTeks = aktif ? 'font-semibold text-ink' : lewat ? 'text-slate-600' : 'text-slate-500';
         return `<div class="flex items-center gap-1.5">
           <button data-langkah="${k}"${halangan ? ` disabled title="${aman(halangan)}"` : ` title="Ke langkah ${i + 1}: ${aman(t)}"`}
-                  class="group flex items-center gap-2 rounded-full px-2.5 py-1.5 transition ${halangan ? 'cursor-not-allowed opacity-45' : 'hover:bg-white/10'}">
+                  class="group flex items-center gap-2 rounded-full px-2.5 py-1.5 transition ${halangan ? 'cursor-not-allowed opacity-45' : 'hover:bg-slate-100'}">
             <span class="flex h-8 w-8 items-center justify-center rounded-full transition ${warnaBulat}">
               ${lewat
                 ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="m5 13 4 4L19 7"/></svg>'
@@ -1541,7 +1541,7 @@ function penunjukLangkah() {
             </span>
             <span class="text-[13px] ${warnaTeks}">${t}</span>
           </button>
-          ${i < 3 ? '<span class="text-white/20">›</span>' : ''}
+          ${i < 3 ? '<span class="text-slate-500">›</span>' : ''}
         </div>`;
       }).join('')}
     </div>`;
@@ -1563,18 +1563,18 @@ function render() {
   if (!akunPfid(ME)) { wadah.innerHTML = ''; return; }
 
   wadah.innerHTML = `
-    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Petugas PFID</p>
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-slate-500">Petugas PFID</p>
     <h1 class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[40px]">Berita acara eMonitoring</h1>
-    <p class="mt-3 max-w-[640px] text-[15px] text-white/65">
+    <p class="mt-3 max-w-[640px] text-[15px] text-slate-600">
       Notulensi rapat koordinasi pemantauan dan evaluasi DAK Fisik Sub Bidang Jalan TA 2026 Triwulan II.
       Tempel tangkapan layar paparan dan aplikasi eMonitoring, biarkan AI mengisi tabelnya, periksa, lalu unduh sebagai Word.
     </p>
-    <p class="mt-2 text-[13px] text-white/45">Penyusun laporan: <span class="font-semibold text-white/80">${aman(ME.nama)}</span></p>
+    <p class="mt-2 text-[13px] text-slate-500">Penyusun laporan: <span class="font-semibold text-slate-700">${aman(ME.nama)}</span></p>
 
     ${penunjukLangkah()}
 
-    ${GALAT ? `<div class="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] leading-relaxed text-rose-200">${aman(GALAT)}</div>` : ''}
-    ${KABAR ? `<div class="mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-5 py-4 text-[13px] leading-relaxed text-emerald-200">${aman(KABAR)}</div>` : ''}
+    ${GALAT ? `<div class="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] leading-relaxed text-rose-700">${aman(GALAT)}</div>` : ''}
+    ${KABAR ? `<div class="mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-5 py-4 text-[13px] leading-relaxed text-emerald-700">${aman(KABAR)}</div>` : ''}
 
     <div id="baIsi" class="mt-7"></div>`;
 
@@ -1599,39 +1599,39 @@ function viewIdentitas() {
   return `
   <div class="glass rounded-3xl p-6 md:p-8">
     <h2 class="text-[17px] font-semibold">Informasi rapat</h2>
-    <p class="mt-1 text-[13px] text-white/50">Bagian kuning dan ungu pada format notulensi.</p>
+    <p class="mt-1 text-[13px] text-slate-500">Bagian kuning dan ungu pada format notulensi.</p>
 
     <div class="mt-6 grid gap-5 md:grid-cols-2">
       <div>
-        <label class="mb-1.5 block text-[12px] font-medium text-white/60">Hari / Tanggal</label>
+        <label class="mb-1.5 block text-[12px] font-medium text-slate-600">Hari / Tanggal</label>
         <input id="baTgl" type="date" value="${aman(D.tanggalIso)}" class="${KELAS_INPUT}" />
-        <p id="baTglTeks" class="mt-1.5 text-[12px] text-amber-300/80">${aman(tanggalIndo(D.tanggalIso))}</p>
+        <p id="baTglTeks" class="mt-1.5 text-[12px] text-amber-700">${aman(tanggalIndo(D.tanggalIso))}</p>
       </div>
       <div>
-        <label class="mb-1.5 block text-[12px] font-medium text-white/60">Tempat</label>
+        <label class="mb-1.5 block text-[12px] font-medium text-slate-600">Tempat</label>
         <input value="Online melalui Zoom Meeting" disabled class="${KELAS_INPUT} opacity-60" />
       </div>
 
       <div>
-        <label class="mb-1.5 block text-[12px] font-medium text-white/60">Provinsi</label>
+        <label class="mb-1.5 block text-[12px] font-medium text-slate-600">Provinsi</label>
         <select id="baProv" class="${KELAS_SEL}">
           <option value="">— pilih provinsi —</option>
           ${prov.map(p => `<option${p === D._prov ? ' selected' : ''}>${aman(p)}</option>`).join('')}
         </select>
       </div>
       <div>
-        <label class="mb-1.5 block text-[12px] font-medium text-white/60">Kabupaten / Kota</label>
+        <label class="mb-1.5 block text-[12px] font-medium text-slate-600">Kabupaten / Kota</label>
         <select id="baKab" class="${KELAS_SEL}"><option value="">— pilih provinsi dulu —</option></select>
       </div>
 
       <div class="md:col-span-2">
-        <label class="mb-1.5 block text-[12px] font-medium text-white/60">Daerah (yang tercetak di notulensi)</label>
+        <label class="mb-1.5 block text-[12px] font-medium text-slate-600">Daerah (yang tercetak di notulensi)</label>
         <input id="baDaerah" value="${aman(D.daerah)}" placeholder="mis. Kab Kep. Siau Tagulandang Biaro" class="${KELAS_INPUT}" />
         <div id="baKembar" class="mt-3 empty:mt-0">${kotakKembar()}</div>
       </div>
 
       <div class="md:col-span-2">
-        <label class="mb-1.5 block text-[12px] font-medium text-white/60">Notulis</label>
+        <label class="mb-1.5 block text-[12px] font-medium text-slate-600">Notulis</label>
         <select id="baPasangan" class="${KELAS_SEL}">
           ${PASANGAN_NOTULIS.map((p, i) =>
             `<option value="${i}"${i === D.pasangan ? ' selected' : ''}>1. ${aman(p[0])} · 2. ${aman(p[1])}</option>`).join('')}
@@ -1700,70 +1700,70 @@ function viewTempel() {
   <div class="glass rounded-3xl p-6 md:p-8">
     <div id="baKembar" class="mb-6 empty:mb-0">${kotakKembar()}</div>
     <h2 class="text-[17px] font-semibold">Tangkapan layar rapat</h2>
-    <p class="mt-1 text-[13px] text-white/50">
-      Tekan <span class="rounded bg-white/12 px-1.5 py-0.5 font-mono text-[12px]">Ctrl</span> +
-      <span class="rounded bg-white/12 px-1.5 py-0.5 font-mono text-[12px]">V</span>, klik kotak di bawah, atau seret berkasnya.
+    <p class="mt-1 text-[13px] text-slate-500">
+      Tekan <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[12px]">Ctrl</span> +
+      <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[12px]">V</span>, klik kotak di bawah, atau seret berkasnya.
       Maksimal ${MAKS_FOTO} gambar. Tiga gambar pertama ikut tercetak di halaman foto dokumentasi.
     </p>
 
-    <div id="baDrop" class="mt-5 cursor-pointer rounded-3xl border-2 border-dashed border-white/20 bg-white/[0.03] px-6 py-10 text-center transition hover:border-white/40 hover:bg-white/[0.06]">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="mx-auto h-8 w-8 text-white/40"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.35-4.35a2 2 0 0 0-2.83 0L4 20"/></svg>
-      <p class="mt-3 text-[14px] font-medium text-white/75">Ctrl+V · Klik · Seret ke sini</p>
-      <p class="mt-1 text-[12px] text-white/40">Paparan pemda, tabel progres, dan tangkapan eMonitoring DAK</p>
+    <div id="baDrop" class="mt-5 cursor-pointer rounded-3xl border-2 border-dashed border-slate-300 bg-white/[0.03] px-6 py-10 text-center transition hover:border-slate-300 hover:bg-white/[0.06]">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="mx-auto h-8 w-8 text-slate-500"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.35-4.35a2 2 0 0 0-2.83 0L4 20"/></svg>
+      <p class="mt-3 text-[14px] font-medium text-slate-600">Ctrl+V · Klik · Seret ke sini</p>
+      <p class="mt-1 text-[12px] text-slate-500">Paparan pemda, tabel progres, dan tangkapan eMonitoring DAK</p>
     </div>
     <input id="baBerkas" type="file" accept="image/*" multiple class="hidden" />
 
     <div id="baGaleri" class="mt-4 flex flex-wrap gap-3">${galeri()}</div>
 
-    <div class="mt-7 border-t border-white/10 pt-6">
+    <div class="mt-7 border-t border-slate-200 pt-6">
       <h3 class="text-[14px] font-semibold">Penyedia AI</h3>
-      <p class="mt-1 text-[12px] text-white/45">
+      <p class="mt-1 text-[12px] text-slate-500">
         ${bersama
           ? 'Kunci ini tersimpan bersama — semua petugas yang namanya memuat “jalan” memakai kunci yang sama'
             + (AI_OLEH ? ', terakhir disimpan oleh ' + aman(AI_OLEH) : '') + '.'
           : 'Kunci belum tersimpan bersama. Simpan sekali supaya petugas PFID lain tidak perlu mengisinya lagi.'}
       </p>
-      ${AI_GALAT ? `<p class="mt-2 text-[12px] text-amber-300/80">${aman(AI_GALAT)}</p>` : ''}
+      ${AI_GALAT ? `<p class="mt-2 text-[12px] text-amber-700">${aman(AI_GALAT)}</p>` : ''}
 
       <div class="mt-4 grid gap-2 sm:grid-cols-2">
         ${Object.entries(PENYEDIA).map(([k, p]) => {
           const on = k === AI.penyedia;
-          const warna = p.biaya === 'GRATIS' ? 'text-emerald-300'
-                      : p.biaya === 'ADA YANG GRATIS' ? 'text-sky-300' : 'text-white/45';
-          return `<button data-penyedia="${k}" class="rounded-2xl border px-4 py-3 text-left transition ${on ? 'border-white/60 bg-white/[0.10]' : 'border-white/12 hover:border-white/30 hover:bg-white/[0.05]'}">
+          const warna = p.biaya === 'GRATIS' ? 'text-emerald-700'
+                      : p.biaya === 'ADA YANG GRATIS' ? 'text-sky-700' : 'text-slate-500';
+          return `<button data-penyedia="${k}" class="rounded-2xl border px-4 py-3 text-left transition ${on ? 'border-slate-400 bg-white/[0.10]' : 'border-slate-200 hover:border-slate-300 hover:bg-white/[0.05]'}">
             <span class="flex items-center gap-2">
               <span class="text-[13px] font-semibold">${aman(p.label)}</span>
-              <span class="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold tracking-wide ${warna}">${aman(p.biaya)}</span>
+              <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold tracking-wide ${warna}">${aman(p.biaya)}</span>
             </span>
-            <span class="mt-1 block text-[11px] leading-relaxed text-white/45">${aman(p.petunjuk)}</span>
+            <span class="mt-1 block text-[11px] leading-relaxed text-slate-500">${aman(p.petunjuk)}</span>
           </button>`;
         }).join('')}
       </div>
 
       ${PENYEDIA[AI.penyedia] && PENYEDIA[AI.penyedia].tautan ? `
-      <p class="mt-3 text-[12px] text-white/55">
+      <p class="mt-3 text-[12px] text-slate-500">
         <a href="${aman(PENYEDIA[AI.penyedia].tautan)}" target="_blank" rel="noopener"
-           class="font-semibold underline decoration-white/30 underline-offset-4 hover:text-white">${aman(PENYEDIA[AI.penyedia].namaTautan)} ↗</a>
+           class="font-semibold underline decoration-slate-400 underline-offset-4 hover:text-ink">${aman(PENYEDIA[AI.penyedia].namaTautan)} ↗</a>
       </p>` : ''}
 
       <div class="mt-4 grid gap-3 md:grid-cols-3">
         <div>
-          <label class="mb-1.5 block text-[12px] font-medium text-white/60">Base URL</label>
+          <label class="mb-1.5 block text-[12px] font-medium text-slate-600">Base URL</label>
           <input id="baUrl" value="${aman(AI.baseUrl)}" class="${KELAS_INPUT}" />
         </div>
         <div>
-          <label class="mb-1.5 block text-[12px] font-medium text-white/60">Model</label>
+          <label class="mb-1.5 block text-[12px] font-medium text-slate-600">Model</label>
           <input id="baModel" value="${aman(AI.model)}" class="${KELAS_INPUT}" />
         </div>
         <div>
-          <label class="mb-1.5 block text-[12px] font-medium text-white/60">API key</label>
+          <label class="mb-1.5 block text-[12px] font-medium text-slate-600">API key</label>
           <input id="baKunci" type="password" value="${aman(AI.apiKey)}" placeholder="tempel kunci di sini" class="${KELAS_INPUT}" />
         </div>
       </div>
 
       ${MODEL.length ? `
       <div class="mt-3">
-        <label class="mb-1.5 block text-[12px] font-medium text-white/60">
+        <label class="mb-1.5 block text-[12px] font-medium text-slate-600">
           ${MODEL.length} model bisa membaca gambar pada kunci ini${MODEL.some(m => m.gratis) ? ' — yang gratis ada di urutan atas' : ''}
         </label>
         <select id="baModelPilih" class="${KELAS_SEL}">
@@ -1789,10 +1789,10 @@ function viewTempel() {
 function galeri() {
   if (!FOTO.length) return '';
   return FOTO.map((f, i) => `
-    <div class="relative h-24 w-32 overflow-hidden rounded-xl border border-white/15">
+    <div class="relative h-24 w-32 overflow-hidden rounded-xl border border-slate-200">
       <img src="${f.url}" alt="" class="h-full w-full object-cover" />
-      ${i < 3 ? `<span class="absolute left-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold">dokumentasi ${i + 1}</span>` : ''}
-      <button data-hapus="${i}" class="absolute right-1 top-1 rounded bg-black/70 p-1 text-white/80 transition hover:bg-black hover:text-white">
+      ${i < 3 ? `<span class="absolute left-1 top-1 rounded bg-white/85 px-1.5 py-0.5 text-[10px] font-semibold">dokumentasi ${i + 1}</span>` : ''}
+      <button data-hapus="${i}" class="absolute right-1 top-1 rounded bg-white/85 p-1 text-slate-700 transition hover:bg-white hover:text-ink">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" class="h-3 w-3"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>`).join('');
@@ -1842,10 +1842,10 @@ function pasangTempel() {
   pasangKembar();
   const drop = el('#baDrop');
   drop.onclick = () => el('#baBerkas').click();
-  drop.ondragover = e => { e.preventDefault(); drop.classList.add('border-white/50'); };
-  drop.ondragleave = () => drop.classList.remove('border-white/50');
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add('border-slate-400'); };
+  drop.ondragleave = () => drop.classList.remove('border-slate-400');
   drop.ondrop = e => {
-    e.preventDefault(); drop.classList.remove('border-white/50');
+    e.preventDefault(); drop.classList.remove('border-slate-400');
     tambahBerkas(e.dataTransfer.files);
   };
   el('#baBerkas').onchange = e => { tambahBerkas(e.target.files); e.target.value = ''; };
@@ -2044,15 +2044,15 @@ function viewBaca() {
     </div>
 
     <p class="mt-7 text-[15px] font-medium">Membaca ${FOTO.length} tangkapan layar…</p>
-    <p id="baPesanAi" class="mt-2 text-[13px] text-white/60 transition-opacity duration-300">${aman(PESAN_BACA[0])}</p>
+    <p id="baPesanAi" class="mt-2 text-[13px] text-slate-600 transition-opacity duration-300">${aman(PESAN_BACA[0])}</p>
 
     <div class="mt-4 flex items-center justify-center gap-1.5">
-      <span class="ba-titik h-1.5 w-1.5 rounded-full bg-white/70"></span>
-      <span class="ba-titik h-1.5 w-1.5 rounded-full bg-white/70" style="animation-delay:.18s"></span>
-      <span class="ba-titik h-1.5 w-1.5 rounded-full bg-white/70" style="animation-delay:.36s"></span>
+      <span class="ba-titik h-1.5 w-1.5 rounded-full bg-white"></span>
+      <span class="ba-titik h-1.5 w-1.5 rounded-full bg-white" style="animation-delay:.18s"></span>
+      <span class="ba-titik h-1.5 w-1.5 rounded-full bg-white" style="animation-delay:.36s"></span>
     </div>
 
-    <p class="mt-5 text-[12px] text-white/35">${aman(AI.model)} · gambar besar bisa memakan waktu sampai satu menit</p>
+    <p class="mt-5 text-[12px] text-slate-500">${aman(AI.model)} · gambar besar bisa memakan waktu sampai satu menit</p>
   </div>`;
 }
 
@@ -2069,7 +2069,7 @@ function pasangBaca() {
 
 /* ── langkah 4: periksa & unduh ─────────────────────────────── */
 function kolomTeks(jalur, nilai, lebar) {
-  return `<input data-jalur="${jalur}" value="${aman(nilai)}" class="w-full min-w-0 rounded-lg border border-white/12 bg-white/5 px-2 py-1.5 text-[12px] text-white outline-none focus:border-white/40"${lebar ? ` style="width:${lebar}"` : ''} />`;
+  return `<input data-jalur="${jalur}" value="${aman(nilai)}" class="w-full min-w-0 rounded-lg border border-slate-200 bg-slate-100 px-2 py-1.5 text-[12px] text-ink outline-none focus:border-slate-300"${lebar ? ` style="width:${lebar}"` : ''} />`;
 }
 
 function tabel(judul, kunciLarik, kolom, tombolTambah) {
@@ -2082,19 +2082,19 @@ function tabel(judul, kunciLarik, kolom, tombolTambah) {
     </div>
     <div class="mt-4 overflow-x-auto">
       <table class="w-full min-w-[720px] border-separate border-spacing-y-1.5 text-[12px]">
-        <thead class="text-left text-white/45">
+        <thead class="text-left text-slate-500">
           <tr>${kolom.map(c => `<th class="px-1 pb-1 font-medium">${aman(c.judul)}</th>`).join('')}<th></th></tr>
         </thead>
         <tbody>
           ${baris.map((r, i) => `<tr>
             ${kolom.map(c => `<td class="px-1 align-top">${kolomTeks(`${kunciLarik}.${i}.${c.k}`, r[c.k])}</td>`).join('')}
             <td class="px-1 align-top">
-              <button data-buang="${kunciLarik}.${i}" class="rounded-lg border border-white/12 px-2 py-1.5 text-white/45 transition hover:border-rose-400/40 hover:text-rose-300">✕</button>
+              <button data-buang="${kunciLarik}.${i}" class="rounded-lg border border-slate-200 px-2 py-1.5 text-slate-500 transition hover:border-rose-400/40 hover:text-rose-700">✕</button>
             </td>
           </tr>`).join('')}
         </tbody>
       </table>
-      ${baris.length ? '' : '<p class="px-1 py-3 text-[12px] text-white/35">Belum ada baris.</p>'}
+      ${baris.length ? '' : '<p class="px-1 py-3 text-[12px] text-slate-500">Belum ada baris.</p>'}
     </div>
   </div>`;
 }
@@ -2105,18 +2105,18 @@ function daftarTeks(judul, kunciLarik, petunjuk, tombolTambah) {
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h3 class="text-[15px] font-semibold">${judul}</h3>
-        ${petunjuk ? `<p class="mt-0.5 text-[12px] text-white/45">${aman(petunjuk)}</p>` : ''}
+        ${petunjuk ? `<p class="mt-0.5 text-[12px] text-slate-500">${aman(petunjuk)}</p>` : ''}
       </div>
       <button data-tambah="${kunciLarik}" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">+ ${tombolTambah}</button>
     </div>
     <div class="mt-4 space-y-2">
       ${D[kunciLarik].map((t, i) => `
         <div class="flex items-start gap-2">
-          <span class="mt-2 w-4 shrink-0 text-[12px] text-white/35">${String.fromCharCode(97 + i)}.</span>
+          <span class="mt-2 w-4 shrink-0 text-[12px] text-slate-500">${String.fromCharCode(97 + i)}.</span>
           ${kolomTeks(`${kunciLarik}.${i}`, t)}
-          <button data-buang="${kunciLarik}.${i}" class="mt-0.5 rounded-lg border border-white/12 px-2 py-1.5 text-[12px] text-white/45 transition hover:border-rose-400/40 hover:text-rose-300">✕</button>
+          <button data-buang="${kunciLarik}.${i}" class="mt-0.5 rounded-lg border border-slate-200 px-2 py-1.5 text-[12px] text-slate-500 transition hover:border-rose-400/40 hover:text-rose-700">✕</button>
         </div>`).join('')}
-      ${D[kunciLarik].length ? '' : '<p class="text-[12px] text-white/35">Belum ada butir.</p>'}
+      ${D[kunciLarik].length ? '' : '<p class="text-[12px] text-slate-500">Belum ada butir.</p>'}
     </div>
   </div>`;
 }
@@ -2150,20 +2150,20 @@ function viewInfoUmum() {
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h3 class="text-[15px] font-semibold">Informasi Umum Kegiatan DAK TA 2026</h3>
-        <p class="mt-0.5 text-[12px] text-white/45">Bagian hijau — empat item pekerjaan untuk tiap ruas.</p>
+        <p class="mt-0.5 text-[12px] text-slate-500">Bagian hijau — empat item pekerjaan untuk tiap ruas.</p>
       </div>
       <button data-tambah="infoUmum" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">+ Ruas</button>
     </div>
     <div class="mt-4 space-y-5">
       ${D.infoUmum.map((r, i) => `
-        <div class="rounded-2xl border border-white/10 p-4">
+        <div class="rounded-2xl border border-slate-200 p-4">
           <div class="flex items-center gap-2">
             ${kolomTeks(`infoUmum.${i}.namaRuas`, r.namaRuas)}
-            <button data-buang="infoUmum.${i}" class="rounded-lg border border-white/12 px-2 py-1.5 text-[12px] text-white/45 transition hover:border-rose-400/40 hover:text-rose-300">✕</button>
+            <button data-buang="infoUmum.${i}" class="rounded-lg border border-slate-200 px-2 py-1.5 text-[12px] text-slate-500 transition hover:border-rose-400/40 hover:text-rose-700">✕</button>
           </div>
           <div class="mt-3 overflow-x-auto">
             <table class="w-full min-w-[640px] border-separate border-spacing-y-1.5 text-[12px]">
-              <thead class="text-left text-white/45"><tr>
+              <thead class="text-left text-slate-500"><tr>
                 <th class="px-1 pb-1 font-medium">Item Pekerjaan</th>
                 <th class="px-1 pb-1 font-medium">Eksisting</th>
                 <th class="px-1 pb-1 font-medium">Rencana</th>
@@ -2172,7 +2172,7 @@ function viewInfoUmum() {
               </tr></thead>
               <tbody>
                 ${ITEM_UMUM.map(({ k, label }) => `<tr>
-                  <td class="px-1 text-white/70">${aman(label)}</td>
+                  <td class="px-1 text-slate-600">${aman(label)}</td>
                   <td class="px-1">${kolomTeks(`infoUmum.${i}.${k}Eksisting`, r[k + 'Eksisting'])}</td>
                   <td class="px-1">${kolomTeks(`infoUmum.${i}.${k}Rencana`, r[k + 'Rencana'])}</td>
                   <td class="px-1">${kolomTeks(`infoUmum.${i}.${k}Realisasi`, r[k + 'Realisasi'])}</td>
@@ -2182,7 +2182,7 @@ function viewInfoUmum() {
             </table>
           </div>
         </div>`).join('')}
-      ${D.infoUmum.length ? '' : '<p class="text-[12px] text-white/35">Belum ada ruas.</p>'}
+      ${D.infoUmum.length ? '' : '<p class="text-[12px] text-slate-500">Belum ada ruas.</p>'}
     </div>
   </div>`;
 }
@@ -2209,18 +2209,18 @@ function viewPeriksa() {
         <!-- Sengaja ikon kecil dan pucat: menekannya menimpa seluruh isian dan
              memakai token AI lagi, jadi jangan sampai terpencet tanpa sengaja. -->
         <button id="baUlangAi" title="Baca ulang screenshot dengan AI — seluruh isian yang sudah diperbaiki akan ditimpa"
-                class="shrink-0 rounded-full border border-white/12 p-2 text-white/35 transition hover:border-white/30 hover:bg-white/10 hover:text-white/80">
+                class="shrink-0 rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
             <path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/>
           </svg>
         </button>
       </div>
       <div class="mt-4 grid gap-4 md:grid-cols-3">
-        <div><label class="mb-1.5 block text-[12px] text-white/55">Hari / Tanggal</label>
+        <div><label class="mb-1.5 block text-[12px] text-slate-500">Hari / Tanggal</label>
           <input value="${aman(tanggalIndo(D.tanggalIso))}" disabled class="${KELAS_INPUT} opacity-60" /></div>
-        <div><label class="mb-1.5 block text-[12px] text-white/55">Daerah</label>
+        <div><label class="mb-1.5 block text-[12px] text-slate-500">Daerah</label>
           ${kolomTeks('daerah', D.daerah)}</div>
-        <div><label class="mb-1.5 block text-[12px] text-white/55">Notulis</label>
+        <div><label class="mb-1.5 block text-[12px] text-slate-500">Notulis</label>
           <input value="1. ${aman(D.notulis1)} · 2. ${aman(D.notulis2)}" disabled class="${KELAS_INPUT} opacity-60" /></div>
       </div>
     </div>
@@ -2233,11 +2233,11 @@ function viewPeriksa() {
     <div class="glass rounded-3xl p-5 md:p-6">
       <h3 class="text-[15px] font-semibold">Evaluasi Pelaksanaan Kegiatan</h3>
       <div class="mt-4 grid gap-4 md:grid-cols-3">
-        <div><label class="mb-1.5 block text-[12px] text-white/55">Progres fisik rata-rata (%)</label>
+        <div><label class="mb-1.5 block text-[12px] text-slate-500">Progres fisik rata-rata (%)</label>
           ${kolomTeks('fisikRata', D.fisikRata)}</div>
-        <div><label class="mb-1.5 block text-[12px] text-white/55">Progres keuangan (%)</label>
+        <div><label class="mb-1.5 block text-[12px] text-slate-500">Progres keuangan (%)</label>
           ${kolomTeks('keuanganRata', D.keuanganRata)}</div>
-        <div><label class="mb-1.5 block text-[12px] text-white/55">Permasalahan utama berasal dari</label>
+        <div><label class="mb-1.5 block text-[12px] text-slate-500">Permasalahan utama berasal dari</label>
           ${kolomTeks('permasalahanUtama', D.permasalahanUtama)}</div>
       </div>
     </div>
@@ -2249,14 +2249,14 @@ function viewPeriksa() {
 
     <div class="glass rounded-3xl p-5 md:p-6">
       <h3 class="text-[15px] font-semibold">Foto dokumentasi</h3>
-      <p class="mt-1 text-[12px] text-white/45">
+      <p class="mt-1 text-[12px] text-slate-500">
         ${FOTO.length ? `${Math.min(FOTO.length, 3)} gambar pertama akan dipasang di halaman dokumentasi.` : 'Belum ada gambar — halaman dokumentasi akan kosong.'}
       </p>
       <div class="mt-4 flex flex-wrap gap-3">
         ${FOTO.slice(0, 3).map((f, i) => `
-          <div class="relative h-24 w-32 overflow-hidden rounded-xl border border-white/15">
+          <div class="relative h-24 w-32 overflow-hidden rounded-xl border border-slate-200">
             <img src="${f.url}" alt="" class="h-full w-full object-cover" />
-            <span class="absolute left-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold">${i + 1}</span>
+            <span class="absolute left-1 top-1 rounded bg-white/85 px-1.5 py-0.5 text-[10px] font-semibold">${i + 1}</span>
           </div>`).join('')}
       </div>
     </div>
@@ -2266,14 +2266,14 @@ function viewPeriksa() {
         <button id="baKeTempel2" class="${KELAS_TOMBOL}">Kembali ke screenshot</button>
         <!-- Sesudah Word-nya diunduh, tombol inilah langkah berikutnya:
              daerah ini selesai, giliran daerah lain. -->
-        <button id="baMulaiBaru" class="${KELAS_TOMBOL}${SUDAH_UNDUH ? ' !border-white/45 !text-white' : ''}">Mulai daerah baru</button>
+        <button id="baMulaiBaru" class="${KELAS_TOMBOL}${SUDAH_UNDUH ? ' !border-slate-300 !text-ink' : ''}">Mulai daerah baru</button>
       </div>
       <div class="flex flex-wrap gap-3">
         <button id="baSimpanArsip" class="${KELAS_TOMBOL}">Simpan ke arsip</button>
         <button id="baUnduh" class="${KELAS_UTAMA}">Unduh Word</button>
       </div>
     </div>
-    ${ARSIP_STATUS ? `<p class="pb-6 text-right text-[12px] text-white/45">${aman(ARSIP_STATUS)}</p>` : ''}
+    ${ARSIP_STATUS ? `<p class="pb-6 text-right text-[12px] text-slate-500">${aman(ARSIP_STATUS)}</p>` : ''}
   </div>`;
 }
 
@@ -2375,11 +2375,11 @@ function kartuArsip(r, pfid, semua) {
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div class="min-w-0">
         <h3 class="text-[16px] font-semibold">${aman(r.daerah)}</h3>
-        <p class="mt-1 text-[13px] text-white/55">${aman(r.tanggalTeks || tanggalIndo(r.tanggalIso))}${semua && provArsip(r) ? ' · ' + aman(provArsip(r)) : ''}</p>
-        <p class="mt-2 text-[12px] text-white/40">
+        <p class="mt-1 text-[13px] text-slate-500">${aman(r.tanggalTeks || tanggalIndo(r.tanggalIso))}${semua && provArsip(r) ? ' · ' + aman(provArsip(r)) : ''}</p>
+        <p class="mt-2 text-[12px] text-slate-500">
           ${r.jumlahRuas || 0} ruas · ${foto} foto · notulis ${aman(r.notulis1 || '—')} &amp; ${aman(r.notulis2 || '—')}
         </p>
-        <p class="mt-1 text-[12px] text-white/35">
+        <p class="mt-1 text-[12px] text-slate-500">
           Disusun ${aman(r.penyusun || '—')}${r.diperbaruiAt ? ' · diperbarui ' + aman(waktuArsip(r.diperbaruiAt)) : ''}
         </p>
       </div>
@@ -2389,7 +2389,7 @@ function kartuArsip(r, pfid, semua) {
         <button data-unduh="${aman(r.id)}" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">Unduh Word</button>
         ${pfid ? `
         <button data-buka="${aman(r.id)}" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">Buka &amp; edit</button>
-        <button data-hapus-arsip="${aman(r.id)}" class="rounded-full border border-white/12 px-3 py-1.5 text-[12px] text-white/45 transition hover:border-rose-400/40 hover:text-rose-300">Hapus</button>` : ''}
+        <button data-hapus-arsip="${aman(r.id)}" class="rounded-full border border-slate-200 px-3 py-1.5 text-[12px] text-slate-500 transition hover:border-rose-400/40 hover:text-rose-700">Hapus</button>` : ''}
       </div>
     </div>
   </div>`;
@@ -2404,8 +2404,8 @@ function kotakSaring(id, ikon, labelSemua, labelKosong, opsi, terpilih) {
   if (!opsi.length) return '';
   return `
       <div class="glass flex items-center gap-2 rounded-full px-5 py-2.5">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 shrink-0 text-white/50">${ikon}</svg>
-        <select id="${id}" class="max-w-[190px] bg-transparent text-[13px] leading-[19.5px] text-white outline-none [&>option]:bg-ink">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 shrink-0 text-slate-500">${ikon}</svg>
+        <select id="${id}" class="max-w-[190px] bg-transparent text-[13px] leading-[19.5px] text-ink outline-none [&>option]:bg-white [&>option]:text-ink">
           <option value="">${labelSemua} (${opsi.reduce((n, o) => n + o.jumlah, 0)})</option>
           ${opsi.map(o => `<option value="${aman(o.nilai)}"${terpilih === o.nilai ? ' selected' : ''}>${aman(o.nilai === TANPA_ISI ? labelKosong : o.nilai)} (${o.jumlah})</option>`).join('')}
         </select>
@@ -2459,13 +2459,13 @@ function renderArsip() {
 
   wadah.innerHTML = `
     ${admin ? `
-    <p class="mt-7 max-w-[720px] text-[14px] leading-[1.7] text-white/60">
+    <p class="mt-7 max-w-[720px] text-[14px] leading-[1.7] text-slate-600">
       Seluruh notulensi rapat pemantauan dan evaluasi yang sudah disusun petugas PFID, ${ARSIP.length} berita acara.
       Dokumennya dapat dibaca di layar dan diunduh dalam bentuk Word; penyuntingan tetap di tangan petugas penyusunnya.
     </p>` : `
-    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">${pfid ? 'Petugas PFID' : 'Pemerintah daerah'}</p>
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-slate-500">${pfid ? 'Petugas PFID' : 'Pemerintah daerah'}</p>
     <h1 class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[40px]">Arsip berita acara</h1>
-    <p class="mt-3 max-w-[640px] text-[15px] text-white/65">
+    <p class="mt-3 max-w-[640px] text-[15px] text-slate-600">
       ${pfid
         ? 'Setiap berita acara yang selesai dibaca AI tersimpan di sini dan terlihat oleh semua petugas. Membukanya kembali tidak memanggil AI lagi, jadi tidak ada token yang terpakai untuk perbaikan.'
         : 'Notulensi rapat pemantauan dan evaluasi DAK Fisik Sub Bidang Jalan untuk ' + aman(ME.kab) + '. Dokumennya dapat dibaca dan diunduh dalam bentuk Word di sini; perubahan isi dilakukan oleh petugas PFID.'}
@@ -2473,28 +2473,28 @@ function renderArsip() {
 
     <div class="mt-8 flex flex-wrap items-center gap-3">
       <div class="glass flex items-center gap-2 rounded-full px-5 py-2.5">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4 text-white/50"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input id="baArsipCari" value="${aman(ARSIP_CARI)}" placeholder="Cari daerah, tanggal, atau penyusun" class="w-56 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4 text-slate-500"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="baArsipCari" value="${aman(ARSIP_CARI)}" placeholder="Cari daerah, tanggal, atau penyusun" class="w-56 bg-transparent text-[13px] outline-none placeholder:text-slate-500" />
       </div>
       ${semua ? kotakSaring('baArsipProv', IKON_SARING, 'Semua provinsi', 'Tanpa provinsi', opsiProv, ARSIP_PROV) : ''}
       ${semua ? kotakSaring('baArsipOleh', IKON_PENYUSUN, 'Semua penyusun', 'Tanpa nama', opsiOleh, ARSIP_OLEH) : ''}
-      <button id="baArsipMuat" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Muat ulang</button>
-      ${semua ? `<button id="baArsipImpor" title="Masukkan notulensi Word yang sudah disusun manual, boleh banyak berkas sekaligus" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Impor dokumen Word</button>` : ''}
-      ${pfid ? `<button id="baArsipBaru" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Buat berita acara baru</button>
-      <button id="baArsipIndeks" title="Susun ulang daftar yang dilihat pemda, termasuk berita acara lama" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Perbarui daftar pemda</button>` : ''}
+      <button id="baArsipMuat" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-slate-700 transition hover:bg-slate-100">Muat ulang</button>
+      ${semua ? `<button id="baArsipImpor" title="Masukkan notulensi Word yang sudah disusun manual, boleh banyak berkas sekaligus" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-slate-700 transition hover:bg-slate-100">Impor dokumen Word</button>` : ''}
+      ${pfid ? `<button id="baArsipBaru" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-slate-700 transition hover:bg-slate-100">Buat berita acara baru</button>
+      <button id="baArsipIndeks" title="Susun ulang daftar yang dilihat pemda, termasuk berita acara lama" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-slate-700 transition hover:bg-slate-100">Perbarui daftar pemda</button>` : ''}
     </div>
 
-    ${ARSIP_GALAT ? `<div class="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] text-rose-200">${aman(ARSIP_GALAT)}</div>` : ''}
+    ${ARSIP_GALAT ? `<div class="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] text-rose-700">${aman(ARSIP_GALAT)}</div>` : ''}
 
     <div class="mt-7 space-y-4">
       ${daftar.length ? daftar.map(r => kartuArsip(r, pfid, semua)).join('') : `
         <div class="glass rounded-3xl px-6 py-14 text-center">
-          <p class="text-[15px] font-medium text-white/75">${ARSIP.length
+          <p class="text-[15px] font-medium text-slate-600">${ARSIP.length
             ? (saringanTerpakai.length
                 ? 'Tidak ada berita acara ' + aman(saringanTerpakai.join(' · ')) + ' yang cocok.'
                 : 'Tidak ada yang cocok dengan pencarian itu.')
             : semua ? 'Arsip masih kosong.' : 'Belum ada berita acara untuk ' + aman(ME.kab) + '.'}</p>
-          <p class="mt-2 text-[13px] text-white/45">${ARSIP.length ? (saringanTerpakai.length ? 'Kembalikan saringannya ke “Semua”, atau coba kata kunci lain.' : 'Coba kata kunci lain.')
+          <p class="mt-2 text-[13px] text-slate-500">${ARSIP.length ? (saringanTerpakai.length ? 'Kembalikan saringannya ke “Semua”, atau coba kata kunci lain.' : 'Coba kata kunci lain.')
             : semua ? 'Berita acara tersimpan sendiri begitu AI selesai membaca screenshot.'
                    : 'Dokumennya muncul di sini setelah petugas PFID menyusun notulensi rapat daerah Anda.'}</p>
         </div>`}

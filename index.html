@@ -14,7 +14,15 @@
     theme: {
       extend: {
         fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
-        colors: { ink: '#0c0c0e' }
+        /* Tema terang: baby blue #8AAAE5 dengan putih.
+           `ink` dulu warna latar tergelap, kini warna tulisan utama — biru
+           tua senada, bukan hitam, supaya sewarna dengan aksennya.
+           `langit` dipakai untuk aksen, `langit-tua` untuk yang perlu
+           kontras cukup di atas putih (tombol dan tautan). */
+        colors: {
+          ink: '#12294d',
+          langit: { DEFAULT: '#8AAAE5', muda: '#dbe7f8', kabut: '#f2f6fd', tua: '#2f5597', pekat: '#1b3564' }
+        }
       }
     }
   }
@@ -50,20 +58,23 @@
   .tabnav {
     align-items: center; gap: .5rem;
     white-space: nowrap; border-radius: 9999px; padding: .5rem 1rem;
-    font-weight: 500; color: rgb(var(--tab) / .8);
+    font-weight: 500;
+    /* Warna tab dicampur hitam supaya cukup gelap di atas kertas putih;
+       warna aslinya dipilih dulu untuk latar gelap dan terlalu muda di sini. */
+    color: color-mix(in srgb, rgb(var(--tab)) 42%, #0b1c33);
     transition: background-color .2s ease, color .2s ease, box-shadow .25s ease;
   }
-  .tabnav:hover { background: rgb(var(--tab) / .14); color: rgb(var(--tab)); }
+  .tabnav:hover { background: rgb(var(--tab) / .18); }
   .tabnav .tabdot {
     height: .45rem; width: .45rem; border-radius: 9999px;
-    background: rgb(var(--tab)); opacity: .8;
+    background: color-mix(in srgb, rgb(var(--tab)) 55%, #0b1c33); opacity: .9;
     transition: transform .2s ease, opacity .2s ease;
   }
   .tabnav.on {
-    background: rgb(var(--tab)); color: #07080a; font-weight: 600;
-    box-shadow: 0 8px 24px rgb(var(--tab) / .35);
+    background: color-mix(in srgb, rgb(var(--tab)) 45%, #0b1c33); color: #fff; font-weight: 600;
+    box-shadow: 0 8px 24px rgb(var(--tab) / .45);
   }
-  .tabnav.on .tabdot { background: #07080a; opacity: .85; transform: scale(1.15); }
+  .tabnav.on .tabdot { background: #fff; opacity: .9; transform: scale(1.15); }
 
   /* ---------- deretan menu bawah untuk layar sempit ----------
      Di ponsel deretan menu atas harus digulir ke samping, sehingga menu yang
@@ -77,7 +88,7 @@
     flex: 1 1 0%; min-width: 0;
     flex-direction: column; align-items: center; justify-content: center; gap: .18rem;
     padding: .5rem .25rem .45rem;
-    color: rgba(255,255,255,.5);
+    color: #64748b;
     transition: color .2s ease;
   }
   .navbtm .navbtm-ikon {
@@ -90,8 +101,8 @@
     font-size: 10px; line-height: 1.1; font-weight: 500;
     max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .navbtm.on { color: rgb(var(--tab)); }
-  .navbtm.on .navbtm-ikon { background: rgb(var(--tab) / .18); color: rgb(var(--tab)); }
+  .navbtm.on { color: color-mix(in srgb, rgb(var(--tab)) 45%, #0b1c33); }
+  .navbtm.on .navbtm-ikon { background: rgb(var(--tab) / .24); color: inherit; }
   .navbtm.on .navbtm-teks { font-weight: 600; }
 
   /* Titik penanda "belum diisi" pada menu survei — pengingat kecil yang tetap
@@ -100,37 +111,50 @@
   .nav-belum::after {
     content: ''; position: absolute; top: .3rem; right: .55rem;
     height: .45rem; width: .45rem; border-radius: 9999px;
-    background: #fbbf24; box-shadow: 0 0 0 2px #07080a;
+    background: #f59e0b; box-shadow: 0 0 0 2px #ffffff;
     animation: denyut 1.8s ease-in-out infinite;
   }
-  .tabnav.nav-belum::after { top: .28rem; right: .5rem; box-shadow: 0 0 0 2px rgba(7,8,10,.9); }
+  .tabnav.nav-belum::after { top: .28rem; right: .5rem; box-shadow: 0 0 0 2px rgba(255,255,255,.95); }
   @keyframes denyut { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.35); opacity: .55; } }
   @media (prefers-reduced-motion: reduce) { .nav-belum::after { animation: none; } }
 
   /* ---------- CTA glow ---------- */
   .cta-glow { transition: box-shadow .35s ease, transform .35s ease; }
-  .cta-glow:hover { box-shadow: 0 0 0 1px rgba(255,255,255,.7), 0 0 28px rgba(255,255,255,.55), 0 0 70px rgba(255,255,255,.28); transform: translateY(-1px); }
+  .cta-glow:hover { box-shadow: 0 0 0 1px rgba(138,170,229,.85), 0 10px 26px -8px rgba(18,41,77,.5), 0 0 44px -12px rgba(138,170,229,.9); transform: translateY(-1px); }
 
-  /* ---------- cinematic background fallback ---------- */
+  /* ---------- latar baby blue ----------
+     Latar aplikasi adalah putih yang disapu baby blue (#8AAAE5) di beberapa
+     sudut, bukan warna rata: sapuan itu memberi kedalaman tanpa menurunkan
+     kontras tulisan, yang tetap gelap di atas bidang hampir putih. */
   .bg-fallback {
     background:
-      radial-gradient(120% 90% at 15% 10%, #1b2a3f 0%, transparent 55%),
-      radial-gradient(110% 80% at 85% 20%, #3a2418 0%, transparent 55%),
-      radial-gradient(140% 120% at 50% 110%, #0a1a24 0%, transparent 60%),
-      linear-gradient(160deg, #07080a 0%, #0d1117 50%, #05070a 100%);
+      radial-gradient(120% 90% at 15% 10%, rgba(138,170,229,.55) 0%, transparent 58%),
+      radial-gradient(110% 80% at 85% 18%, rgba(138,170,229,.34) 0%, transparent 55%),
+      radial-gradient(140% 120% at 50% 110%, rgba(138,170,229,.45) 0%, transparent 62%),
+      linear-gradient(160deg, #ffffff 0%, #eef4fd 52%, #ffffff 100%);
     animation: drift 26s ease-in-out infinite;
   }
   .bg-fallback::after {
     content: ''; position: absolute; inset: 0;
-    background-image: linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(18,41,77,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(18,41,77,.05) 1px, transparent 1px);
     background-size: 88px 88px;
     mask-image: radial-gradient(80% 60% at 50% 45%, #000 0%, transparent 75%);
   }
 
-  /* ---------- glass ---------- */
-  .glass { background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.11); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
-  .glass-hover { transition: background .25s ease, border-color .25s ease, transform .25s ease; }
-  .glass-hover:hover { background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.22); transform: translateY(-2px); }
+  /* ---------- kartu ----------
+     Dulu kaca buram di atas gelap; pada tema terang yang setara adalah
+     kertas putih dengan tepi biru tipis dan bayangan rendah. */
+  .glass {
+    background: rgba(255,255,255,.86);
+    border: 1px solid rgba(138,170,229,.38);
+    box-shadow: 0 18px 40px -30px rgba(18,41,77,.45);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  }
+  .glass-hover { transition: background .25s ease, border-color .25s ease, transform .25s ease, box-shadow .25s ease; }
+  .glass-hover:hover {
+    background: #fff; border-color: rgba(138,170,229,.7);
+    box-shadow: 0 24px 50px -28px rgba(18,41,77,.5); transform: translateY(-2px);
+  }
 
   /* ---------- kartu ringkasan berwarna tab ----------
      Tiap tab panel admin punya warnanya sendiri pada tombolnya. Warna itu
@@ -140,26 +164,26 @@
      tidak perlu tahu sedang berada di tab mana. */
   .kartu-tab {
     background:
-      linear-gradient(155deg, rgb(var(--tab) / .14), rgb(var(--tab) / .04) 55%, rgba(255,255,255,.03));
-    border: 1px solid rgb(var(--tab) / .3);
-    box-shadow: 0 14px 34px -22px rgb(var(--tab) / .75);
-    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      linear-gradient(155deg, rgb(var(--tab) / .16), rgb(var(--tab) / .05) 55%, #ffffff);
+    border: 1px solid rgb(var(--tab) / .42);
+    box-shadow: 0 14px 34px -24px rgb(var(--tab) / .9);
     transition: border-color .25s ease, transform .25s ease;
   }
-  .kartu-tab:hover { border-color: rgb(var(--tab) / .5); transform: translateY(-2px); }
-  /* judul kecil di atas angka ikut berwarna, tetapi tetap redup supaya
-     angkanya yang pertama terbaca */
-  .kartu-tab .kartu-judul { color: rgb(var(--tab) / .82); }
+  .kartu-tab:hover { border-color: rgb(var(--tab) / .75); transform: translateY(-2px); }
+  /* Judul kecil dan angkanya memakai warna tabnya, digelapkan lewat campuran
+     dengan hitam supaya tetap terbaca di atas kertas putih — warna tab yang
+     apa adanya dipilih untuk latar gelap dan terlalu muda di sini. */
+  .kartu-tab .kartu-judul { color: color-mix(in srgb, rgb(var(--tab)) 45%, #0b1c33); }
   /* Angka yang tidak membawa arti baik/buruk memakai warna tabnya. Yang
      membawa arti — hijau untuk sudah, merah untuk tertinggal — dibiarkan
      seperti apa adanya, karena artinya lebih penting daripada warna tab. */
-  .kartu-tab .kartu-angka { color: rgb(var(--tab)); }
+  .kartu-tab .kartu-angka { color: color-mix(in srgb, rgb(var(--tab)) 45%, #0b1c33); }
 
   @media (prefers-reduced-motion: reduce) { .kartu-tab:hover { transform: none; } }
 
   /* ---------- peta sebaran (assets/peta.js) ---------- */
   .peta-daerah { cursor: pointer; transition: fill-opacity .15s ease; }
-  .peta-daerah:hover { fill-opacity: 1; stroke: #fff; stroke-width: 1.1; }
+  .peta-daerah:hover { fill-opacity: 1; stroke: #12294d; stroke-width: 1.1; }
 
   /* ---------- conic gradient submit button ---------- */
   .gbtn { position: relative; width: 52px; height: 52px; flex: 0 0 52px; border-radius: 9999px; }
@@ -191,15 +215,15 @@
 
   /* ---------- quiz option ---------- */
   .opt { transition: background .18s ease, border-color .18s ease, transform .18s ease; }
-  .opt:hover { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.28); }
-  .opt[data-picked="1"] { background: rgba(255,255,255,.96); border-color: #fff; color: #0c0c0e; }
-  .opt[data-picked="1"] .opt-key { background: #0c0c0e; color: #fff; border-color: #0c0c0e; }
+  .opt:hover { background: rgba(138,170,229,.14); border-color: rgba(138,170,229,.6); }
+  .opt[data-picked="1"] { background: #12294d; border-color: #12294d; color: #fff; }
+  .opt[data-picked="1"] .opt-key { background: #fff; color: #12294d; border-color: #fff; }
   .nav-cell { transition: all .15s ease; }
 
   /* ---------- podium juara ---------- */
   @keyframes glowPulse {
-    0%, 100% { box-shadow: 0 0 0 1px var(--tepi), 0 0 22px -4px var(--pendar), 0 18px 40px -22px rgba(0,0,0,.9); }
-    50%      { box-shadow: 0 0 0 1px var(--tepi), 0 0 46px -2px var(--pendar), 0 18px 40px -22px rgba(0,0,0,.9); }
+    0%, 100% { box-shadow: 0 0 0 1px var(--tepi), 0 0 22px -6px var(--pendar), 0 18px 40px -26px rgba(18,41,77,.55); }
+    50%      { box-shadow: 0 0 0 1px var(--tepi), 0 0 46px -4px var(--pendar), 0 18px 40px -26px rgba(18,41,77,.55); }
   }
   @keyframes kilau { 0% { transform: translateX(-120%) skewX(-18deg); } 100% { transform: translateX(320%) skewX(-18deg); } }
   @keyframes piala { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-4px) rotate(3deg); } }
@@ -207,34 +231,35 @@
   .juara {
     position: relative; overflow: hidden;
     border: 1px solid var(--tepi);
-    background: linear-gradient(155deg, var(--isi1) 0%, rgba(255,255,255,.04) 45%, var(--isi2) 100%);
+    background: linear-gradient(155deg, var(--isi1) 0%, #ffffff 45%, var(--isi2) 100%);
     animation: glowPulse 3.4s ease-in-out infinite;
   }
   /* sapuan cahaya yang melintas, memberi kesan logam */
   .juara::after {
     content: ''; position: absolute; top: 0; bottom: 0; width: 38%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent);
     animation: kilau 4.6s ease-in-out infinite;
     animation-delay: var(--jeda, 0s);
     pointer-events: none;
   }
-  .juara-1 { --tepi: rgba(253,224,71,.75);  --pendar: rgba(250,204,21,.55); --isi1: rgba(250,204,21,.20); --isi2: rgba(180,120,10,.16); --jeda: 0s; }
-  .juara-2 { --tepi: rgba(226,232,240,.70); --pendar: rgba(203,213,225,.42); --isi1: rgba(226,232,240,.16); --isi2: rgba(100,116,139,.14); --jeda: .5s; }
-  .juara-3 { --tepi: rgba(251,146,60,.65);  --pendar: rgba(234,140,60,.40);  --isi1: rgba(234,140,60,.16);  --isi2: rgba(124,64,20,.16);  --jeda: 1s; }
+  .juara-1 { --tepi: rgba(217,164,6,.65);   --pendar: rgba(250,204,21,.5);  --isi1: rgba(250,204,21,.30); --isi2: rgba(217,164,6,.22);  --jeda: 0s; }
+  .juara-2 { --tepi: rgba(148,163,184,.6);  --pendar: rgba(148,163,184,.4); --isi1: rgba(203,213,225,.4); --isi2: rgba(148,163,184,.26); --jeda: .5s; }
+  .juara-3 { --tepi: rgba(194,101,44,.55);  --pendar: rgba(234,140,60,.4);  --isi1: rgba(234,140,60,.28); --isi2: rgba(194,101,44,.2);  --jeda: 1s; }
 
-  .medali { box-shadow: 0 4px 14px -4px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.45); }
+  .medali { box-shadow: 0 4px 14px -6px rgba(18,41,77,.55), inset 0 1px 0 rgba(255,255,255,.55); }
   .medali-1 { background: linear-gradient(150deg, #fde68a, #f59e0b 55%, #b45309); color: #3b2600; }
   .medali-2 { background: linear-gradient(150deg, #f8fafc, #cbd5e1 55%, #64748b); color: #1e293b; }
   .medali-3 { background: linear-gradient(150deg, #fed7aa, #ea8c3c 55%, #92400e); color: #3b1d00; }
 
   .piala-anim { animation: piala 2.8s ease-in-out infinite; transform-origin: 50% 90%; }
   /* baris 1-3 pada tabel peringkat */
-  .baris-1 { background: linear-gradient(90deg, rgba(250,204,21,.14), transparent 60%); }
-  .baris-2 { background: linear-gradient(90deg, rgba(203,213,225,.12), transparent 60%); }
-  .baris-3 { background: linear-gradient(90deg, rgba(234,140,60,.12), transparent 60%); }
-  .teks-emas   { background: linear-gradient(100deg, #fef3c7, #fbbf24 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .teks-silver { background: linear-gradient(100deg, #ffffff, #e2e8f0 45%, #94a3b8); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .teks-perunggu { background: linear-gradient(100deg, #fed7aa, #f59e42 45%, #c2410c); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .baris-1 { background: linear-gradient(90deg, rgba(250,204,21,.26), transparent 60%); }
+  .baris-2 { background: linear-gradient(90deg, rgba(148,163,184,.24), transparent 60%); }
+  .baris-3 { background: linear-gradient(90deg, rgba(234,140,60,.22), transparent 60%); }
+  /* Gradasi logamnya digelapkan: di atas kertas putih ujung terangnya hilang. */
+  .teks-emas   { background: linear-gradient(100deg, #d9a406, #b45309 45%, #92400e); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .teks-silver { background: linear-gradient(100deg, #94a3b8, #64748b 45%, #475569); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .teks-perunggu { background: linear-gradient(100deg, #c2410c, #9a3412 45%, #7c2d12); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
   @media (prefers-reduced-motion: reduce) {
     .juara, .juara::after, .piala-anim { animation: none; }
@@ -250,7 +275,8 @@
   @keyframes adminGelombang{ to { -webkit-mask-position: 24px center; mask-position: 24px center; } }
 
   .admin-warna {
-    background: linear-gradient(100deg, #FF8A3D, #F472B6 35%, #A855F7 60%, #F472B6 85%, #FF8A3D);
+    /* Gradasinya digelapkan untuk tema terang; nuansanya tetap sama. */
+    background: linear-gradient(100deg, #C2410C, #BE185D 35%, #7E22CE 60%, #BE185D 85%, #C2410C);
     background-size: 250% 100%;
     background-position: 0 50%;
     -webkit-background-clip: text; background-clip: text; color: transparent;
@@ -259,7 +285,7 @@
   .admin-ombak { position: relative; display: inline-block; }
   .admin-ombak::after {
     content: ''; position: absolute; left: 0; right: 0; bottom: -7px; height: 6px;
-    background: linear-gradient(100deg, #FF8A3D, #F472B6 35%, #A855F7 60%, #F472B6 85%, #FF8A3D);
+    background: linear-gradient(100deg, #C2410C, #BE185D 35%, #7E22CE 60%, #BE185D 85%, #C2410C);
     background-size: 250% 100%;
     background-position: 0 50%;
     -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='6'%3E%3Cpath d='M0 3q3-3 6 0t6 0 6 0 6 0' fill='none' stroke='%23000' stroke-width='1.7'/%3E%3C/svg%3E");
@@ -271,14 +297,14 @@
     opacity: .85;
   }
   /* Lambang perisainya ikut berwarna, sebab warna tulisannya sudah transparan. */
-  .admin-ikon { color: #F472B6; animation: adminKedip 5s ease-in-out infinite; }
-  @keyframes adminKedip { 0%,100% { color: #FF8A3D; } 50% { color: #A855F7; } }
+  .admin-ikon { color: #BE185D; animation: adminKedip 5s ease-in-out infinite; }
+  @keyframes adminKedip { 0%,100% { color: #C2410C; } 50% { color: #7E22CE; } }
   /* Pil di kaki halaman: bingkainya ikut gradasi yang sama. */
   .admin-pil {
     border: 1px solid transparent;
     background:
-      linear-gradient(rgba(10,10,12,.55), rgba(10,10,12,.55)) padding-box,
-      linear-gradient(100deg, #FF8A3D, #F472B6 35%, #A855F7 60%, #F472B6 85%, #FF8A3D) border-box;
+      linear-gradient(rgba(255,255,255,.9), rgba(255,255,255,.9)) padding-box,
+      linear-gradient(100deg, #C2410C, #BE185D 35%, #7E22CE 60%, #BE185D 85%, #C2410C) border-box;
     background-size: auto, 250% 100%;
     background-position: 0 0, 0 50%;
     animation: adminPilAlir 5s linear infinite;
@@ -286,25 +312,30 @@
   @keyframes adminPilAlir { to { background-position: 0 0, 250% 50%; } }
 
   /* ---------- misc ---------- */
-  .sunset-text { background: linear-gradient(90deg, #FF512F, #F09819); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sunset-text { background: linear-gradient(90deg, #C2410C, #B45309); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .ring-anim { animation: ringDraw 1.1s cubic-bezier(.22,.61,.36,1) forwards; }
   .bar-anim { animation: growBar .9s cubic-bezier(.22,.61,.36,1) forwards; }
-  ::selection { background: #fff; color: #000; }
+  ::selection { background: #8AAAE5; color: #0b1c33; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
 </style>
 </head>
 
-<body class="min-h-screen bg-black text-white antialiased">
+<body class="min-h-screen bg-white text-ink antialiased">
 
-<!-- ═══════════ FIXED CINEMATIC BACKGROUND ═══════════ -->
-<div class="fixed inset-0 overflow-hidden bg-black" style="z-index:-1">
+<!-- ═══════════ LATAR TETAP ═══════════
+     Tema terang baby blue: sapuan biru muda di atas putih, dengan cuplikan
+     video jalan yang sengaja dibuat samar — di tema gelap video itu jadi
+     panggungnya, di sini ia hanya tekstur supaya tulisan gelap tetap terbaca.
+     #bgScrim menutupnya hampir penuh begitu masuk ke aplikasi atau panel
+     admin, karena di sana yang dibaca tabel dan angka, bukan gambar. -->
+<div class="fixed inset-0 overflow-hidden bg-white" style="z-index:-1">
   <div class="bg-fallback absolute inset-0"></div>
   <video id="bgVideo" autoplay muted loop playsinline preload="auto"
-         class="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-1000">
+         class="absolute inset-0 h-full w-full object-cover opacity-0 mix-blend-luminosity transition-opacity duration-1000">
     <source src="assets/video-erasio.mp4" type="video/mp4">
   </video>
-  <div class="absolute inset-0 bg-black/30"></div>
-  <div id="bgScrim" class="absolute inset-0 bg-black/80 opacity-0 backdrop-blur-2xl transition-opacity duration-500"></div>
+  <div class="absolute inset-0 bg-gradient-to-b from-white/80 via-white/70 to-[#8AAAE5]/45"></div>
+  <div id="bgScrim" class="absolute inset-0 bg-gradient-to-b from-white/95 to-[#dbe7f8]/95 opacity-0 backdrop-blur-2xl transition-opacity duration-500"></div>
 </div>
 
 
@@ -314,10 +345,10 @@
   <header class="absolute inset-x-0 top-0 z-10 px-6 py-6 md:px-16 md:py-10">
     <div class="mx-auto flex max-w-7xl items-center justify-between">
       <a href="#top" class="anim-fade flex items-center gap-3" style="animation-delay:.15s">
-        <span class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/20 backdrop-blur-md">
+        <span class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200 backdrop-blur-md">
           <img src="assets/logo-pu.png" alt="Kementerian PU" class="h-full w-full object-contain"
                onerror="this.remove();document.getElementById('navLogoFallback').classList.remove('hidden')" />
-          <svg id="navLogoFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="hidden h-[18px] w-[18px] text-white">
+          <svg id="navLogoFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="hidden h-[18px] w-[18px] text-ink">
             <circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.6-4-9s1.4-6.5 4-9z"/>
           </svg>
         </span>
@@ -325,11 +356,11 @@
       </a>
 
       <nav class="anim-fade hidden items-center md:flex md:space-x-10" style="animation-delay:.3s">
-        <a href="#top"      class="text-[14px] font-medium text-white/95 transition hover:text-white">Beranda</a>
-        <a href="#alur"     class="text-[14px] font-medium text-white/95 transition hover:text-white">Alur Monev</a>
-        <a href="#triwulan" class="text-[14px] font-medium text-white/95 transition hover:text-white">Triwulan</a>
-        <a href="#panduan"  class="text-[14px] font-medium text-white/95 transition hover:text-white">Panduan</a>
-        <button onclick="go('login')" class="rounded-full bg-white/15 px-5 py-2 text-[14px] font-medium text-white backdrop-blur-md transition hover:bg-white/25">Masuk</button>
+        <a href="#top"      class="text-[14px] font-medium text-ink transition hover:text-ink">Beranda</a>
+        <a href="#alur"     class="text-[14px] font-medium text-ink transition hover:text-ink">Alur Monev</a>
+        <a href="#triwulan" class="text-[14px] font-medium text-ink transition hover:text-ink">Triwulan</a>
+        <a href="#panduan"  class="text-[14px] font-medium text-ink transition hover:text-ink">Panduan</a>
+        <button onclick="go('login')" class="rounded-full bg-slate-100 px-5 py-2 text-[14px] font-medium text-ink backdrop-blur-md transition hover:bg-slate-100">Masuk</button>
       </nav>
 
       <button id="burger" aria-label="Buka menu" class="anim-fade md:hidden" style="animation-delay:.3s">
@@ -338,7 +369,7 @@
     </div>
   </header>
 
-  <div id="mobileMenu" class="fixed inset-0 z-40 hidden bg-black/85 backdrop-blur-xl">
+  <div id="mobileMenu" class="fixed inset-0 z-40 hidden bg-white/95 backdrop-blur-xl">
     <div class="flex items-center justify-between px-6 py-6">
       <span class="text-[16px] font-medium tracking-wide">MonevDAK</span>
       <button id="burgerClose" aria-label="Tutup menu">
@@ -346,11 +377,11 @@
       </button>
     </div>
     <nav class="flex flex-col gap-2 px-6 pt-10">
-      <a href="#top"      data-mclose class="border-b border-white/10 py-4 text-[22px] font-medium">Beranda</a>
-      <a href="#alur"     data-mclose class="border-b border-white/10 py-4 text-[22px] font-medium">Alur Monev</a>
-      <a href="#triwulan" data-mclose class="border-b border-white/10 py-4 text-[22px] font-medium">Triwulan</a>
-      <a href="#panduan"  data-mclose class="border-b border-white/10 py-4 text-[22px] font-medium">Panduan</a>
-      <button onclick="closeMenu();go('login')" class="mt-8 rounded-full bg-white px-6 py-4 text-[15px] font-medium text-black">Masuk sebagai Pemda</button>
+      <a href="#top"      data-mclose class="border-b border-slate-200 py-4 text-[22px] font-medium">Beranda</a>
+      <a href="#alur"     data-mclose class="border-b border-slate-200 py-4 text-[22px] font-medium">Alur Monev</a>
+      <a href="#triwulan" data-mclose class="border-b border-slate-200 py-4 text-[22px] font-medium">Triwulan</a>
+      <a href="#panduan"  data-mclose class="border-b border-slate-200 py-4 text-[22px] font-medium">Panduan</a>
+      <button onclick="closeMenu();go('login')" class="mt-8 rounded-full bg-ink px-6 py-4 text-[15px] font-medium text-white">Masuk sebagai Pemda</button>
     </nav>
   </div>
 
@@ -361,9 +392,9 @@
       <div class="anim-pin mb-7">
         <!-- Logo resmi di assets/logo-pu.png. Bila berkas hilang, ikon cadangan yang tampil. -->
         <img src="assets/logo-pu.png" alt="Logo Kementerian Pekerjaan Umum"
-             class="pin-shadow mx-auto h-[68px] w-[68px] rounded-2xl object-contain ring-1 ring-white/20 md:h-20 md:w-20"
+             class="pin-shadow mx-auto h-[68px] w-[68px] rounded-2xl object-contain ring-1 ring-slate-200 md:h-20 md:w-20"
              onerror="this.remove();document.getElementById('heroLogoFallback').classList.remove('hidden')" />
-        <svg id="heroLogoFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="pin-shadow mx-auto hidden h-11 w-11 text-white md:h-12 md:w-12">
+        <svg id="heroLogoFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="pin-shadow mx-auto hidden h-11 w-11 text-ink md:h-12 md:w-12">
           <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.6"/>
         </svg>
       </div>
@@ -372,95 +403,95 @@
         Pantau Setiap Kilometer<br class="hidden md:block"/>DAK Fisik Bidang Jalan
       </h1>
 
-      <p id="heroSub" class="mt-6 max-w-[480px] text-[16px] font-medium leading-[1.6] text-white/95 md:text-[17px]">
+      <p id="heroSub" class="mt-6 max-w-[480px] text-[16px] font-medium leading-[1.6] text-ink md:text-[17px]">
         Pre test dan post test pelaksanaan monitoring dan evaluasi<br class="hidden md:block"/>DAK Fisik Bidang Jalan — periode penilaian Triwulan II.
       </p>
 
       <div class="mt-10 flex flex-col items-center gap-4 sm:flex-row">
-        <button id="heroCta" onclick="go('login')" class="anim-cta cta-glow rounded-full bg-white px-8 py-[14px] text-[15px] font-medium text-black">Mulai Pengisian</button>
-        <button id="heroCta2" onclick="go('rank')" class="anim-cta rounded-full border border-white/25 bg-white/10 px-7 py-[14px] text-[15px] font-medium text-white backdrop-blur-md transition hover:bg-white/20">Lihat Peringkat</button>
+        <button id="heroCta" onclick="go('login')" class="anim-cta cta-glow rounded-full bg-ink px-8 py-[14px] text-[15px] font-medium text-white">Mulai Pengisian</button>
+        <button id="heroCta2" onclick="go('rank')" class="anim-cta rounded-full border border-slate-300 bg-slate-100 px-7 py-[14px] text-[15px] font-medium text-ink backdrop-blur-md transition hover:bg-slate-100">Lihat Peringkat</button>
       </div>
 
       <div id="heroMeta" class="anim-fade mt-8">
-        <p class="text-[13px] font-semibold uppercase tracking-[0.2em] text-white/80">Pusat Fasilitasi Infrastruktur Daerah</p>
-        <p class="mt-1.5 text-[12px] font-medium uppercase tracking-[0.24em] text-white/55">Kementerian PU</p>
+        <p class="text-[13px] font-semibold uppercase tracking-[0.2em] text-slate-700">Pusat Fasilitasi Infrastruktur Daerah</p>
+        <p class="mt-1.5 text-[12px] font-medium uppercase tracking-[0.24em] text-slate-500">Kementerian PU</p>
       </div>
     </div>
 
-    <a href="#alur" class="anim-fade absolute bottom-8 left-1/2 -translate-x-1/2 text-white/60 transition hover:text-white" style="animation-delay:2.6s" aria-label="Gulir ke bawah">
+    <a href="#alur" class="anim-fade absolute bottom-8 left-1/2 -translate-x-1/2 text-slate-600 transition hover:text-ink" style="animation-delay:2.6s" aria-label="Gulir ke bawah">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="h-6 w-6"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
     </a>
   </section>
 
-  <div class="relative z-[5] bg-black/80 backdrop-blur-2xl">
+  <div class="relative z-[5] bg-white/85 backdrop-blur-2xl">
 
     <section id="alur" class="mx-auto max-w-7xl px-6 py-24 md:px-16 md:py-28">
-      <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Alur</p>
+      <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-slate-500">Alur</p>
       <h2 class="mt-3 max-w-2xl text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[42px]">Empat langkah, satu siklus evaluasi</h2>
-      <p class="mt-4 max-w-[540px] text-[15px] leading-[1.7] text-white/70">Setiap pemerintah daerah mengikuti alur yang sama, sehingga capaian pemahaman dapat diukur sebelum dan sesudah pendampingan.</p>
+      <p class="mt-4 max-w-[540px] text-[15px] leading-[1.7] text-slate-600">Setiap pemerintah daerah mengikuti alur yang sama, sehingga capaian pemahaman dapat diukur sebelum dan sesudah pendampingan.</p>
 
       <div class="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <div class="glass glass-hover rounded-3xl p-7">
-          <span class="text-[13px] font-semibold tabular-nums text-white/40">01</span>
+          <span class="text-[13px] font-semibold tabular-nums text-slate-500">01</span>
           <h3 class="mt-4 text-[18px] font-semibold">Identitas Pemda</h3>
-          <p class="mt-2 text-[14px] leading-[1.65] text-white/65">Isi nama, provinsi, dan kabupaten/kota. Kolom provinsi dan kabupaten dibantu saran otomatis saat diketik.</p>
+          <p class="mt-2 text-[14px] leading-[1.65] text-slate-600">Isi nama, provinsi, dan kabupaten/kota. Kolom provinsi dan kabupaten dibantu saran otomatis saat diketik.</p>
         </div>
         <div class="glass glass-hover rounded-3xl p-7">
-          <span class="text-[13px] font-semibold tabular-nums text-white/40">02</span>
+          <span class="text-[13px] font-semibold tabular-nums text-slate-500">02</span>
           <h3 class="mt-4 text-[18px] font-semibold">Pre Test</h3>
-          <p class="mt-2 text-[14px] leading-[1.65] text-white/65">20 soal acak dari bank 25 soal. Urutan soal dan urutan pilihan jawaban berbeda untuk setiap peserta.</p>
+          <p class="mt-2 text-[14px] leading-[1.65] text-slate-600">20 soal acak dari bank 25 soal. Urutan soal dan urutan pilihan jawaban berbeda untuk setiap peserta.</p>
         </div>
         <div class="glass glass-hover rounded-3xl p-7">
-          <span class="text-[13px] font-semibold tabular-nums text-white/40">03</span>
+          <span class="text-[13px] font-semibold tabular-nums text-slate-500">03</span>
           <h3 class="mt-4 text-[18px] font-semibold">Post Test</h3>
-          <p class="mt-2 text-[14px] leading-[1.65] text-white/65">Dikerjakan setelah pendampingan teknis, dengan pengacakan yang sama sehingga tidak dapat dihafal urutannya.</p>
+          <p class="mt-2 text-[14px] leading-[1.65] text-slate-600">Dikerjakan setelah pendampingan teknis, dengan pengacakan yang sama sehingga tidak dapat dihafal urutannya.</p>
         </div>
         <div class="glass glass-hover rounded-3xl p-7">
-          <span class="text-[13px] font-semibold tabular-nums text-white/40">04</span>
+          <span class="text-[13px] font-semibold tabular-nums text-slate-500">04</span>
           <h3 class="mt-4 text-[18px] font-semibold">Nilai &amp; Peringkat</h3>
-          <p class="mt-2 text-[14px] leading-[1.65] text-white/65">Nilai akhir, pembahasan berikut dasar hukum, peringkat nasional, dan grafik perbandingan pre–post.</p>
+          <p class="mt-2 text-[14px] leading-[1.65] text-slate-600">Nilai akhir, pembahasan berikut dasar hukum, peringkat nasional, dan grafik perbandingan pre–post.</p>
         </div>
       </div>
     </section>
 
-    <section id="triwulan" class="border-t border-white/10">
+    <section id="triwulan" class="border-t border-slate-200">
       <div class="mx-auto max-w-7xl px-6 py-24 md:px-16 md:py-28">
-        <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Periode</p>
+        <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-slate-500">Periode</p>
         <h2 class="mt-3 text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[42px]">Triwulan I – IV</h2>
-        <p class="mt-4 max-w-[540px] text-[15px] leading-[1.7] text-white/70">Untuk saat ini hanya <strong class="font-semibold text-white">Triwulan II</strong> yang dinilai. Triwulan lain menyusul pada periode berikutnya.</p>
+        <p class="mt-4 max-w-[540px] text-[15px] leading-[1.7] text-slate-600">Untuk saat ini hanya <strong class="font-semibold text-ink">Triwulan II</strong> yang dinilai. Triwulan lain menyusul pada periode berikutnya.</p>
         <div id="twGrid" class="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"></div>
       </div>
     </section>
 
-    <section id="panduan" class="border-t border-white/10">
+    <section id="panduan" class="border-t border-slate-200">
       <div class="mx-auto grid max-w-7xl gap-14 px-6 py-24 md:grid-cols-2 md:px-16 md:py-28">
         <div>
-          <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Panduan</p>
+          <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-slate-500">Panduan</p>
           <h2 class="mt-3 text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[42px]">Sebelum Anda mulai</h2>
-          <ul class="mt-8 space-y-5 text-[15px] leading-[1.7] text-white/70">
-            <li class="flex gap-3"><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-white/60"></span><span>Setiap peserta mengerjakan <strong class="font-semibold text-white">satu pre test</strong> dan <strong class="font-semibold text-white">satu post test</strong>. Sesi yang sudah dikirim tidak dapat diulang.</span></li>
-            <li class="flex gap-3"><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-white/60"></span><span><strong class="font-semibold text-white">20 soal</strong> diambil acak dari 25 soal. Urutan soal dan urutan opsi A–D diacak ulang setiap kali masuk.</span></li>
-            <li class="flex gap-3"><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-white/60"></span><span>Setiap soal bernilai <strong class="font-semibold text-white">5 poin</strong>, sehingga nilai maksimal <strong class="font-semibold text-white">100</strong>. Batas waktu 20 menit; sesi dikirim otomatis saat waktu habis.</span></li>
-            <li class="flex gap-3"><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-white/60"></span><span>Peringkat disusun dari <strong class="font-semibold text-white">jumlah jawaban benar</strong>; bila sama, <strong class="font-semibold text-white">waktu penyelesaian tercepat</strong> yang lebih unggul.</span></li>
-            <li class="flex gap-3"><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-white/60"></span><span>Setelah selesai, setiap soal disertai kunci jawaban dan <strong class="font-semibold text-white">dasar hukum</strong> pada SE dan lampirannya.</span></li>
+          <ul class="mt-8 space-y-5 text-[15px] leading-[1.7] text-slate-600">
+            <li class="flex gap-3"><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-white"></span><span>Setiap peserta mengerjakan <strong class="font-semibold text-ink">satu pre test</strong> dan <strong class="font-semibold text-ink">satu post test</strong>. Sesi yang sudah dikirim tidak dapat diulang.</span></li>
+            <li class="flex gap-3"><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-white"></span><span><strong class="font-semibold text-ink">20 soal</strong> diambil acak dari 25 soal. Urutan soal dan urutan opsi A–D diacak ulang setiap kali masuk.</span></li>
+            <li class="flex gap-3"><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-white"></span><span>Setiap soal bernilai <strong class="font-semibold text-ink">5 poin</strong>, sehingga nilai maksimal <strong class="font-semibold text-ink">100</strong>. Batas waktu 20 menit; sesi dikirim otomatis saat waktu habis.</span></li>
+            <li class="flex gap-3"><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-white"></span><span>Peringkat disusun dari <strong class="font-semibold text-ink">jumlah jawaban benar</strong>; bila sama, <strong class="font-semibold text-ink">waktu penyelesaian tercepat</strong> yang lebih unggul.</span></li>
+            <li class="flex gap-3"><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-white"></span><span>Setelah selesai, setiap soal disertai kunci jawaban dan <strong class="font-semibold text-ink">dasar hukum</strong> pada SE dan lampirannya.</span></li>
           </ul>
         </div>
         <div class="glass rounded-3xl p-8 md:p-10">
-          <h3 class="text-[13px] font-semibold uppercase tracking-[0.18em] text-white/50">Dasar hukum bank soal</h3>
+          <h3 class="text-[13px] font-semibold uppercase tracking-[0.18em] text-slate-500">Dasar hukum bank soal</h3>
           <p class="mt-5 text-[19px] font-medium leading-[1.5]">Surat Edaran Menteri Pekerjaan Umum Nomor 5/SE/Mn/2026</p>
-          <p class="mt-3 text-[14px] leading-[1.7] text-white/65">Pemantauan, evaluasi, dan pelaksanaan DAK Fisik Infrastruktur Pekerjaan Umum Bidang Jalan, beserta Lampiran I dan Lampiran II.</p>
-          <div class="mt-8 grid grid-cols-4 gap-4 border-t border-white/10 pt-8">
-            <div><p class="text-[26px] font-semibold tabular-nums">25</p><p class="mt-1 text-[12px] text-white/55">Bank soal</p></div>
-            <div><p class="text-[26px] font-semibold tabular-nums">20</p><p class="mt-1 text-[12px] text-white/55">Dikerjakan</p></div>
-            <div><p class="text-[26px] font-semibold tabular-nums">100</p><p class="mt-1 text-[12px] text-white/55">Nilai maks</p></div>
-            <div><p class="text-[26px] font-semibold tabular-nums">20′</p><p class="mt-1 text-[12px] text-white/55">Durasi</p></div>
+          <p class="mt-3 text-[14px] leading-[1.7] text-slate-600">Pemantauan, evaluasi, dan pelaksanaan DAK Fisik Infrastruktur Pekerjaan Umum Bidang Jalan, beserta Lampiran I dan Lampiran II.</p>
+          <div class="mt-8 grid grid-cols-4 gap-4 border-t border-slate-200 pt-8">
+            <div><p class="text-[26px] font-semibold tabular-nums">25</p><p class="mt-1 text-[12px] text-slate-500">Bank soal</p></div>
+            <div><p class="text-[26px] font-semibold tabular-nums">20</p><p class="mt-1 text-[12px] text-slate-500">Dikerjakan</p></div>
+            <div><p class="text-[26px] font-semibold tabular-nums">100</p><p class="mt-1 text-[12px] text-slate-500">Nilai maks</p></div>
+            <div><p class="text-[26px] font-semibold tabular-nums">20′</p><p class="mt-1 text-[12px] text-slate-500">Durasi</p></div>
           </div>
         </div>
       </div>
     </section>
 
-    <footer class="border-t border-white/10">
-      <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-10 text-[13px] text-white/50 md:flex-row md:items-center md:justify-between md:px-16">
+    <footer class="border-t border-slate-200">
+      <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-10 text-[13px] text-slate-500 md:flex-row md:items-center md:justify-between md:px-16">
         <p>MonevDAK · Pusat Fasilitasi Infrastruktur Daerah, Kementerian PU</p>
         <div class="flex flex-wrap items-center gap-4">
           <p id="footMode">Memeriksa koneksi basis data…</p>
@@ -617,25 +648,25 @@
 <!-- ═══════════ VIEW: LOGIN ADMIN ═══════════ -->
 <main id="view-adminlogin" data-view class="relative z-10 hidden min-h-screen items-center justify-center px-5 py-12">
   <div class="glass w-full max-w-[440px] rounded-[2rem] p-8 md:p-10">
-    <button onclick="go('landing')" class="mb-7 flex items-center gap-2 text-[13px] font-medium text-white/55 transition hover:text-white">
+    <button onclick="go('landing')" class="mb-7 flex items-center gap-2 text-[13px] font-medium text-slate-500 transition hover:text-ink">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Beranda
     </button>
 
-    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Area terbatas</p>
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-slate-500">Area terbatas</p>
     <h1 class="mt-3 text-[28px] font-semibold tracking-[-0.02em]">Masuk Admin</h1>
-    <p class="mt-3 text-[14px] leading-[1.65] text-white/60">Pantau progres seluruh pemerintah daerah, tinjau hasil pengisian, dan unduh rekapnya.</p>
+    <p class="mt-3 text-[14px] leading-[1.65] text-slate-600">Pantau progres seluruh pemerintah daerah, tinjau hasil pengisian, dan unduh rekapnya.</p>
 
     <form id="adminForm" class="mt-8 space-y-3" autocomplete="off" novalidate>
       <div>
-        <label for="adEmail" class="mb-1.5 block text-[12px] font-medium text-white/60">Email admin</label>
-        <input id="adEmail" type="email" placeholder="admin@contoh.go.id" class="w-full rounded-2xl border border-white/12 bg-black/40 px-4 py-3 text-[15px] outline-none transition focus:border-white/35" />
+        <label for="adEmail" class="mb-1.5 block text-[12px] font-medium text-slate-600">Email admin</label>
+        <input id="adEmail" type="email" placeholder="admin@contoh.go.id" class="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-[15px] outline-none transition focus:border-slate-300" />
       </div>
       <div>
-        <label for="adPass" class="mb-1.5 block text-[12px] font-medium text-white/60">Kata sandi</label>
-        <input id="adPass" type="password" placeholder="••••••••" class="w-full rounded-2xl border border-white/12 bg-black/40 px-4 py-3 text-[15px] outline-none transition focus:border-white/35" />
+        <label for="adPass" class="mb-1.5 block text-[12px] font-medium text-slate-600">Kata sandi</label>
+        <input id="adPass" type="password" placeholder="••••••••" class="w-full rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-[15px] outline-none transition focus:border-slate-300" />
       </div>
-      <button id="adBtn" type="submit" class="cta-glow mt-2 w-full rounded-2xl bg-white px-6 py-3.5 text-[15px] font-medium text-black">Masuk</button>
-      <p id="adErr" class="hidden pt-1 text-[13px] font-medium text-red-400"></p>
+      <button id="adBtn" type="submit" class="cta-glow mt-2 w-full rounded-2xl bg-ink px-6 py-3.5 text-[15px] font-medium text-white">Masuk</button>
+      <p id="adErr" class="hidden pt-1 text-[13px] font-medium text-red-600"></p>
     </form>
   </div>
 </main>
@@ -643,19 +674,19 @@
 
 <!-- ═══════════ ADMIN SHELL ═══════════ -->
 <div id="adminShell" class="relative z-10 hidden min-h-screen">
-  <header class="sticky top-0 z-30 border-b border-white/10 bg-black/55 backdrop-blur-2xl">
+  <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/85 backdrop-blur-2xl">
     <div class="mx-auto flex max-w-[1400px] items-center gap-4 px-5 py-4 md:px-10">
       <span class="flex items-center gap-3">
-        <span class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/20 backdrop-blur-md">
+        <span class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200 backdrop-blur-md">
           <img src="assets/logo-pu.png" alt="Kementerian PU" class="h-full w-full object-contain" onerror="this.remove()" />
         </span>
         <span class="text-[16px] font-medium tracking-wide">MonevDAK</span>
-        <span class="rounded-full bg-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-black">Admin</span>
+        <span class="rounded-full bg-ink px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">Admin</span>
       </span>
       <div class="ml-auto flex items-center gap-3">
-        <span id="adWho" class="hidden text-[12px] text-white/55 sm:inline"></span>
-        <button onclick="muatAdmin(true)" class="rounded-full border border-white/20 px-4 py-2 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Muat ulang</button>
-        <button onclick="keluarAdmin()" title="Keluar" class="rounded-full p-2 text-white/60 transition hover:bg-white/10 hover:text-white">
+        <span id="adWho" class="hidden text-[12px] text-slate-500 sm:inline"></span>
+        <button onclick="muatAdmin(true)" class="rounded-full border border-slate-300 px-4 py-2 text-[13px] font-medium text-slate-700 transition hover:bg-slate-100">Muat ulang</button>
+        <button onclick="keluarAdmin()" title="Keluar" class="rounded-full p-2 text-slate-600 transition hover:bg-slate-100 hover:text-ink">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px]"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
         </button>
       </div>
@@ -663,7 +694,7 @@
   </header>
 
   <section id="view-admin" data-view class="mx-auto max-w-[1400px] px-5 py-10 md:px-10 md:py-12">
-    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Rekapitulasi · Triwulan II</p>
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-slate-500">Rekapitulasi · Triwulan II</p>
     <h1 id="adJudul" class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[38px]">Progres pengisian seluruh pemda</h1>
 
     <!-- empat kelompok hasil, dipilih dari tab di atas. Urutannya mengikuti
@@ -681,15 +712,15 @@
     <div id="adStats" class="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"></div>
 
     <div class="mt-10 flex flex-wrap items-center gap-3">
-      <select id="adFilter" onchange="renderAdmin()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink">
+      <select id="adFilter" onchange="renderAdmin()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-ink outline-none [&>option]:bg-white [&>option]:text-ink">
         <option value="semua">Semua peserta</option>
         <option value="lengkap">Sudah lengkap (pre + post)</option>
         <option value="prasaja">Baru pre test</option>
         <option value="possaja">Baru post test</option>
         <option value="belum">Belum mengisi sama sekali</option>
       </select>
-      <select id="adProv" onchange="renderAdmin()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink"></select>
-      <select id="adUrut" onchange="renderAdmin()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink">
+      <select id="adProv" onchange="renderAdmin()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-ink outline-none [&>option]:bg-white [&>option]:text-ink"></select>
+      <select id="adUrut" onchange="renderAdmin()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-ink outline-none [&>option]:bg-white [&>option]:text-ink">
         <option value="post">Urut nilai post tertinggi</option>
         <option value="pre">Urut nilai pre tertinggi</option>
         <option value="delta">Urut peningkatan terbesar</option>
@@ -697,28 +728,28 @@
         <option value="wilayah">Urut provinsi</option>
       </select>
       <div class="glass flex items-center gap-2 rounded-full px-5 py-2.5">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4 text-white/50"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input id="adQ" oninput="renderAdmin()" placeholder="Cari nama atau daerah" class="w-48 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4 text-slate-500"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="adQ" oninput="renderAdmin()" placeholder="Cari nama atau daerah" class="w-48 bg-transparent text-[13px] outline-none placeholder:text-slate-500" />
       </div>
       <div class="ml-auto flex flex-wrap gap-2">
         <button id="adHapusBtn" onclick="hapusTerpilih()" disabled
-                class="rounded-full border border-red-400/50 bg-red-500/15 px-5 py-2.5 text-[13px] font-medium text-red-200 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40">
+                class="rounded-full border border-red-400/50 bg-red-500/15 px-5 py-2.5 text-[13px] font-medium text-red-700 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40">
           Hapus terpilih <span id="adHapusJml"></span>
         </button>
-        <button onclick="exportCSV()" class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 transition hover:bg-white/10">Unduh CSV</button>
-        <button onclick="exportXLS()" class="cta-glow rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black">Unduh Excel</button>
+        <button onclick="exportCSV()" class="rounded-full border border-slate-300 px-5 py-2.5 text-[13px] font-medium text-slate-700 transition hover:bg-slate-100">Unduh CSV</button>
+        <button onclick="exportXLS()" class="cta-glow rounded-full bg-ink px-5 py-2.5 text-[13px] font-medium text-white">Unduh Excel</button>
       </div>
     </div>
 
     <div id="adTable" class="glass mt-6 overflow-hidden rounded-3xl"></div>
 
     <h2 class="mt-14 text-[20px] font-semibold tracking-[-0.01em]">Analisis butir soal</h2>
-    <p class="mt-2 max-w-[640px] text-[14px] leading-[1.7] text-white/60">Persentase jawaban benar tiap butir, dihitung dari seluruh sesi yang tersimpan. Butir dengan persentase rendah menandakan materi yang perlu diperkuat saat pendampingan.</p>
+    <p class="mt-2 max-w-[640px] text-[14px] leading-[1.7] text-slate-600">Persentase jawaban benar tiap butir, dihitung dari seluruh sesi yang tersimpan. Butir dengan persentase rendah menandakan materi yang perlu diperkuat saat pendampingan.</p>
     <div id="adSoal" class="glass mt-6 overflow-hidden rounded-3xl"></div>
     </div><!-- /adPanelTest -->
 
     <div id="adPanelSurvei" class="hidden" style="--tab:232 121 249">
-      <p class="mt-7 max-w-[720px] text-[14px] leading-[1.7] text-white/60">Penilaian pemda atas pelayanan Rapat Koordinasi TW II, diisi langsung di aplikasi. Indeks kepuasan dihitung dari tujuh unsur pelayanan (nilai rata-rata × 25) mengikuti cara hitung IKM.</p>
+      <p class="mt-7 max-w-[720px] text-[14px] leading-[1.7] text-slate-600">Penilaian pemda atas pelayanan Rapat Koordinasi TW II, diisi langsung di aplikasi. Indeks kepuasan dihitung dari tujuh unsur pelayanan (nilai rata-rata × 25) mengikuti cara hitung IKM.</p>
       <div id="adSurvei" class="mt-7"></div>
     </div>
 
@@ -738,11 +769,11 @@
   </section>
 
   <!-- panel detail jawaban -->
-  <div id="adDetail" class="fixed inset-0 z-[85] hidden overflow-y-auto bg-black/70 px-4 py-10 backdrop-blur-md">
+  <div id="adDetail" class="fixed inset-0 z-[85] hidden overflow-y-auto bg-slate-900/40 px-4 py-10 backdrop-blur-md">
     <div class="glass mx-auto max-w-3xl rounded-[2rem] p-6 md:p-9">
       <div class="flex items-start justify-between gap-4">
         <div id="adDetailHead"></div>
-        <button onclick="tutupDetail()" class="rounded-full p-2 text-white/60 transition hover:bg-white/10 hover:text-white">
+        <button onclick="tutupDetail()" class="rounded-full p-2 text-slate-600 transition hover:bg-slate-100 hover:text-ink">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-5 w-5"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
@@ -750,8 +781,8 @@
     </div>
   </div>
 
-  <footer class="border-t border-white/10 bg-black/50 backdrop-blur-xl">
-    <div class="mx-auto px-5 py-8 text-[12px] text-white/45 md:px-10">
+  <footer class="border-t border-slate-200 bg-white/85 backdrop-blur-xl">
+    <div class="mx-auto px-5 py-8 text-[12px] text-slate-500 md:px-10">
       <p>MonevDAK · Pusat Fasilitasi Infrastruktur Daerah, Kementerian PU</p>
     </div>
   </footer>
@@ -761,10 +792,10 @@
 <!-- ═══════════ APP SHELL ═══════════ -->
 <div id="appShell" class="relative z-10 hidden min-h-screen">
 
-  <header class="sticky top-0 z-30 border-b border-white/10 bg-black/55 backdrop-blur-2xl">
+  <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/85 backdrop-blur-2xl">
     <div class="mx-auto flex max-w-7xl items-center gap-4 px-5 py-4 md:px-10">
       <button onclick="go('dashboard')" class="flex items-center gap-3">
-        <span class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/20 backdrop-blur-md">
+        <span class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200 backdrop-blur-md">
           <img src="assets/logo-pu.png" alt="Kementerian PU" class="h-full w-full object-contain"
                onerror="this.remove();document.getElementById('appLogoFallback').classList.remove('hidden')" />
           <svg id="appLogoFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" class="hidden h-[18px] w-[18px]"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.5 4 5.6 4 9s-1.4 6.5-4 9c-2.6-2.5-4-5.6-4-9s1.4-6.5 4-9z"/></svg>
@@ -786,10 +817,10 @@
       <div class="ml-auto flex items-center gap-3">
         <div class="hidden text-right sm:block">
           <p id="chipName" class="text-[13px] font-semibold leading-tight"></p>
-          <p id="chipRegion" class="text-[11px] leading-tight text-white/55"></p>
+          <p id="chipRegion" class="text-[11px] leading-tight text-slate-500"></p>
         </div>
-        <div id="chipAvatar" class="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-[13px] font-semibold backdrop-blur-md"></div>
-        <button onclick="logout()" title="Keluar" class="rounded-full p-2 text-white/60 transition hover:bg-white/10 hover:text-white">
+        <div id="chipAvatar" class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-[13px] font-semibold backdrop-blur-md"></div>
+        <button onclick="logout()" title="Keluar" class="rounded-full p-2 text-slate-600 transition hover:bg-slate-100 hover:text-ink">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px]"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
         </button>
       </div>
@@ -798,17 +829,17 @@
 
   <!-- ─── DASHBOARD ─── -->
   <section id="view-dashboard" data-view class="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-14">
-    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Dashboard peserta</p>
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-slate-500">Dashboard peserta</p>
     <h1 id="dashHello" class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[40px]"></h1>
-    <p id="dashRegion" class="mt-3 text-[15px] text-white/65"></p>
+    <p id="dashRegion" class="mt-3 text-[15px] text-slate-600"></p>
 
     <div id="dashPfid" class="mt-7 hidden rounded-3xl border border-sky-400/35 bg-sky-500/[.12] px-5 py-4 md:px-6">
-      <p class="text-[13px] font-semibold text-sky-100">Akun petugas PFID</p>
-      <p class="mt-1 text-[13px] leading-relaxed text-sky-100/75">
+      <p class="text-[13px] font-semibold text-sky-800">Akun petugas PFID</p>
+      <p class="mt-1 text-[13px] leading-relaxed text-sky-900">
         Pre test dan post test tidak wajib untuk akun ini. Tugas Anda ada di menu
-        <button onclick="go('berita')" class="font-semibold underline decoration-sky-200/40 underline-offset-4 hover:text-white">Berita Acara eMonitoring</button>,
+        <button onclick="go('berita')" class="font-semibold underline decoration-sky-200/40 underline-offset-4 hover:text-ink">Berita Acara eMonitoring</button>,
         dan berita acara yang sudah pernah dibaca AI tersimpan di
-        <button onclick="go('arsip')" class="font-semibold underline decoration-sky-200/40 underline-offset-4 hover:text-white">Arsip Berita Acara</button>.
+        <button onclick="go('arsip')" class="font-semibold underline decoration-sky-200/40 underline-offset-4 hover:text-ink">Arsip Berita Acara</button>.
       </p>
     </div>
 
@@ -818,10 +849,10 @@
     <div id="dashSurvei" class="mt-7 hidden"></div>
 
     <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="glass rounded-3xl p-6"><p class="text-[12px] uppercase tracking-[0.16em] text-white/50">Nilai pre test</p><p id="kpiPre" class="mt-3 text-[32px] font-semibold tabular-nums">—</p></div>
-      <div class="glass rounded-3xl p-6"><p class="text-[12px] uppercase tracking-[0.16em] text-white/50">Nilai post test</p><p id="kpiPost" class="mt-3 text-[32px] font-semibold tabular-nums">—</p></div>
-      <div class="glass rounded-3xl p-6"><p class="text-[12px] uppercase tracking-[0.16em] text-white/50">Peningkatan</p><p id="kpiDelta" class="mt-3 text-[32px] font-semibold tabular-nums">—</p></div>
-      <div class="glass rounded-3xl p-6"><p class="text-[12px] uppercase tracking-[0.16em] text-white/50">Peringkat post test</p><p id="kpiRank" class="mt-3 text-[32px] font-semibold tabular-nums">—</p></div>
+      <div class="glass rounded-3xl p-6"><p class="text-[12px] uppercase tracking-[0.16em] text-slate-500">Nilai pre test</p><p id="kpiPre" class="mt-3 text-[32px] font-semibold tabular-nums">—</p></div>
+      <div class="glass rounded-3xl p-6"><p class="text-[12px] uppercase tracking-[0.16em] text-slate-500">Nilai post test</p><p id="kpiPost" class="mt-3 text-[32px] font-semibold tabular-nums">—</p></div>
+      <div class="glass rounded-3xl p-6"><p class="text-[12px] uppercase tracking-[0.16em] text-slate-500">Peningkatan</p><p id="kpiDelta" class="mt-3 text-[32px] font-semibold tabular-nums">—</p></div>
+      <div class="glass rounded-3xl p-6"><p class="text-[12px] uppercase tracking-[0.16em] text-slate-500">Peringkat post test</p><p id="kpiRank" class="mt-3 text-[32px] font-semibold tabular-nums">—</p></div>
     </div>
 
     <h2 class="mt-14 text-[20px] font-semibold tracking-[-0.01em]">Pengisian per triwulan</h2>
@@ -833,15 +864,15 @@
     <div class="glass rounded-3xl p-5 md:p-7">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p id="quizKind" class="text-[12px] font-semibold uppercase tracking-[0.18em] text-white/55"></p>
+          <p id="quizKind" class="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-500"></p>
           <h1 id="quizTitle" class="mt-1.5 text-[20px] font-semibold tracking-[-0.01em] md:text-[24px]"></h1>
         </div>
         <div class="flex items-center gap-3">
           <div class="glass rounded-full px-4 py-2 text-[14px] font-semibold tabular-nums" id="quizTimer">20:00</div>
-          <button onclick="abandonQuiz()" class="rounded-full border border-white/20 px-4 py-2 text-[13px] font-medium text-white/75 transition hover:bg-white/10">Keluar</button>
+          <button onclick="abandonQuiz()" class="rounded-full border border-slate-300 px-4 py-2 text-[13px] font-medium text-slate-600 transition hover:bg-slate-100">Keluar</button>
         </div>
       </div>
-      <div class="mt-5 h-1.5 overflow-hidden rounded-full bg-white/12">
+      <div class="mt-5 h-1.5 overflow-hidden rounded-full bg-slate-100">
         <div id="quizProgress" class="h-full rounded-full bg-white transition-all duration-300" style="width:0%"></div>
       </div>
       <div id="quizNav" class="mt-5 flex flex-wrap gap-2"></div>
@@ -850,10 +881,10 @@
     <div id="quizCard" class="glass mt-5 rounded-3xl p-6 md:p-9"></div>
 
     <div class="mt-5 flex items-center justify-between gap-3">
-      <button id="quizPrev" onclick="qMove(-1)" class="rounded-full border border-white/20 px-6 py-3 text-[14px] font-medium text-white/85 transition hover:bg-white/10 disabled:opacity-30">Sebelumnya</button>
+      <button id="quizPrev" onclick="qMove(-1)" class="rounded-full border border-slate-300 px-6 py-3 text-[14px] font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-30">Sebelumnya</button>
       <div class="flex items-center gap-3">
-        <button id="quizNext" onclick="qMove(1)" class="rounded-full border border-white/20 px-6 py-3 text-[14px] font-medium text-white/85 transition hover:bg-white/10 disabled:opacity-30">Berikutnya</button>
-        <button id="quizSubmit" onclick="submitQuiz(false)" class="cta-glow rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black">Selesai &amp; Kirim</button>
+        <button id="quizNext" onclick="qMove(1)" class="rounded-full border border-slate-300 px-6 py-3 text-[14px] font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-30">Berikutnya</button>
+        <button id="quizSubmit" onclick="submitQuiz(false)" class="cta-glow rounded-full bg-ink px-6 py-3 text-[14px] font-medium text-white">Selesai &amp; Kirim</button>
       </div>
     </div>
   </section>
@@ -863,21 +894,21 @@
 
   <!-- ─── RANK ─── -->
   <section id="view-rank" data-view class="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-14">
-    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Peringkat nasional · Triwulan II</p>
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-slate-500">Peringkat nasional · Triwulan II</p>
     <h1 class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[40px]">Papan peringkat peserta</h1>
-    <p class="mt-3 max-w-[600px] text-[15px] text-white/65">Diurutkan dari jumlah jawaban benar terbanyak; bila jumlah benar sama, waktu penyelesaian tercepat lebih unggul.</p>
+    <p class="mt-3 max-w-[600px] text-[15px] text-slate-600">Diurutkan dari jumlah jawaban benar terbanyak; bila jumlah benar sama, waktu penyelesaian tercepat lebih unggul.</p>
 
     <div class="mt-8 flex flex-wrap items-center gap-3">
-      <select id="rankKind" onchange="renderRank()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink">
+      <select id="rankKind" onchange="renderRank()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-ink outline-none [&>option]:bg-white [&>option]:text-ink">
         <option value="post">Post Test</option>
         <option value="pre">Pre Test</option>
         <option value="delta">Peningkatan (post − pre)</option>
       </select>
       <div class="glass flex items-center gap-2 rounded-full px-5 py-2.5">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4 text-white/50"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input id="rankQ" oninput="renderRank()" placeholder="Cari nama atau daerah" class="w-44 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4 text-slate-500"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="rankQ" oninput="renderRank()" placeholder="Cari nama atau daerah" class="w-44 bg-transparent text-[13px] outline-none placeholder:text-slate-500" />
       </div>
-      <button onclick="refreshRank()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Muat ulang</button>
+      <button onclick="refreshRank()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-slate-700 transition hover:bg-slate-100">Muat ulang</button>
     </div>
 
     <div id="rankPodium" class="mt-9 grid gap-4 sm:grid-cols-3"></div>
@@ -886,9 +917,9 @@
 
   <!-- ─── COMPARE ─── -->
   <section id="view-compare" data-view class="mx-auto max-w-5xl px-5 py-10 md:px-10 md:py-14">
-    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Analisis</p>
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-slate-500">Analisis</p>
     <h1 class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[40px]">Sebelum dan sesudah</h1>
-    <p class="mt-3 max-w-[560px] text-[15px] text-white/65">Perbandingan nilai pre test dan post test Anda pada Triwulan II.</p>
+    <p class="mt-3 max-w-[560px] text-[15px] text-slate-600">Perbandingan nilai pre test dan post test Anda pada Triwulan II.</p>
     <div id="compareBody" class="mt-10 space-y-5"></div>
   </section>
 
@@ -901,8 +932,8 @@
   <!-- ─── SURVEI KEPUASAN — akun pemda, isinya dibangun assets/survei.js ─── -->
   <section id="view-survei" data-view class="mx-auto max-w-4xl px-5 py-10 md:px-10 md:py-14"></section>
 
-  <footer class="border-t border-white/10 bg-black/50 pb-[76px] backdrop-blur-xl md:pb-0">
-    <div class="mx-auto flex max-w-7xl flex-col gap-2 px-5 py-8 text-[12px] text-white/45 md:flex-row md:items-center md:justify-between md:px-10">
+  <footer class="border-t border-slate-200 bg-white/85 pb-[76px] backdrop-blur-xl md:pb-0">
+    <div class="mx-auto flex max-w-7xl flex-col gap-2 px-5 py-8 text-[12px] text-slate-500 md:flex-row md:items-center md:justify-between md:px-10">
       <p>MonevDAK · Pre test &amp; post test DAK Fisik Bidang Jalan</p>
       <p>Bank soal: SE Menteri PU No. 5/SE/Mn/2026 (Lampiran I &amp; II)</p>
     </div>
@@ -911,7 +942,7 @@
   <!-- ─── DERETAN MENU BAWAH (ponsel) ───
        Menu yang sama dengan deretan atas, tetapi seluruhnya terlihat tanpa
        digeser. Tulisannya diperpendek supaya lima menu muat di layar 360 px. -->
-  <nav id="navBawah" class="fixed inset-x-0 bottom-0 z-40 flex border-t border-white/10 bg-black/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl md:hidden">
+  <nav id="navBawah" class="fixed inset-x-0 bottom-0 z-40 flex border-t border-slate-200 bg-white/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl md:hidden">
     <button data-nav="dashboard" data-navbawah onclick="go('dashboard')" style="--tab:56 189 248" class="navbtm">
       <span class="navbtm-ikon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10V20h13V10"/></svg></span>
       <span class="navbtm-teks">Beranda</span>
@@ -941,15 +972,15 @@
 
 
 <!-- mode lokal indicator -->
-<div id="modeBadge" class="fixed bottom-[84px] left-4 z-[70] hidden flex max-w-[240px] md:bottom-4 items-start gap-2 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-3.5 py-2.5 text-[11px] leading-[1.55] text-amber-200 backdrop-blur-xl md:max-w-[300px] md:text-[12px]">
+<div id="modeBadge" class="fixed bottom-[84px] left-4 z-[70] hidden flex max-w-[240px] md:bottom-4 items-start gap-2 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-3.5 py-2.5 text-[11px] leading-[1.55] text-amber-700 backdrop-blur-xl md:max-w-[300px] md:text-[12px]">
   <span class="flex-1"><strong class="font-semibold">Mode lokal.</strong> Firebase belum dikonfigurasi, data hanya tersimpan di peramban ini.</span>
-  <button onclick="this.parentElement.classList.add('hidden')" aria-label="Tutup" class="-mr-1 -mt-0.5 shrink-0 rounded-full p-1 text-amber-200/70 transition hover:bg-amber-400/20 hover:text-amber-100">
+  <button onclick="this.parentElement.classList.add('hidden')" aria-label="Tutup" class="-mr-1 -mt-0.5 shrink-0 rounded-full p-1 text-amber-800 transition hover:bg-amber-400/20 hover:text-amber-800">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="h-3 w-3"><path d="M6 6l12 12M18 6L6 18"/></svg>
   </button>
 </div>
 
 <!-- toast -->
-<div id="toast" class="pointer-events-none fixed bottom-[88px] left-1/2 z-[80] md:bottom-6 -translate-x-1/2 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black opacity-0 shadow-2xl transition-all duration-300"></div>
+<div id="toast" class="pointer-events-none fixed bottom-[88px] left-1/2 z-[80] md:bottom-6 -translate-x-1/2 rounded-full bg-ink px-6 py-3 text-[14px] font-medium text-white opacity-0 shadow-2xl transition-all duration-300"></div>
 
 <script src="assets/wilayah.js"></script>
 <script src="assets/soal-tw2.js"></script>
@@ -1415,7 +1446,9 @@ function splitWords(el, start, step) {
 
 document.addEventListener('DOMContentLoaded', async () => {
   const v = $('#bgVideo');
-  v.addEventListener('loadeddata', () => v.classList.remove('opacity-0'));
+  /* Videonya hanya tekstur latar pada tema terang, jadi ditahan samar —
+     tulisan gelap di atasnya harus tetap terbaca. */
+  v.addEventListener('loadeddata', () => { v.classList.remove('opacity-0'); v.classList.add('opacity-30'); });
   v.addEventListener('error', () => v.classList.add('opacity-0'), true);
 
   const T_PIN = 0.55, STEP_H = 0.075, STEP_S = 0.035;
@@ -1464,15 +1497,15 @@ function closeMenu() { $('#mobileMenu').classList.add('hidden'); }
 function renderTwGrid() {
   $('#twGrid').innerHTML = [1, 2, 3, 4].map(tw => {
     const m = TW_META[tw], aktif = tw === TW_AKTIF;
-    return `<div class="glass glass-hover rounded-3xl p-7 ${aktif ? 'ring-1 ring-white/40' : ''}">
+    return `<div class="glass glass-hover rounded-3xl p-7 ${aktif ? 'ring-1 ring-slate-200' : ''}">
       <div class="flex items-start justify-between">
-        <span class="text-[30px] font-semibold tracking-[-0.02em] ${aktif ? '' : 'text-white/45'}">TW ${m.rom}</span>
-        <span class="rounded-full px-3 py-1 text-[11px] font-semibold ${aktif ? 'bg-white text-black' : 'border border-white/25 text-white/60'}">${aktif ? 'Dinilai' : 'Belum dinilai'}</span>
+        <span class="text-[30px] font-semibold tracking-[-0.02em] ${aktif ? '' : 'text-slate-500'}">TW ${m.rom}</span>
+        <span class="rounded-full px-3 py-1 text-[11px] font-semibold ${aktif ? 'bg-ink text-white' : 'border border-slate-300 text-slate-600'}">${aktif ? 'Dinilai' : 'Belum dinilai'}</span>
       </div>
-      <p class="mt-4 text-[14px] leading-[1.65] ${aktif ? 'text-white/65' : 'text-white/40'}">${esc(m.focus)}</p>
+      <p class="mt-4 text-[14px] leading-[1.65] ${aktif ? 'text-slate-600' : 'text-slate-500'}">${esc(m.focus)}</p>
       ${aktif
-        ? `<button onclick="go('login')" class="mt-6 text-[13px] font-semibold text-white">Ikuti pre test →</button>`
-        : `<p class="mt-6 text-[13px] font-semibold text-white/35">Menyusul periode berikutnya</p>`}
+        ? `<button onclick="go('login')" class="mt-6 text-[13px] font-semibold text-ink">Ikuti pre test →</button>`
+        : `<p class="mt-6 text-[13px] font-semibold text-slate-500">Menyusul periode berikutnya</p>`}
     </div>`;
   }).join('');
 }
@@ -1811,7 +1844,7 @@ async function renderDashboard() {
   const d = (rp && rq) ? rq.nilai - rp.nilai : null;
   const kd = $('#kpiDelta');
   kd.textContent = d === null ? '—' : (d > 0 ? '+' : '') + d;
-  kd.className = 'mt-3 text-[32px] font-semibold tabular-nums ' + (d === null ? '' : d > 0 ? 'text-emerald-400' : d < 0 ? 'text-red-400' : '');
+  kd.className = 'mt-3 text-[32px] font-semibold tabular-nums ' + (d === null ? '' : d > 0 ? 'text-emerald-600' : d < 0 ? 'text-red-600' : '');
 
   let posisi = '—';
   if (rq) {
@@ -1834,40 +1867,40 @@ async function renderDashboard() {
 
     if (terkunci) {
       return `<div class="rounded-2xl border border-red-400/45 bg-red-500/[.14] px-4 py-3">
-        <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-red-200/90">${IKON.kunci}${judul}</p>
-        <p class="mt-1.5 text-[15px] font-semibold text-red-50">Terkunci</p>
-        <p class="mt-0.5 text-[11px] leading-[1.5] text-red-200/75">Selesaikan pre test lebih dahulu</p>
+        <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-red-700">${IKON.kunci}${judul}</p>
+        <p class="mt-1.5 text-[15px] font-semibold text-red-800">Terkunci</p>
+        <p class="mt-0.5 text-[11px] leading-[1.5] text-red-800">Selesaikan pre test lebih dahulu</p>
       </div>`;
     }
 
     if (r) {
       return `<button onclick="showResult('${kind}')" class="rounded-2xl border border-emerald-400/45 bg-emerald-500/[.15] px-4 py-3 text-left transition hover:bg-emerald-500/[.24]">
-        <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-emerald-200/90">${IKON.selesai}${judul}</p>
-        <p class="mt-1.5 text-[22px] font-semibold tabular-nums text-emerald-50">${r.nilai}<span class="text-[13px] font-medium text-emerald-200/70"> / ${NILAI_MAX}</span></p>
-        <p class="mt-0.5 text-[11px] leading-[1.5] text-emerald-200/75">${r.benar}/${r.total} benar · ${fmtDur(r.durasiMs)} · pembahasan</p>
+        <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-emerald-700">${IKON.selesai}${judul}</p>
+        <p class="mt-1.5 text-[22px] font-semibold tabular-nums text-emerald-800">${r.nilai}<span class="text-[13px] font-medium text-emerald-800"> / ${NILAI_MAX}</span></p>
+        <p class="mt-0.5 text-[11px] leading-[1.5] text-emerald-800">${r.benar}/${r.total} benar · ${fmtDur(r.durasiMs)} · pembahasan</p>
       </button>`;
     }
 
     return `<button onclick="startQuiz('${kind}')" class="rounded-2xl border border-emerald-400/45 bg-emerald-500/[.09] px-4 py-3 text-left transition hover:bg-emerald-500/[.20]">
-      <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-emerald-200/90">${IKON.mulai}${judul}</p>
-      <p class="mt-1.5 text-[15px] font-semibold text-emerald-50">Mulai sekarang</p>
-      <p class="mt-0.5 text-[11px] leading-[1.5] text-emerald-200/75">${ATURAN.jumlahSoal} soal acak · ${ATURAN.durasiMenit} menit</p>
+      <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-emerald-700">${IKON.mulai}${judul}</p>
+      <p class="mt-1.5 text-[15px] font-semibold text-emerald-800">Mulai sekarang</p>
+      <p class="mt-0.5 text-[11px] leading-[1.5] text-emerald-800">${ATURAN.jumlahSoal} soal acak · ${ATURAN.durasiMenit} menit</p>
     </button>`;
   };
 
-  const aktifCard = `<div class="glass rounded-3xl p-6 ring-1 ring-white/40 md:p-7">
+  const aktifCard = `<div class="glass rounded-3xl p-6 ring-1 ring-slate-200 md:p-7">
       <div class="flex items-start justify-between gap-4">
         <div>
-          <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/50">${TW_META[TW_AKTIF].label}</p>
+          <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">${TW_META[TW_AKTIF].label}</p>
           <h3 class="mt-2 text-[17px] font-semibold leading-snug">${esc(TW_META[TW_AKTIF].focus)}</h3>
         </div>
-        <span class="shrink-0 rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-black">Dinilai</span>
+        <span class="shrink-0 rounded-full bg-ink px-3 py-1 text-[11px] font-semibold text-white">Dinilai</span>
       </div>
       <div class="mt-5 grid grid-cols-2 gap-3">${kartu(rp, 'pre', false)}${kartu(rq, 'post', !rp)}</div>
-      ${d !== null ? `<div class="mt-4 flex items-center gap-2 rounded-2xl bg-white/[.06] px-4 py-3">
-        <span class="text-[12px] text-white/60">Peningkatan</span>
-        <span class="text-[15px] font-semibold tabular-nums ${d > 0 ? 'text-emerald-400' : d < 0 ? 'text-red-400' : 'text-white/70'}">${d > 0 ? '+' : ''}${d} poin</span>
-        <button onclick="go('compare')" class="ml-auto text-[12px] font-semibold text-white/70 underline decoration-white/30 underline-offset-4 hover:text-white">grafik</button>
+      ${d !== null ? `<div class="mt-4 flex items-center gap-2 rounded-2xl bg-slate-50 px-4 py-3">
+        <span class="text-[12px] text-slate-600">Peningkatan</span>
+        <span class="text-[15px] font-semibold tabular-nums ${d > 0 ? 'text-emerald-600' : d < 0 ? 'text-red-600' : 'text-slate-600'}">${d > 0 ? '+' : ''}${d} poin</span>
+        <button onclick="go('compare')" class="ml-auto text-[12px] font-semibold text-slate-600 underline decoration-slate-400 underline-offset-4 hover:text-ink">grafik</button>
       </div>` : ''}
     </div>`;
 
@@ -1876,12 +1909,12 @@ async function renderDashboard() {
     return `<div class="glass rounded-3xl p-6 opacity-60 md:p-7">
       <div class="flex items-start justify-between gap-4">
         <div>
-          <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/45">${m.label}</p>
-          <h3 class="mt-2 text-[17px] font-semibold leading-snug text-white/70">${esc(m.focus)}</h3>
+          <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">${m.label}</p>
+          <h3 class="mt-2 text-[17px] font-semibold leading-snug text-slate-600">${esc(m.focus)}</h3>
         </div>
-        <span class="shrink-0 rounded-full border border-white/20 px-3 py-1 text-[11px] font-semibold text-white/55">Belum dinilai</span>
+        <span class="shrink-0 rounded-full border border-slate-300 px-3 py-1 text-[11px] font-semibold text-slate-500">Belum dinilai</span>
       </div>
-      <p class="mt-5 text-[13px] text-white/45">Pengisian dibuka pada periode berikutnya.</p>
+      <p class="mt-5 text-[13px] text-slate-500">Pengisian dibuka pada periode berikutnya.</p>
     </div>`;
   }).join('');
 
@@ -1910,9 +1943,9 @@ async function renderAjakanSurvei() {
   if (terkirim) {
     kotak.className = 'mt-7 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-fuchsia-400/25 bg-fuchsia-500/[.08] px-5 py-3.5';
     kotak.innerHTML = `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 shrink-0 text-fuchsia-300"><path d="M20 6 9 17l-5-5"/></svg>
-      <p class="text-[13px] text-fuchsia-100/85">Terima kasih, penilaian kepuasan ${esc(ME.kab)} sudah kami terima.</p>
-      <button onclick="go('survei')" class="ml-auto text-[12px] font-semibold text-fuchsia-200 underline decoration-fuchsia-300/40 underline-offset-4 hover:text-white">Ubah jawaban</button>`;
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 shrink-0 text-fuchsia-700"><path d="M20 6 9 17l-5-5"/></svg>
+      <p class="text-[13px] text-fuchsia-800">Terima kasih, penilaian kepuasan ${esc(ME.kab)} sudah kami terima.</p>
+      <button onclick="go('survei')" class="ml-auto text-[12px] font-semibold text-fuchsia-700 underline decoration-fuchsia-300/40 underline-offset-4 hover:text-ink">Ubah jawaban</button>`;
     return;
   }
 
@@ -1920,16 +1953,16 @@ async function renderAjakanSurvei() {
   kotak.innerHTML = `
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div class="min-w-[240px] flex-1">
-        <p class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-fuchsia-200">
+        <p class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-fuchsia-700">
           <span class="flex h-1.5 w-1.5 rounded-full bg-amber-400"></span>Belum diisi
         </p>
-        <h3 class="mt-2 text-[17px] font-semibold leading-snug text-fuchsia-50">Survei kepuasan Rapat Koordinasi TW II</h3>
-        <p class="mt-1.5 max-w-[520px] text-[13px] leading-[1.6] text-fuchsia-100/75">
+        <h3 class="mt-2 text-[17px] font-semibold leading-snug text-fuchsia-800">Survei kepuasan Rapat Koordinasi TW II</h3>
+        <p class="mt-1.5 max-w-[520px] text-[13px] leading-[1.6] text-fuchsia-900">
           Penilaian ${esc(ME.kab)} atas pelayanan kami sangat dibutuhkan sebagai bahan perbaikan.
           Sekitar dua menit — nama, instansi, dan email sudah terisi dari akun Anda.
         </p>
       </div>
-      <button onclick="go('survei')" class="cta-glow shrink-0 rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black">Isi survei sekarang</button>
+      <button onclick="go('survei')" class="cta-glow shrink-0 rounded-full bg-ink px-5 py-2.5 text-[13px] font-medium text-white">Isi survei sekarang</button>
     </div>`;
 }
 
@@ -1973,7 +2006,7 @@ function tick() {
   if (!Q) return;
   const t = $('#quizTimer');
   t.textContent = fmtDur(Q.sisa * 1000);
-  t.classList.toggle('text-red-400', Q.sisa <= 60);
+  t.classList.toggle('text-red-600', Q.sisa <= 60);
   if (Q.sisa <= 0) { clearInterval(Q.timer); submitQuiz(true); return; }
   Q.sisa--;
 }
@@ -1986,17 +2019,17 @@ function renderQuiz() {
   $('#quizNav').innerHTML = Q.item.map((_, i) => {
     const done = Q.ans[i] >= 0, here = i === Q.i;
     return `<button onclick="qJump(${i})" class="nav-cell h-8 w-8 rounded-lg text-[12px] font-semibold tabular-nums
-      ${here ? 'bg-white text-black' : done ? 'bg-white/25 text-white' : 'border border-white/15 text-white/50 hover:bg-white/10'}">${i + 1}</button>`;
+      ${here ? 'bg-ink text-white' : done ? 'bg-slate-100 text-ink' : 'border border-slate-200 text-slate-500 hover:bg-slate-100'}">${i + 1}</button>`;
   }).join('');
 
   $('#quizCard').innerHTML = `
-    <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/45">Soal ${Q.i + 1} dari ${Q.item.length}</p>
+    <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">Soal ${Q.i + 1} dari ${Q.item.length}</p>
     <h2 class="mt-4 text-[19px] font-medium leading-[1.55] md:text-[21px]">${esc(s.q)}</h2>
     <div class="mt-7 space-y-3">
       ${it.ord.map((asli, tampil) => `
         <button onclick="qPick(${tampil})" data-picked="${Q.ans[Q.i] === tampil ? 1 : 0}"
-          class="opt flex w-full items-start gap-4 rounded-2xl border border-white/12 bg-white/[.04] p-4 text-left md:p-5">
-          <span class="opt-key mt-[1px] flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/25 text-[12px] font-semibold">${KEYS[tampil]}</span>
+          class="opt flex w-full items-start gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left md:p-5">
+          <span class="opt-key mt-[1px] flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-300 text-[12px] font-semibold">${KEYS[tampil]}</span>
           <span class="text-[15px] leading-[1.6]">${esc(s.o[asli])}</span>
         </button>`).join('')}
     </div>`;
@@ -2081,7 +2114,7 @@ async function showResult(kind) {
   const detail = r.detail && r.detail.length ? r.detail : null;
 
   $('#view-result').innerHTML = `
-    <button onclick="go('dashboard')" class="mb-7 flex items-center gap-2 text-[13px] font-medium text-white/60 transition hover:text-white">
+    <button onclick="go('dashboard')" class="mb-7 flex items-center gap-2 text-[13px] font-medium text-slate-600 transition hover:text-ink">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Dashboard
     </button>
 
@@ -2096,19 +2129,19 @@ async function showResult(kind) {
           </svg>
           <div class="absolute inset-0 flex flex-col items-center justify-center">
             <span class="text-[40px] font-semibold leading-none tabular-nums">${r.nilai}</span>
-            <span class="mt-1 text-[11px] uppercase tracking-[0.16em] text-white/50">dari ${NILAI_MAX}</span>
+            <span class="mt-1 text-[11px] uppercase tracking-[0.16em] text-slate-500">dari ${NILAI_MAX}</span>
           </div>
         </div>
 
         <div class="flex-1 text-center md:text-left">
-          <p class="text-[12px] font-semibold uppercase tracking-[0.18em] text-white/50">${kind === 'pre' ? 'Pre Test' : 'Post Test'} · ${TW_META[TW_AKTIF].label}</p>
+          <p class="text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-500">${kind === 'pre' ? 'Pre Test' : 'Post Test'} · ${TW_META[TW_AKTIF].label}</p>
           <h1 class="mt-3 text-[28px] font-semibold tracking-[-0.02em] md:text-[38px]">${predikat(r.nilai)}</h1>
-          <p class="mt-3 text-[15px] leading-[1.7] text-white/65">${esc(r.nama)} · ${esc(r.kab)}, ${esc(r.prov)}</p>
-          <div class="mt-6 grid grid-cols-2 gap-4 border-t border-white/10 pt-6 text-center sm:grid-cols-4 md:text-left">
-            <div><p class="text-[22px] font-semibold tabular-nums text-emerald-400">${r.benar}</p><p class="mt-1 text-[12px] text-white/55">Benar</p></div>
-            <div><p class="text-[22px] font-semibold tabular-nums text-red-400">${r.total - r.benar}</p><p class="mt-1 text-[12px] text-white/55">Salah</p></div>
-            <div><p class="text-[22px] font-semibold tabular-nums">${fmtDur(r.durasiMs)}</p><p class="mt-1 text-[12px] text-white/55">Waktu</p></div>
-            <div><p class="text-[22px] font-semibold tabular-nums">${pos || '—'}</p><p class="mt-1 text-[12px] text-white/55">Dari ${list.length} peserta</p></div>
+          <p class="mt-3 text-[15px] leading-[1.7] text-slate-600">${esc(r.nama)} · ${esc(r.kab)}, ${esc(r.prov)}</p>
+          <div class="mt-6 grid grid-cols-2 gap-4 border-t border-slate-200 pt-6 text-center sm:grid-cols-4 md:text-left">
+            <div><p class="text-[22px] font-semibold tabular-nums text-emerald-600">${r.benar}</p><p class="mt-1 text-[12px] text-slate-500">Benar</p></div>
+            <div><p class="text-[22px] font-semibold tabular-nums text-red-600">${r.total - r.benar}</p><p class="mt-1 text-[12px] text-slate-500">Salah</p></div>
+            <div><p class="text-[22px] font-semibold tabular-nums">${fmtDur(r.durasiMs)}</p><p class="mt-1 text-[12px] text-slate-500">Waktu</p></div>
+            <div><p class="text-[22px] font-semibold tabular-nums">${pos || '—'}</p><p class="mt-1 text-[12px] text-slate-500">Dari ${list.length} peserta</p></div>
           </div>
         </div>
       </div>
@@ -2121,24 +2154,24 @@ async function showResult(kind) {
         ${barRow('Pre test', pair.pre.nilai, 'rgba(255,255,255,.35)')}
         ${barRow('Post test', pair.post.nilai, '#fff')}
       </div>
-      <p class="mt-7 border-t border-white/10 pt-5 text-[15px] leading-[1.7] text-white/70">
-        Selisih <strong class="font-semibold ${pair.post.nilai - pair.pre.nilai > 0 ? 'text-emerald-400' : pair.post.nilai - pair.pre.nilai < 0 ? 'text-red-400' : 'text-white'}">${pair.post.nilai - pair.pre.nilai > 0 ? '+' : ''}${pair.post.nilai - pair.pre.nilai} poin</strong>,
+      <p class="mt-7 border-t border-slate-200 pt-5 text-[15px] leading-[1.7] text-slate-600">
+        Selisih <strong class="font-semibold ${pair.post.nilai - pair.pre.nilai > 0 ? 'text-emerald-600' : pair.post.nilai - pair.pre.nilai < 0 ? 'text-red-600' : 'text-ink'}">${pair.post.nilai - pair.pre.nilai > 0 ? '+' : ''}${pair.post.nilai - pair.pre.nilai} poin</strong>,
         waktu ${fmtDur(pair.pre.durasiMs)} → ${fmtDur(pair.post.durasiMs)}.
       </p>
     </div>` : `
     <div class="glass mt-5 rounded-[2rem] p-7">
-      <p class="text-[15px] leading-[1.7] text-white/70">Kerjakan ${kind === 'pre' ? 'post test' : 'pre test'} untuk melihat perbandingan nilai sebelum dan sesudah.</p>
-      <button onclick="startQuiz('${kind === 'pre' ? 'post' : 'pre'}')" class="mt-5 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black">Mulai ${kind === 'pre' ? 'post test' : 'pre test'}</button>
+      <p class="text-[15px] leading-[1.7] text-slate-600">Kerjakan ${kind === 'pre' ? 'post test' : 'pre test'} untuk melihat perbandingan nilai sebelum dan sesudah.</p>
+      <button onclick="startQuiz('${kind === 'pre' ? 'post' : 'pre'}')" class="mt-5 rounded-full bg-ink px-6 py-3 text-[14px] font-medium text-white">Mulai ${kind === 'pre' ? 'post test' : 'pre test'}</button>
     </div>`}
 
     <div class="mt-5 flex flex-wrap gap-3">
-      <button onclick="go('rank')" class="cta-glow rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black">Lihat peringkat nasional</button>
-      <button onclick="go('compare')" class="rounded-full border border-white/20 px-6 py-3 text-[14px] font-medium text-white/85 transition hover:bg-white/10">Grafik perbandingan</button>
+      <button onclick="go('rank')" class="cta-glow rounded-full bg-ink px-6 py-3 text-[14px] font-medium text-white">Lihat peringkat nasional</button>
+      <button onclick="go('compare')" class="rounded-full border border-slate-300 px-6 py-3 text-[14px] font-medium text-slate-700 transition hover:bg-slate-100">Grafik perbandingan</button>
     </div>
 
     ${detail ? `
     <h2 class="mt-14 text-[20px] font-semibold tracking-[-0.01em]">Pembahasan</h2>
-    <p class="mt-2 text-[14px] text-white/60">Sesuai urutan soal dan urutan opsi yang Anda kerjakan.</p>
+    <p class="mt-2 text-[14px] text-slate-600">Sesuai urutan soal dan urutan opsi yang Anda kerjakan.</p>
     <div class="mt-6 space-y-4">
       ${detail.map((dd, i) => {
         const s = SOAL_BY_ID[dd.id];
@@ -2147,15 +2180,15 @@ async function showResult(kind) {
         const ok = dd.pick === benarTampil;
         return `<div class="glass rounded-3xl p-6">
           <div class="flex items-start gap-3">
-            <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-bold ${ok ? 'bg-emerald-400 text-black' : 'bg-red-400 text-black'}">${ok ? '✓' : '✕'}</span>
+            <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-bold ${ok ? 'bg-emerald-400 text-ink' : 'bg-red-400 text-ink'}">${ok ? '✓' : '✕'}</span>
             <div class="min-w-0 flex-1">
-              <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">Soal ${i + 1}</p>
+              <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Soal ${i + 1}</p>
               <p class="mt-2 text-[15px] font-medium leading-[1.6]">${esc(s.q)}</p>
               <div class="mt-4 space-y-2 text-[14px] leading-[1.6]">
-                <p class="${ok ? 'text-emerald-300' : 'text-red-300'}">Jawaban Anda: ${dd.pick >= 0 ? KEYS[dd.pick] + '. ' + esc(s.o[dd.ord[dd.pick]]) : '<em class="text-white/50">tidak dijawab</em>'}</p>
-                ${ok ? '' : `<p class="text-emerald-300">Kunci: ${KEYS[benarTampil]}. ${esc(s.o[s.a])}</p>`}
+                <p class="${ok ? 'text-emerald-700' : 'text-red-700'}">Jawaban Anda: ${dd.pick >= 0 ? KEYS[dd.pick] + '. ' + esc(s.o[dd.ord[dd.pick]]) : '<em class="text-slate-500">tidak dijawab</em>'}</p>
+                ${ok ? '' : `<p class="text-emerald-700">Kunci: ${KEYS[benarTampil]}. ${esc(s.o[s.a])}</p>`}
               </div>
-              <p class="mt-4 rounded-2xl bg-white/[.06] px-4 py-3 text-[13px] leading-[1.65] text-white/65"><span class="font-semibold text-white/80">Dasar hukum:</span> ${esc(s.ref || '—')}</p>
+              <p class="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-[13px] leading-[1.65] text-slate-600"><span class="font-semibold text-slate-700">Dasar hukum:</span> ${esc(s.ref || '—')}</p>
             </div>
           </div>
         </div>`;
@@ -2169,8 +2202,8 @@ function barRow(label, val, color) {
   const ada = val !== null && val !== undefined;
   const pct = ada ? (val / NILAI_MAX * 100) : 0;
   return `<div>
-    <div class="flex items-baseline justify-between text-[13px]"><span class="text-white/65">${label}</span><span class="font-semibold tabular-nums ${ada ? '' : 'text-white/40'}">${ada ? val : 'belum dikerjakan'}</span></div>
-    <div class="mt-2 h-3 overflow-hidden rounded-full bg-white/12">
+    <div class="flex items-baseline justify-between text-[13px]"><span class="text-slate-600">${label}</span><span class="font-semibold tabular-nums ${ada ? '' : 'text-slate-500'}">${ada ? val : 'belum dikerjakan'}</span></div>
+    <div class="mt-2 h-3 overflow-hidden rounded-full bg-slate-100">
       <div class="bar-anim h-full rounded-full" style="width:${pct}%;background:${color}"></div>
     </div>
   </div>`;
@@ -2249,11 +2282,11 @@ async function renderRank(paksa) {
     const izin = String(store.galat.code || store.galat.message).includes('permission-denied')
       || String(store.galat.message || '').includes('insufficient permissions');
     $('#rankPodium').innerHTML = `<div class="glass rounded-3xl border-amber-400/40 bg-amber-400/10 p-6 sm:col-span-3">
-      <p class="text-[15px] font-semibold text-amber-200">Papan peringkat belum dapat dimuat</p>
-      <p class="mt-2 text-[14px] leading-[1.7] text-amber-200/80">${izin
+      <p class="text-[15px] font-semibold text-amber-700">Papan peringkat belum dapat dimuat</p>
+      <p class="mt-2 text-[14px] leading-[1.7] text-amber-700">${izin
         ? 'Firestore menolak permintaan baca. Security rules proyek <strong>emondak-faee8</strong> belum dipublikasikan — tempel isi <code>firestore.rules</code> di Firebase Console → Firestore Database → Rules → Publish.'
         : 'Terjadi kesalahan koneksi ke Firestore. Periksa jaringan lalu tekan Muat ulang.'}</p>
-      <p class="mt-3 text-[12px] text-amber-200/60">${esc(String(store.galat.code || store.galat.message || ''))}</p>
+      <p class="mt-3 text-[12px] text-amber-800">${esc(String(store.galat.code || store.galat.message || ''))}</p>
     </div>`;
     $('#rankTable').innerHTML = '';
     return;
@@ -2267,25 +2300,25 @@ async function renderRank(paksa) {
     const teks    = ['teks-emas', 'teks-silver', 'teks-perunggu'][i];
     const urutan  = ['sm:order-2', 'sm:order-1', 'sm:order-3'][i];
     const tinggi  = i === 0 ? 'sm:-mt-3 sm:pb-8' : 'sm:mt-2';
-    return `<div class="juara juara-${j} ${urutan} ${tinggi} rounded-3xl p-6 ${ME && x.pid === ME.pid ? 'ring-2 ring-white/60' : ''}">
+    return `<div class="juara juara-${j} ${urutan} ${tinggi} rounded-3xl p-6 ${ME && x.pid === ME.pid ? 'ring-2 ring-slate-200' : ''}">
       <div class="relative z-10">
         <div class="flex items-center gap-3">
           <span class="medali medali-${j} flex h-10 w-10 items-center justify-center rounded-full text-[15px] font-bold">${j}</span>
           <div class="min-w-0">
             <p class="truncate text-[12px] font-bold uppercase tracking-[0.14em] ${teks}">${gelar}</p>
-            <p class="mt-0.5 text-[11px] uppercase tracking-[0.12em] text-white/50">${label}</p>
+            <p class="mt-0.5 text-[11px] uppercase tracking-[0.12em] text-slate-500">${label}</p>
           </div>
           ${ikonPiala(j)}
         </div>
         <p class="mt-5 truncate text-[18px] font-semibold">${esc(x.nama)}</p>
-        <p class="mt-1 truncate text-[13px] text-white/60">${esc(x.kab)}, ${esc(x.prov)}</p>
+        <p class="mt-1 truncate text-[13px] text-slate-600">${esc(x.kab)}, ${esc(x.prov)}</p>
         <p class="mt-5 text-[34px] font-semibold leading-none tabular-nums">${nilaiUtama(x)}</p>
-        <p class="mt-2 text-[12px] text-white/60">${benarUtama(x) ?? '—'} benar · ${fmtDur(durUtama(x))}</p>
+        <p class="mt-2 text-[12px] text-slate-600">${benarUtama(x) ?? '—'} benar · ${fmtDur(durUtama(x))}</p>
       </div>
     </div>`;
   }).join('') || `<div class="glass rounded-3xl p-6 sm:col-span-3">
       <p class="text-[15px] font-semibold">Belum ada nilai pada kategori ini</p>
-      <p class="mt-2 text-[14px] leading-[1.7] text-white/65">${
+      <p class="mt-2 text-[14px] leading-[1.7] text-slate-600">${
         kind === 'delta'
           ? 'Peringkat peningkatan baru muncul setelah ada peserta yang menyelesaikan pre test <em>dan</em> post test.'
           : 'Belum ada pemerintah daerah yang menyelesaikan ' + (kind === 'pre' ? 'pre test' : 'post test') + '. Coba pilih kategori lain pada penyaring di atas.'
@@ -2295,7 +2328,7 @@ async function renderRank(paksa) {
   $('#rankTable').innerHTML = `
     <div class="overflow-x-auto">
       <table class="w-full min-w-[760px] text-left text-[14px]">
-        <thead class="border-b border-white/10 text-[11px] uppercase tracking-[0.14em] text-white/45">
+        <thead class="border-b border-slate-200 text-[11px] uppercase tracking-[0.14em] text-slate-500">
           <tr>
             <th class="px-5 py-4 font-semibold">#</th>
             <th class="px-5 py-4 font-semibold">Peserta</th>
@@ -2310,26 +2343,26 @@ async function renderRank(paksa) {
         <tbody>
           ${view.length ? view.map(x => {
             const me = ME && x.pid === ME.pid;
-            return `<tr class="border-b border-white/[.06] ${me ? 'bg-white/[.10]' : x.pos <= 3 ? 'baris-' + x.pos : ''}">
+            return `<tr class="border-b border-slate-300/[.06] ${me ? 'bg-slate-50' : x.pos <= 3 ? 'baris-' + x.pos : ''}">
               <td class="px-5 py-4">${x.pos <= 3
                 ? `<span class="flex items-center gap-2">
                      <span class="medali medali-${x.pos} flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold">${x.pos}</span>
                      ${ikonPiala(x.pos, 'h-[18px] w-[18px]')}
                    </span>`
-                : `<span class="tabular-nums text-white/55">${x.pos}</span>`}</td>
-              <td class="px-5 py-4 font-medium">${esc(x.nama)}${me ? ' <span class="ml-2 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-black">ANDA</span>' : ''}</td>
-              <td class="px-5 py-4 text-white/65">${esc(x.kab)}, ${esc(x.prov)}</td>
-              <td class="px-5 py-4 text-right tabular-nums text-white/70">${benarUtama(x) ?? '—'}${benarUtama(x) !== null ? '/' + ATURAN.jumlahSoal : ''}</td>
-              <td class="px-5 py-4 text-right tabular-nums text-white/70">${fmtDur(durUtama(x))}</td>
-              <td class="px-5 py-4 text-right tabular-nums text-white/70">${x.preNilai ?? '—'}</td>
-              <td class="px-5 py-4 text-right tabular-nums text-white/70">${x.postNilai ?? '—'}</td>
-              <td class="px-5 py-4 text-right text-[15px] font-semibold tabular-nums ${kind === 'delta' ? (x.delta > 0 ? 'text-emerald-400' : x.delta < 0 ? 'text-red-400' : '') : ''}">${nilaiUtama(x)}</td>
+                : `<span class="tabular-nums text-slate-500">${x.pos}</span>`}</td>
+              <td class="px-5 py-4 font-medium">${esc(x.nama)}${me ? ' <span class="ml-2 rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-white">ANDA</span>' : ''}</td>
+              <td class="px-5 py-4 text-slate-600">${esc(x.kab)}, ${esc(x.prov)}</td>
+              <td class="px-5 py-4 text-right tabular-nums text-slate-600">${benarUtama(x) ?? '—'}${benarUtama(x) !== null ? '/' + ATURAN.jumlahSoal : ''}</td>
+              <td class="px-5 py-4 text-right tabular-nums text-slate-600">${fmtDur(durUtama(x))}</td>
+              <td class="px-5 py-4 text-right tabular-nums text-slate-600">${x.preNilai ?? '—'}</td>
+              <td class="px-5 py-4 text-right tabular-nums text-slate-600">${x.postNilai ?? '—'}</td>
+              <td class="px-5 py-4 text-right text-[15px] font-semibold tabular-nums ${kind === 'delta' ? (x.delta > 0 ? 'text-emerald-600' : x.delta < 0 ? 'text-red-600' : '') : ''}">${nilaiUtama(x)}</td>
             </tr>`;
-          }).join('') : '<tr><td colspan="8" class="px-5 py-10 text-center text-white/50">Tidak ada peserta yang cocok.</td></tr>'}
+          }).join('') : '<tr><td colspan="8" class="px-5 py-10 text-center text-slate-500">Tidak ada peserta yang cocok.</td></tr>'}
         </tbody>
       </table>
     </div>
-    <p class="border-t border-white/10 px-5 py-4 text-[12px] text-white/40">${list.length} peserta${store.mode === 'lokal' ? ' · mode lokal, sebagian merupakan data contoh' : ''}</p>`;
+    <p class="border-t border-slate-200 px-5 py-4 text-[12px] text-slate-500">${list.length} peserta${store.mode === 'lokal' ? ' · mode lokal, sebagian merupakan data contoh' : ''}</p>`;
 }
 
 
@@ -2341,8 +2374,8 @@ async function renderCompare() {
 
   if (!pre && !post) {
     $('#compareBody').innerHTML = `<div class="glass rounded-3xl p-8">
-      <p class="text-[15px] leading-[1.7] text-white/70">Belum ada nilai yang bisa dibandingkan. Selesaikan pre test terlebih dahulu.</p>
-      <button onclick="go('dashboard')" class="mt-5 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black">Ke dashboard</button>
+      <p class="text-[15px] leading-[1.7] text-slate-600">Belum ada nilai yang bisa dibandingkan. Selesaikan pre test terlebih dahulu.</p>
+      <button onclick="go('dashboard')" class="mt-5 rounded-full bg-ink px-6 py-3 text-[14px] font-medium text-white">Ke dashboard</button>
     </div>`;
     return;
   }
@@ -2357,26 +2390,26 @@ async function renderCompare() {
   $('#compareBody').innerHTML = `<div class="glass rounded-[2rem] p-7 md:p-9">
     <div class="flex flex-wrap items-baseline justify-between gap-3">
       <div>
-        <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/50">${TW_META[TW_AKTIF].label}</p>
+        <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">${TW_META[TW_AKTIF].label}</p>
         <h3 class="mt-2 text-[18px] font-semibold">${esc(TW_META[TW_AKTIF].focus)}</h3>
       </div>
       ${d !== null
-        ? `<span class="rounded-full px-4 py-1.5 text-[13px] font-semibold ${d > 0 ? 'bg-emerald-400/20 text-emerald-300' : d < 0 ? 'bg-red-400/20 text-red-300' : 'bg-white/10 text-white/70'}">${d > 0 ? '+' : ''}${d} poin</span>`
-        : '<span class="rounded-full border border-white/20 px-4 py-1.5 text-[12px] text-white/55">belum lengkap</span>'}
+        ? `<span class="rounded-full px-4 py-1.5 text-[13px] font-semibold ${d > 0 ? 'bg-emerald-400/20 text-emerald-700' : d < 0 ? 'bg-red-400/20 text-red-700' : 'bg-slate-100 text-slate-600'}">${d > 0 ? '+' : ''}${d} poin</span>`
+        : '<span class="rounded-full border border-slate-300 px-4 py-1.5 text-[12px] text-slate-500">belum lengkap</span>'}
     </div>
     <div class="mt-7 space-y-5">
       ${barRow('Pre test', pre ? pre.nilai : null, 'rgba(255,255,255,.35)')}
       ${barRow('Post test', post ? post.nilai : null, '#fff')}
     </div>
-    <div class="mt-7 grid grid-cols-2 gap-4 border-t border-white/10 pt-6 sm:grid-cols-4">
-      <div><p class="text-[11px] uppercase tracking-[0.14em] text-white/50">Benar pre</p><p class="mt-1.5 text-[14px] font-semibold tabular-nums">${pre ? pre.benar + '/' + pre.total : '—'}</p></div>
-      <div><p class="text-[11px] uppercase tracking-[0.14em] text-white/50">Benar post</p><p class="mt-1.5 text-[14px] font-semibold tabular-nums">${post ? post.benar + '/' + post.total : '—'}</p></div>
-      <div><p class="text-[11px] uppercase tracking-[0.14em] text-white/50">Waktu pre → post</p><p class="mt-1.5 text-[14px] font-semibold tabular-nums">${fmtDur(pre && pre.durasiMs)} → ${fmtDur(post && post.durasiMs)}</p></div>
-      <div><p class="text-[11px] uppercase tracking-[0.14em] text-white/50">Rata-rata nasional</p><p class="mt-1.5 text-[14px] font-semibold tabular-nums">${rata('pre') ?? '—'} → ${rata('post') ?? '—'}</p></div>
+    <div class="mt-7 grid grid-cols-2 gap-4 border-t border-slate-200 pt-6 sm:grid-cols-4">
+      <div><p class="text-[11px] uppercase tracking-[0.14em] text-slate-500">Benar pre</p><p class="mt-1.5 text-[14px] font-semibold tabular-nums">${pre ? pre.benar + '/' + pre.total : '—'}</p></div>
+      <div><p class="text-[11px] uppercase tracking-[0.14em] text-slate-500">Benar post</p><p class="mt-1.5 text-[14px] font-semibold tabular-nums">${post ? post.benar + '/' + post.total : '—'}</p></div>
+      <div><p class="text-[11px] uppercase tracking-[0.14em] text-slate-500">Waktu pre → post</p><p class="mt-1.5 text-[14px] font-semibold tabular-nums">${fmtDur(pre && pre.durasiMs)} → ${fmtDur(post && post.durasiMs)}</p></div>
+      <div><p class="text-[11px] uppercase tracking-[0.14em] text-slate-500">Rata-rata nasional</p><p class="mt-1.5 text-[14px] font-semibold tabular-nums">${rata('pre') ?? '—'} → ${rata('post') ?? '—'}</p></div>
     </div>
-    <div class="mt-7 grid grid-cols-2 gap-4 border-t border-white/10 pt-6">
-      <div><p class="text-[11px] uppercase tracking-[0.14em] text-white/50">Predikat awal</p><p class="mt-1.5 text-[14px] font-semibold">${pre ? predikat(pre.nilai) : '—'}</p></div>
-      <div><p class="text-[11px] uppercase tracking-[0.14em] text-white/50">Predikat akhir</p><p class="mt-1.5 text-[14px] font-semibold">${post ? predikat(post.nilai) : '—'}</p></div>
+    <div class="mt-7 grid grid-cols-2 gap-4 border-t border-slate-200 pt-6">
+      <div><p class="text-[11px] uppercase tracking-[0.14em] text-slate-500">Predikat awal</p><p class="mt-1.5 text-[14px] font-semibold">${pre ? predikat(pre.nilai) : '—'}</p></div>
+      <div><p class="text-[11px] uppercase tracking-[0.14em] text-slate-500">Predikat akhir</p><p class="mt-1.5 text-[14px] font-semibold">${post ? predikat(post.nilai) : '—'}</p></div>
     </div>
   </div>`;
 }
@@ -2565,10 +2598,10 @@ function renderAdmin() {
   const notis = $('#adNotice');
   if (ADATA.galatPeserta) {
     notis.classList.remove('hidden');
-    notis.innerHTML = `<div class="rounded-3xl border border-amber-400/40 bg-amber-400/10 p-5 text-[14px] leading-[1.7] text-amber-200/90">
-      <p class="font-semibold text-amber-200">Daftar peserta terdaftar tidak dapat dibaca</p>
+    notis.innerHTML = `<div class="rounded-3xl border border-amber-400/40 bg-amber-400/10 p-5 text-[14px] leading-[1.7] text-amber-700">
+      <p class="font-semibold text-amber-700">Daftar peserta terdaftar tidak dapat dibaca</p>
       <p class="mt-1.5">Angka “Belum mengisi” tidak dapat dihitung. Tambahkan email admin ini ke daftar <code>ADMIN_EMAIL</code> pada <code>firestore.rules</code>, lalu publikasikan ulang. Rekap di bawah tetap lengkap untuk peserta yang sudah mengisi.</p>
-      <p class="mt-2 text-[12px] text-amber-200/60">${esc(String(ADATA.galatPeserta.code || ADATA.galatPeserta.message || ''))}</p>
+      <p class="mt-2 text-[12px] text-amber-800">${esc(String(ADATA.galatPeserta.code || ADATA.galatPeserta.message || ''))}</p>
     </div>`;
   } else notis.classList.add('hidden');
 
@@ -2577,33 +2610,33 @@ function renderAdmin() {
   const kartu = (label, isi, sub, warna) => `<div class="kartu-tab rounded-3xl p-5">
     <p class="kartu-judul text-[11px] uppercase tracking-[0.14em]">${label}</p>
     <p class="mt-2.5 text-[28px] font-semibold tabular-nums ${warna || 'kartu-angka'}">${isi}</p>
-    <p class="mt-1 text-[11px] text-white/50">${sub}</p>
+    <p class="mt-1 text-[11px] text-slate-500">${sub}</p>
   </div>`;
 
   $('#adStats').innerHTML =
     kartu('Peserta terdaftar', semua.length, ADATA.galatPeserta ? 'yang sudah mengisi' : 'termasuk yang belum mengisi') +
-    kartu('Sudah pre test', sudahPre, semua.length ? Math.round(sudahPre / semua.length * 100) + '% dari peserta' : '—', 'text-emerald-400') +
-    kartu('Sudah post test', sudahPost, semua.length ? Math.round(sudahPost / semua.length * 100) + '% dari peserta' : '—', 'text-emerald-400') +
-    kartu('Belum mengisi', ADATA.galatPeserta ? '—' : belum, 'belum ada sesi', belum ? 'text-red-400' : '') +
+    kartu('Sudah pre test', sudahPre, semua.length ? Math.round(sudahPre / semua.length * 100) + '% dari peserta' : '—', 'text-emerald-600') +
+    kartu('Sudah post test', sudahPost, semua.length ? Math.round(sudahPost / semua.length * 100) + '% dari peserta' : '—', 'text-emerald-600') +
+    kartu('Belum mengisi', ADATA.galatPeserta ? '—' : belum, 'belum ada sesi', belum ? 'text-red-600' : '') +
     kartu('Rata-rata nilai', (rPre ?? '—') + ' → ' + (rPost ?? '—'), 'pre → post') +
     kartu('Rata-rata peningkatan', rDelta === null ? '—' : (rDelta > 0 ? '+' : '') + rDelta, 'dari ' + lengkap + ' peserta lengkap',
-          rDelta === null ? '' : rDelta > 0 ? 'text-emerald-400' : 'text-red-400');
+          rDelta === null ? '' : rDelta > 0 ? 'text-emerald-600' : 'text-red-600');
 
   const rows = dataTampilAdmin();
   const sel = (g, k, f) => g[k] ? f(g[k]) : '—';
   const badge = s => {
-    const w = { lengkap: 'bg-emerald-400/20 text-emerald-300', prasaja: 'bg-amber-400/20 text-amber-300', possaja: 'bg-amber-400/20 text-amber-300', belum: 'bg-red-400/20 text-red-300' }[s];
+    const w = { lengkap: 'bg-emerald-400/20 text-emerald-700', prasaja: 'bg-amber-400/20 text-amber-700', possaja: 'bg-amber-400/20 text-amber-700', belum: 'bg-red-400/20 text-red-700' }[s];
     return `<span class="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${w}">${LABEL_STATUS[s]}</span>`;
   };
 
   $('#adTable').innerHTML = `
     <div class="overflow-x-auto">
       <table class="w-full min-w-[1080px] text-left text-[14px]">
-        <thead class="border-b border-white/10 text-[11px] uppercase tracking-[0.14em] text-white/45">
+        <thead class="border-b border-slate-200 text-[11px] uppercase tracking-[0.14em] text-slate-500">
           <tr>
             <th class="px-5 py-4 font-semibold">
               <input type="checkbox" id="adPilihSemua" onchange="pilihSemua(this.checked)" title="Pilih semua yang tampil"
-                     class="h-4 w-4 cursor-pointer rounded border-white/30 bg-transparent accent-red-500" />
+                     class="h-4 w-4 cursor-pointer rounded border-slate-300 bg-transparent accent-red-500" />
             </th>
             <th class="px-5 py-4 font-semibold">#</th>
             <th class="px-5 py-4 font-semibold">Peserta</th>
@@ -2618,33 +2651,33 @@ function renderAdmin() {
         <tbody>
           ${rows.length ? rows.map((g, i) => {
             const d = (g.pre && g.post) ? g.post.nilai - g.pre.nilai : null;
-            return `<tr class="border-b border-white/[.06]" data-pid="${esc(g.pid)}">
+            return `<tr class="border-b border-slate-300/[.06]" data-pid="${esc(g.pid)}">
               <td class="px-5 py-4">
-                <input type="checkbox" class="adPilih h-4 w-4 cursor-pointer rounded border-white/30 bg-transparent accent-red-500"
+                <input type="checkbox" class="adPilih h-4 w-4 cursor-pointer rounded border-slate-300 bg-transparent accent-red-500"
                        value="${esc(g.pid)}" onchange="perbaruiPilihan()" />
               </td>
-              <td class="px-5 py-4 tabular-nums text-white/50">${i + 1}</td>
-              <td class="px-5 py-4"><p class="font-medium">${esc(g.nama)}</p>${g.email ? `<p class="text-[12px] text-white/45">${esc(g.email)}</p>` : ''}</td>
-              <td class="px-5 py-4 text-white/65">${esc(g.kab || '—')}${g.prov ? '<br><span class="text-[12px] text-white/40">' + esc(g.prov) + '</span>' : ''}</td>
+              <td class="px-5 py-4 tabular-nums text-slate-500">${i + 1}</td>
+              <td class="px-5 py-4"><p class="font-medium">${esc(g.nama)}</p>${g.email ? `<p class="text-[12px] text-slate-500">${esc(g.email)}</p>` : ''}</td>
+              <td class="px-5 py-4 text-slate-600">${esc(g.kab || '—')}${g.prov ? '<br><span class="text-[12px] text-slate-500">' + esc(g.prov) + '</span>' : ''}</td>
               <td class="px-5 py-4">${badge(statusPeserta(g))}</td>
-              <td class="px-5 py-4 text-right tabular-nums">${sel(g, 'pre', r => `<span class="font-semibold">${r.nilai}</span><br><span class="text-[11px] text-white/45">${r.benar}/${r.total} · ${fmtDur(r.durasiMs)}</span>`)}</td>
-              <td class="px-5 py-4 text-right tabular-nums">${sel(g, 'post', r => `<span class="font-semibold">${r.nilai}</span><br><span class="text-[11px] text-white/45">${r.benar}/${r.total} · ${fmtDur(r.durasiMs)}</span>`)}</td>
-              <td class="px-5 py-4 text-right tabular-nums ${d === null ? 'text-white/35' : d > 0 ? 'text-emerald-400' : d < 0 ? 'text-red-400' : 'text-white/60'}">${d === null ? '—' : (d > 0 ? '+' : '') + d}</td>
+              <td class="px-5 py-4 text-right tabular-nums">${sel(g, 'pre', r => `<span class="font-semibold">${r.nilai}</span><br><span class="text-[11px] text-slate-500">${r.benar}/${r.total} · ${fmtDur(r.durasiMs)}</span>`)}</td>
+              <td class="px-5 py-4 text-right tabular-nums">${sel(g, 'post', r => `<span class="font-semibold">${r.nilai}</span><br><span class="text-[11px] text-slate-500">${r.benar}/${r.total} · ${fmtDur(r.durasiMs)}</span>`)}</td>
+              <td class="px-5 py-4 text-right tabular-nums ${d === null ? 'text-slate-500' : d > 0 ? 'text-emerald-600' : d < 0 ? 'text-red-600' : 'text-slate-600'}">${d === null ? '—' : (d > 0 ? '+' : '') + d}</td>
               <td class="px-5 py-4 text-right">
                 <span class="inline-flex gap-2">
                   ${(g.pre || g.post)
-                    ? `<button onclick="bukaDetail('${esc(g.pid)}')" class="rounded-full border border-white/20 px-3.5 py-1.5 text-[12px] font-medium text-white/80 transition hover:bg-white/10">Detail</button>`
+                    ? `<button onclick="bukaDetail('${esc(g.pid)}')" class="rounded-full border border-slate-300 px-3.5 py-1.5 text-[12px] font-medium text-slate-700 transition hover:bg-slate-100">Detail</button>`
                     : ''}
                   <button onclick="hapusSatu('${esc(g.pid)}')" title="Hapus peserta ini"
-                          class="rounded-full border border-red-400/40 px-3 py-1.5 text-[12px] font-medium text-red-300 transition hover:bg-red-500/20">Hapus</button>
+                          class="rounded-full border border-red-400/40 px-3 py-1.5 text-[12px] font-medium text-red-700 transition hover:bg-red-500/20">Hapus</button>
                 </span>
               </td>
             </tr>`;
-          }).join('') : '<tr><td colspan="9" class="px-5 py-12 text-center text-white/50">Tidak ada peserta yang cocok dengan penyaring.</td></tr>'}
+          }).join('') : '<tr><td colspan="9" class="px-5 py-12 text-center text-slate-500">Tidak ada peserta yang cocok dengan penyaring.</td></tr>'}
         </tbody>
       </table>
     </div>
-    <p class="border-t border-white/10 px-5 py-4 text-[12px] leading-[1.7] text-white/40">
+    <p class="border-t border-slate-200 px-5 py-4 text-[12px] leading-[1.7] text-slate-500">
       Menampilkan ${rows.length} dari ${semua.length} peserta. Tombol unduh dan pilih semua mengikuti penyaring yang sedang aktif.<br>
       Menghapus peserta membuang identitas dan seluruh nilainya. Akun masuknya tetap ada di Authentication dan harus dihapus terpisah dari Firebase Console.
     </p>`;
@@ -2667,7 +2700,7 @@ function renderAdmin() {
   $('#adSoal').innerHTML = `
     <div class="overflow-x-auto">
       <table class="w-full min-w-[720px] text-left text-[14px]">
-        <thead class="border-b border-white/10 text-[11px] uppercase tracking-[0.14em] text-white/45">
+        <thead class="border-b border-slate-200 text-[11px] uppercase tracking-[0.14em] text-slate-500">
           <tr>
             <th class="px-5 py-4 font-semibold">Butir</th>
             <th class="px-5 py-4 font-semibold">Pertanyaan</th>
@@ -2679,19 +2712,19 @@ function renderAdmin() {
         <tbody>
           ${butir.map(b => {
             const pct = b.tampil ? Math.round(b.benar / b.tampil * 100) : null;
-            const w = pct === null ? 'text-white/35' : pct < 50 ? 'text-red-400' : pct < 75 ? 'text-amber-300' : 'text-emerald-400';
-            return `<tr class="border-b border-white/[.06]">
-              <td class="px-5 py-4 font-mono text-[12px] text-white/50">${esc(b.id)}</td>
-              <td class="px-5 py-4"><p class="max-w-[620px] leading-[1.55] text-white/80">${esc(b.q)}</p></td>
-              <td class="px-5 py-4 text-right tabular-nums text-white/60">${b.tampil || '—'}</td>
-              <td class="px-5 py-4 text-right tabular-nums text-white/60">${b.tampil ? b.benar : '—'}</td>
+            const w = pct === null ? 'text-slate-500' : pct < 50 ? 'text-red-600' : pct < 75 ? 'text-amber-700' : 'text-emerald-600';
+            return `<tr class="border-b border-slate-300/[.06]">
+              <td class="px-5 py-4 font-mono text-[12px] text-slate-500">${esc(b.id)}</td>
+              <td class="px-5 py-4"><p class="max-w-[620px] leading-[1.55] text-slate-700">${esc(b.q)}</p></td>
+              <td class="px-5 py-4 text-right tabular-nums text-slate-600">${b.tampil || '—'}</td>
+              <td class="px-5 py-4 text-right tabular-nums text-slate-600">${b.tampil ? b.benar : '—'}</td>
               <td class="px-5 py-4 text-right text-[15px] font-semibold tabular-nums ${w}">${pct === null ? '—' : pct + '%'}</td>
             </tr>`;
           }).join('')}
         </tbody>
       </table>
     </div>
-    <p class="border-t border-white/10 px-5 py-4 text-[12px] text-white/40">Diurutkan dari persentase benar terendah. Butir yang belum pernah muncul ditandai “—”.</p>`;
+    <p class="border-t border-slate-200 px-5 py-4 text-[12px] text-slate-500">Diurutkan dari persentase benar terendah. Butir yang belum pernah muncul ditandai “—”.</p>`;
 }
 
 /* ── pilih dan hapus peserta ── */
@@ -2765,17 +2798,17 @@ function bukaDetail(pid) {
   if (!g) return;
 
   $('#adDetailHead').innerHTML = `
-    <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/50">Hasil pengisian</p>
+    <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">Hasil pengisian</p>
     <h2 class="mt-2 text-[22px] font-semibold tracking-[-0.01em]">${esc(g.nama)}</h2>
-    <p class="mt-1.5 text-[14px] text-white/60">${esc(g.kab || '—')}${g.prov ? ', ' + esc(g.prov) : ''}${g.email ? ' · ' + esc(g.email) : ''}</p>`;
+    <p class="mt-1.5 text-[14px] text-slate-600">${esc(g.kab || '—')}${g.prov ? ', ' + esc(g.prov) : ''}${g.email ? ' · ' + esc(g.email) : ''}</p>`;
 
   const sesi = (r, judul) => {
-    if (!r) return `<div class="glass rounded-2xl p-5"><p class="text-[13px] font-semibold text-white/70">${judul}</p><p class="mt-1.5 text-[13px] text-white/45">Belum dikerjakan</p></div>`;
+    if (!r) return `<div class="glass rounded-2xl p-5"><p class="text-[13px] font-semibold text-slate-600">${judul}</p><p class="mt-1.5 text-[13px] text-slate-500">Belum dikerjakan</p></div>`;
     const detail = r.detail || [];
     return `<div class="glass rounded-2xl p-5">
       <div class="flex flex-wrap items-baseline justify-between gap-3">
         <p class="text-[13px] font-semibold">${judul}</p>
-        <p class="text-[13px] text-white/60">Nilai <span class="font-semibold text-white">${r.nilai}</span> · ${r.benar}/${r.total} benar · ${fmtDur(r.durasiMs)} · ${esc(tglStr(r.selesaiAt))}</p>
+        <p class="text-[13px] text-slate-600">Nilai <span class="font-semibold text-ink">${r.nilai}</span> · ${r.benar}/${r.total} benar · ${fmtDur(r.durasiMs)} · ${esc(tglStr(r.selesaiAt))}</p>
       </div>
       ${detail.length ? `<div class="mt-4 space-y-2">
         ${detail.map((d, i) => {
@@ -2783,15 +2816,15 @@ function bukaDetail(pid) {
           if (!s) return '';
           const benarTampil = d.ord.indexOf(s.a);
           const ok = d.pick === benarTampil;
-          return `<div class="flex items-start gap-3 rounded-xl bg-white/[.04] px-3.5 py-2.5">
-            <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${ok ? 'bg-emerald-400 text-black' : 'bg-red-400 text-black'}">${ok ? '✓' : '✕'}</span>
+          return `<div class="flex items-start gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5">
+            <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${ok ? 'bg-emerald-400 text-ink' : 'bg-red-400 text-ink'}">${ok ? '✓' : '✕'}</span>
             <div class="min-w-0 flex-1">
-              <p class="text-[13px] leading-[1.5] text-white/80">${i + 1}. ${esc(s.q)}</p>
-              <p class="mt-1 text-[12px] text-white/50">Dijawab: ${d.pick >= 0 ? esc(s.o[d.ord[d.pick]]) : '<em>tidak dijawab</em>'}${ok ? '' : ' · Kunci: ' + esc(s.o[s.a])}</p>
+              <p class="text-[13px] leading-[1.5] text-slate-700">${i + 1}. ${esc(s.q)}</p>
+              <p class="mt-1 text-[12px] text-slate-500">Dijawab: ${d.pick >= 0 ? esc(s.o[d.ord[d.pick]]) : '<em>tidak dijawab</em>'}${ok ? '' : ' · Kunci: ' + esc(s.o[s.a])}</p>
             </div>
           </div>`;
         }).join('')}
-      </div>` : '<p class="mt-3 text-[13px] text-white/45">Rincian jawaban tidak tersimpan untuk sesi ini.</p>'}
+      </div>` : '<p class="mt-3 text-[13px] text-slate-500">Rincian jawaban tidak tersimpan untuk sesi ini.</p>'}
     </div>`;
   };
 

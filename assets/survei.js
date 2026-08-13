@@ -215,9 +215,9 @@ const GAYA = `
   .sv-opsi:active { transform: scale(.97) }
 </style>`;
 
-const KELAS_TOMBOL = 'rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10';
-const KELAS_UTAMA  = 'cta-glow rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black transition disabled:opacity-40';
-const KELAS_ISIAN  = 'w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-[14px] text-white outline-none transition placeholder:text-white/25 focus:border-white/45';
+const KELAS_TOMBOL = 'rounded-full border border-slate-300 px-5 py-2.5 text-[13px] font-medium text-slate-700 transition hover:bg-slate-100';
+const KELAS_UTAMA  = 'cta-glow rounded-full bg-ink px-6 py-3 text-[14px] font-medium text-white transition disabled:opacity-40';
+const KELAS_ISIAN  = 'w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-[14px] text-ink outline-none transition placeholder:text-slate-500 focus:border-slate-300';
 
 const terisi = k => {
   const v = JAWAB[k];
@@ -234,16 +234,16 @@ function render() {
   if (TERKIRIM && !TINJAU && IDX < 0) { wadah.innerHTML = GAYA + viewTerimaKasih(); pasangTerimaKasih(); return; }
 
   wadah.innerHTML = GAYA + `
-    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Survei kepuasan</p>
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-slate-500">Survei kepuasan</p>
     <h1 class="mt-3 max-w-[760px] text-[26px] font-semibold leading-[1.2] tracking-[-0.02em] md:text-[34px]">
       Kuesioner kepuasan pemerintah daerah
     </h1>
-    <p class="mt-3 max-w-[680px] text-[15px] text-white/65">${aman(JUDUL_KEGIATAN)}</p>
-    <p class="mt-2 text-[13px] text-white/45">
+    <p class="mt-3 max-w-[680px] text-[15px] text-slate-600">${aman(JUDUL_KEGIATAN)}</p>
+    <p class="mt-2 text-[13px] text-slate-500">
       ${aman(ME.nama)} · ${aman(ME.kab)}${ME.prov ? ', ' + aman(ME.prov) : ''} · ${aman(ME.email || '—')}
-      <span class="ml-1 text-white/30">— diambil dari akun Anda, tidak perlu diketik lagi.</span>
+      <span class="ml-1 text-slate-500">— diambil dari akun Anda, tidak perlu diketik lagi.</span>
     </p>
-    ${GALAT ? `<div class="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] text-rose-200">${aman(GALAT)}</div>` : ''}
+    ${GALAT ? `<div class="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] text-rose-700">${aman(GALAT)}</div>` : ''}
     <div id="svIsi" class="mt-8"></div>`;
 
   el('#svIsi').innerHTML = TINJAU ? viewTinjau() : viewPertanyaan();
@@ -255,11 +255,11 @@ function bilahKemajuan() {
   const persen = Math.round(sudah / PERTANYAAN.length * 100);
   return `
     <div class="mb-6">
-      <div class="flex items-center justify-between text-[12px] text-white/45">
+      <div class="flex items-center justify-between text-[12px] text-slate-500">
         <span>Pertanyaan ${Math.min(IDX + 1, PERTANYAAN.length)} dari ${PERTANYAAN.length}</span>
         <span>${sudah} terjawab</span>
       </div>
-      <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+      <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
         <div class="h-full rounded-full bg-white transition-all duration-500" style="width:${persen}%"></div>
       </div>
     </div>`;
@@ -275,14 +275,14 @@ function viewPertanyaan() {
       <div class="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
         ${[1, 2, 3, 4].map(n => {
           const on = Number(nilai) === n;
-          return `<button data-nilai="${n}" class="sv-opsi ${on ? 'sv-pop border-white bg-white/[0.14]' : 'border-white/12 bg-white/[0.04] hover:border-white/35'} relative rounded-3xl border px-3 py-6 text-center">
+          return `<button data-nilai="${n}" class="sv-opsi ${on ? 'sv-pop border-slate-300 bg-white/[0.14]' : 'border-slate-200 bg-white/[0.04] hover:border-slate-300'} relative rounded-3xl border px-3 py-6 text-center">
             <span class="block text-[30px] leading-none">${WAJAH[n - 1]}</span>
-            <span class="mt-3 block text-[20px] font-semibold ${on ? 'text-white' : 'text-white/70'}">${n}</span>
-            ${on ? '<span class="absolute inset-0 rounded-3xl ring-2 ring-white/70"></span>' : ''}
+            <span class="mt-3 block text-[20px] font-semibold ${on ? 'text-ink' : 'text-slate-600'}">${n}</span>
+            ${on ? '<span class="absolute inset-0 rounded-3xl ring-2 ring-slate-200"></span>' : ''}
           </button>`;
         }).join('')}
       </div>
-      <div class="mt-3 flex items-center justify-between text-[12px] text-white/40">
+      <div class="mt-3 flex items-center justify-between text-[12px] text-slate-500">
         <span>${aman(p.kiri)}</span><span>${aman(p.kanan)}</span>
       </div>`;
   } else if (p.tipe === 'pilih') {
@@ -290,11 +290,11 @@ function viewPertanyaan() {
       <div class="mt-7 grid gap-2.5 ${p.opsi.length > 2 ? 'sm:grid-cols-2' : ''}">
         ${p.opsi.map(o => {
           const on = nilai === o;
-          return `<button data-opsi="${aman(o)}" class="sv-opsi ${on ? 'sv-pop border-white bg-white/[0.14]' : 'border-white/12 bg-white/[0.04] hover:border-white/35'} flex items-center gap-3 rounded-2xl border px-5 py-4 text-left">
-            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${on ? 'border-white bg-white' : 'border-white/30'}">
+          return `<button data-opsi="${aman(o)}" class="sv-opsi ${on ? 'sv-pop border-slate-300 bg-white/[0.14]' : 'border-slate-200 bg-white/[0.04] hover:border-slate-300'} flex items-center gap-3 rounded-2xl border px-5 py-4 text-left">
+            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${on ? 'border-slate-300 bg-white' : 'border-slate-300'}">
               ${on ? '<svg viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3"><path class="sv-centang" d="m5 13 4 4L19 7"/></svg>' : ''}
             </span>
-            <span class="text-[14px] ${on ? 'font-semibold text-white' : 'text-white/75'}">${aman(o)}</span>
+            <span class="text-[14px] ${on ? 'font-semibold text-ink' : 'text-slate-600'}">${aman(o)}</span>
           </button>`;
         }).join('')}
       </div>`;
@@ -304,13 +304,13 @@ function viewPertanyaan() {
         ${[1, 2, 3, 4, 5].map(n => {
           const on = Number(nilai) >= n;
           const dipilih = Number(nilai) === n;
-          return `<button data-bintang="${n}" class="sv-opsi ${dipilih ? 'sv-pop' : ''} rounded-2xl border ${on ? 'border-amber-300/60 bg-amber-300/15' : 'border-white/12 bg-white/[0.04] hover:border-white/35'} px-4 py-3">
-            <svg viewBox="0 0 24 24" class="h-7 w-7 ${on ? 'text-amber-300' : 'text-white/25'}" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+          return `<button data-bintang="${n}" class="sv-opsi ${dipilih ? 'sv-pop' : ''} rounded-2xl border ${on ? 'border-amber-300/60 bg-amber-300/15' : 'border-slate-200 bg-white/[0.04] hover:border-slate-300'} px-4 py-3">
+            <svg viewBox="0 0 24 24" class="h-7 w-7 ${on ? 'text-amber-700' : 'text-slate-500'}" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
               <path d="M12 3.6l2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-3-5.3 3 1.1-6L3.4 10l6-.8z"/>
             </svg>
           </button>`;
         }).join('')}
-        <span class="ml-2 text-[13px] text-white/55">${nilai ? aman(nilai) + ' dari 5' : 'belum dinilai'}</span>
+        <span class="ml-2 text-[13px] text-slate-500">${nilai ? aman(nilai) + ' dari 5' : 'belum dinilai'}</span>
       </div>`;
   } else {
     const baris = p.tipe === 'paragraf' ? 4 : 2;
@@ -324,9 +324,9 @@ function viewPertanyaan() {
   return `
   <div class="sv-masuk glass rounded-3xl p-6 md:p-9">
     ${bilahKemajuan()}
-    ${p2.bagian ? `<p class="mb-3 inline-block rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">${aman(p2.bagian)}</p>` : ''}
+    ${p2.bagian ? `<p class="mb-3 inline-block rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">${aman(p2.bagian)}</p>` : ''}
     <h2 class="max-w-[680px] text-[19px] font-semibold leading-[1.45] md:text-[21px]">${aman(p2.judul)}</h2>
-    ${p2.petunjuk ? `<p class="mt-2 max-w-[620px] text-[13px] text-white/45">${aman(p2.petunjuk)}</p>` : ''}
+    ${p2.petunjuk ? `<p class="mt-2 max-w-[620px] text-[13px] text-slate-500">${aman(p2.petunjuk)}</p>` : ''}
     ${isi}
     <div class="mt-8 flex flex-wrap items-center justify-between gap-3">
       <button id="svMundur" class="${KELAS_TOMBOL}"${IDX === 0 ? ' disabled style="opacity:.35"' : ''}>Kembali</button>
@@ -389,16 +389,16 @@ function viewTinjau() {
       <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 class="text-[19px] font-semibold">Periksa sekali lagi</h2>
-          <p class="mt-1 text-[13px] text-white/50">Ketuk baris mana pun untuk memperbaikinya.</p>
+          <p class="mt-1 text-[13px] text-slate-500">Ketuk baris mana pun untuk memperbaikinya.</p>
         </div>
         <div class="text-right">
-          <p class="text-[11px] uppercase tracking-[0.16em] text-white/45">Indeks kepuasan Anda</p>
+          <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">Indeks kepuasan Anda</p>
           <p class="text-[30px] font-semibold tabular-nums">${ikm == null ? '—' : ikm}</p>
-          <p class="text-[12px] text-white/50">${aman(MUTU(ikm))}</p>
+          <p class="text-[12px] text-slate-500">${aman(MUTU(ikm))}</p>
         </div>
       </div>
 
-      <div class="mt-6 divide-y divide-white/8">
+      <div class="mt-6 divide-y divide-slate-200">
         ${PERTANYAAN.map((p, i) => {
           const v = JAWAB[p.k];
           const ada = terisi(p.k);
@@ -406,14 +406,14 @@ function viewTinjau() {
                        : p.tipe === 'bintang' ? '★'.repeat(Number(v) || 0) + ' ' + (v || '')
                        : v;
           return `<button data-ke="${i}" class="flex w-full items-start justify-between gap-4 py-3 text-left transition hover:bg-white/[0.04]">
-            <span class="max-w-[62%] text-[13px] leading-relaxed text-white/55">${aman(p.judul)}</span>
-            <span class="text-right text-[13px] ${ada ? 'font-medium text-white' : 'text-rose-300'}">${ada ? aman(tampil) : 'belum dijawab'}</span>
+            <span class="max-w-[62%] text-[13px] leading-relaxed text-slate-500">${aman(p.judul)}</span>
+            <span class="text-right text-[13px] ${ada ? 'font-medium text-ink' : 'text-rose-700'}">${ada ? aman(tampil) : 'belum dijawab'}</span>
           </button>`;
         }).join('')}
       </div>
     </div>
 
-    ${kurang.length ? `<div class="rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] text-rose-200">
+    ${kurang.length ? `<div class="rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] text-rose-700">
       Masih ada ${kurang.length} pertanyaan yang belum dijawab.</div>` : ''}
 
     <div class="flex flex-wrap items-center justify-between gap-3 pb-4">
@@ -457,20 +457,20 @@ function viewTerimaKasih() {
     <div class="relative mx-auto flex h-20 w-20 items-center justify-center">
       <span class="sv-denyut absolute inset-0 rounded-full bg-emerald-400/40"></span>
       <span class="sv-apung relative flex h-20 w-20 items-center justify-center rounded-full bg-emerald-400/20 ring-1 ring-emerald-300/40">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" class="h-9 w-9 text-emerald-300">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" class="h-9 w-9 text-emerald-700">
           <path class="sv-centang" d="m5 13 4 4L19 7"/>
         </svg>
       </span>
     </div>
     <h2 class="mt-7 text-[22px] font-semibold">Terima kasih, ${aman(String(ME.nama).split(' ')[0])}.</h2>
-    <p class="mx-auto mt-2 max-w-[520px] text-[14px] leading-relaxed text-white/60">
+    <p class="mx-auto mt-2 max-w-[520px] text-[14px] leading-relaxed text-slate-600">
       Penilaian ${aman(ME.kab)} sudah kami terima${TERKIRIM && TERKIRIM.dikirimAt ? ' pada ' + aman(waktuTeks(TERKIRIM.dikirimAt)) : ''}.
       Masukan Anda dipakai untuk memperbaiki pelayanan rapat koordinasi berikutnya.
     </p>
-    <div class="mx-auto mt-7 max-w-[300px] rounded-3xl border border-white/12 bg-white/[0.04] px-6 py-5">
-      <p class="text-[11px] uppercase tracking-[0.16em] text-white/45">Indeks kepuasan</p>
+    <div class="mx-auto mt-7 max-w-[300px] rounded-3xl border border-slate-200 bg-white/[0.04] px-6 py-5">
+      <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">Indeks kepuasan</p>
       <p class="mt-1 text-[38px] font-semibold tabular-nums leading-none">${ikm == null ? '—' : ikm}</p>
-      <p class="mt-1.5 text-[12px] text-white/55">${aman(MUTU(ikm))}</p>
+      <p class="mt-1.5 text-[12px] text-slate-500">${aman(MUTU(ikm))}</p>
     </div>
     <button id="svUbah" class="${KELAS_TOMBOL} mt-8">Ubah jawaban</button>
   </div>`;
@@ -695,14 +695,14 @@ function kartuAngka(judul, nilai, keterangan, warna) {
   return `<div class="kartu-tab sva-naik rounded-3xl p-5">
     <p class="kartu-judul text-[11px] uppercase tracking-[0.16em]">${aman(judul)}</p>
     <p class="mt-2 text-[28px] font-semibold tabular-nums leading-none ${warna || 'kartu-angka'}">${aman(nilai)}</p>
-    ${keterangan ? `<p class="mt-1.5 text-[12px] text-white/45">${aman(keterangan)}</p>` : ''}
+    ${keterangan ? `<p class="mt-1.5 text-[12px] text-slate-500">${aman(keterangan)}</p>` : ''}
   </div>`;
 }
 
 const bungkusGrafik = (judul, sub, isi, kelas) => `
   <div class="glass sva-naik rounded-3xl p-5 md:p-6 ${kelas || ''}">
-    <p class="text-[11px] uppercase tracking-[0.16em] text-white/45">${aman(judul)}</p>
-    ${sub ? `<p class="mt-1 text-[12px] leading-relaxed text-white/40">${aman(sub)}</p>` : ''}
+    <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">${aman(judul)}</p>
+    ${sub ? `<p class="mt-1 text-[12px] leading-relaxed text-slate-500">${aman(sub)}</p>` : ''}
     <div class="mt-4">${isi}</div>
   </div>`;
 
@@ -825,12 +825,12 @@ function grafikDonat(rows) {
 
   const legenda = kel.map(h => {
     const aktif = SARING.mutu === h;
-    return `<button data-mutu="${h}" class="sva-klik flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left ${aktif ? 'border-white/40 bg-white/10' : 'border-white/10 bg-white/[0.03] hover:border-white/25'}">
+    return `<button data-mutu="${h}" class="sva-klik flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left ${aktif ? 'border-slate-300 bg-slate-100' : 'border-slate-200 bg-white/[0.03] hover:border-slate-300'}">
       <span class="flex items-center gap-2">
         <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background:${WARNA_MUTU[h]}"></span>
-        <span class="text-[12px] ${aktif ? 'font-semibold text-white' : 'text-white/70'}">${h} · ${ARTI_MUTU[h]}</span>
+        <span class="text-[12px] ${aktif ? 'font-semibold text-ink' : 'text-slate-600'}">${h} · ${ARTI_MUTU[h]}</span>
       </span>
-      <span class="text-[12px] tabular-nums text-white/55">${cacah[h]}</span>
+      <span class="text-[12px] tabular-nums text-slate-500">${cacah[h]}</span>
     </button>`;
   }).join('');
 
@@ -843,7 +843,7 @@ function grafikDonat(rows) {
       </svg>
       <div class="grid w-full gap-2">${legenda}</div>
     </div>
-    <p class="mt-4 text-[11px] text-white/35">Ketuk salah satu mutu untuk menyaring tabel dan grafik.</p>`;
+    <p class="mt-4 text-[11px] text-slate-500">Ketuk salah satu mutu untuk menyaring tabel dan grafik.</p>`;
 }
 
 /* ── 4. sebaran jawaban tiap unsur ────────────────────────────── */
@@ -860,15 +860,15 @@ function grafikSebaran(rows) {
     return `
       <button data-unsur="${k}" class="group block w-full rounded-2xl px-3 py-2.5 text-left transition ${aktif ? 'bg-white/[0.08]' : 'hover:bg-white/[0.04]'}">
         <div class="flex items-baseline justify-between gap-3">
-          <span class="text-[13px] ${aktif ? 'font-semibold text-white' : 'text-white/75'}">${aman(NAMA_UNSUR[k][1])}</span>
-          <span class="shrink-0 text-[12px] tabular-nums ${aktif ? 'text-white' : 'text-white/50'}">${nomor(rata, 2)} <span class="text-white/30">/ 4</span></span>
+          <span class="text-[13px] ${aktif ? 'font-semibold text-ink' : 'text-slate-600'}">${aman(NAMA_UNSUR[k][1])}</span>
+          <span class="shrink-0 text-[12px] tabular-nums ${aktif ? 'text-ink' : 'text-slate-500'}">${nomor(rata, 2)} <span class="text-slate-500">/ 4</span></span>
         </div>
         <div class="mt-2 flex h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06]">${jml ? seg : ''}</div>
       </button>`;
   }).join('');
 
   const legenda = [1, 2, 3, 4].map(n => `
-    <span class="flex items-center gap-1.5 text-[11px] text-white/45">
+    <span class="flex items-center gap-1.5 text-[11px] text-slate-500">
       <span class="h-2 w-2 rounded-full" style="background:${WARNA_SKALA[n - 1]}"></span>${WAJAH[n - 1]} ${n}
     </span>`).join('');
 
@@ -887,13 +887,13 @@ function panelUnsur(rows) {
   const kolom = c.map((n, j) => {
     const tinggi = jml ? Math.max(3, n / Math.max(...c) * 100) : 3;
     return `<div class="flex flex-1 flex-col items-center gap-2">
-      <span class="text-[12px] tabular-nums text-white/70">${n}</span>
+      <span class="text-[12px] tabular-nums text-slate-600">${n}</span>
       <div class="flex h-[86px] w-full items-end">
         <div class="sva-tumbuh w-full rounded-t-lg" style="height:${tinggi}%;background:${WARNA_SKALA[j]};opacity:.85;animation-name:svaNaik"
              data-tip="Jawaban ${j + 1} — ${n} pemda${jml ? ' (' + Math.round(n / jml * 100) + '%)' : ''}"></div>
       </div>
       <span class="text-[16px]">${WAJAH[j]}</span>
-      <span class="text-[11px] text-white/40">${j + 1}</span>
+      <span class="text-[11px] text-slate-500">${j + 1}</span>
     </div>`;
   }).join('');
 
@@ -907,23 +907,23 @@ function panelUnsur(rows) {
   <div class="glass sva-naik mt-4 rounded-3xl border-fuchsia-400/25 p-5 md:p-6">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <p class="text-[11px] uppercase tracking-[0.16em] text-white/45">Bedah unsur</p>
+        <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">Bedah unsur</p>
         <p class="mt-1 text-[17px] font-semibold">${aman(NAMA_UNSUR[k][1])}</p>
-        <p class="mt-1 text-[12px] text-white/50">Rata-rata ${nomor(rata, 2)} dari 4 · setara indeks ${nomor(rata == null ? null : rata * 25, 1)} · ${jml} penilai</p>
+        <p class="mt-1 text-[12px] text-slate-500">Rata-rata ${nomor(rata, 2)} dari 4 · setara indeks ${nomor(rata == null ? null : rata * 25, 1)} · ${jml} penilai</p>
       </div>
-      <button id="svTutupUnsur" class="rounded-full border border-white/15 px-3.5 py-1.5 text-[12px] text-white/60 transition hover:bg-white/10">Tutup</button>
+      <button id="svTutupUnsur" class="rounded-full border border-slate-200 px-3.5 py-1.5 text-[12px] text-slate-600 transition hover:bg-slate-100">Tutup</button>
     </div>
     <div class="mt-5 grid gap-6 md:grid-cols-2">
       <div class="flex items-end gap-3">${kolom}</div>
       <div>
-        <p class="text-[12px] text-white/45">Penilaian terendah pada unsur ini</p>
-        <div class="mt-2 divide-y divide-white/8">
+        <p class="text-[12px] text-slate-500">Penilaian terendah pada unsur ini</p>
+        <div class="mt-2 divide-y divide-slate-200">
           ${rendah.length ? rendah.map(r => `
             <div class="flex items-center justify-between gap-3 py-2">
-              <span class="truncate text-[13px] text-white/80">${aman(r.kab || '—')}<span class="ml-1.5 text-[11px] text-white/35">${aman(r.prov || '')}</span></span>
+              <span class="truncate text-[13px] text-slate-700">${aman(r.kab || '—')}<span class="ml-1.5 text-[11px] text-slate-500">${aman(r.prov || '')}</span></span>
               <span class="shrink-0 text-[13px] tabular-nums">${WAJAH[Number(r.jawaban[k]) - 1] || ''} ${aman(r.jawaban[k])}</span>
             </div>`).join('')
-          : '<p class="py-3 text-[13px] text-white/40">Belum ada jawaban pada unsur ini.</p>'}
+          : '<p class="py-3 text-[13px] text-slate-500">Belum ada jawaban pada unsur ini.</p>'}
         </div>
       </div>
     </div>
@@ -947,15 +947,15 @@ function grafikWilayah(rows) {
     .map(([nama, v]) => ({ nama, rata: v.reduce((a, b) => a + b, 0) / v.length, n: v.length }))
     .sort((a, b) => b.rata - a.rata);
 
-  if (!daftar.length) return '<p class="text-[13px] text-white/40">Belum ada indeks yang dapat diperingkat.</p>';
+  if (!daftar.length) return '<p class="text-[13px] text-slate-500">Belum ada indeks yang dapat diperingkat.</p>';
 
   const baris = daftar.map((d, i) => {
     const h = HURUF_MUTU(d.rata);
     return `<${perKab ? 'div' : 'button'} ${perKab ? '' : `data-prov="${aman(d.nama)}"`}
         class="block w-full rounded-2xl px-3 py-2 text-left transition ${perKab ? '' : 'sva-klik hover:bg-white/[0.05]'}">
       <div class="flex items-baseline justify-between gap-3">
-        <span class="truncate text-[13px] text-white/80"><span class="mr-1.5 text-white/30 tabular-nums">${i + 1}.</span>${aman(d.nama)}</span>
-        <span class="shrink-0 text-[12px] tabular-nums text-white/60">${nomor(d.rata, 1)} <span class="text-white/25">· ${d.n}</span></span>
+        <span class="truncate text-[13px] text-slate-700"><span class="mr-1.5 text-slate-500 tabular-nums">${i + 1}.</span>${aman(d.nama)}</span>
+        <span class="shrink-0 text-[12px] tabular-nums text-slate-600">${nomor(d.rata, 1)} <span class="text-slate-500">· ${d.n}</span></span>
       </div>
       <div class="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-white/[0.06]">
         <div class="sva-tumbuh h-full rounded-full" style="width:${Math.max(2, d.rata).toFixed(1)}%;background:${WARNA_MUTU[h]};animation-delay:${Math.min(i * 0.04, 0.4).toFixed(2)}s"
@@ -965,7 +965,7 @@ function grafikWilayah(rows) {
   }).join('');
 
   return `<div class="-mx-1 max-h-[330px] overflow-y-auto pr-1">${baris}</div>
-    ${perKab ? '' : '<p class="mt-3 px-3 text-[11px] text-white/35">Ketuk provinsi untuk menyaring seluruh halaman ini.</p>'}`;
+    ${perKab ? '' : '<p class="mt-3 px-3 text-[11px] text-slate-500">Ketuk provinsi untuk menyaring seluruh halaman ini.</p>'}`;
 }
 
 /* ── 7. skor petugas desk ─────────────────────────────────────── */
@@ -987,22 +987,22 @@ function grafikPetugas(rows) {
     .concat(kumpul('deskVerifikator', 'skorVerifikator', 'Verifikator'))
     .sort((a, b) => b.rata - a.rata || b.n - a.n);
 
-  if (!daftar.length) return '<p class="text-[13px] text-white/40">Belum ada penilaian petugas.</p>';
+  if (!daftar.length) return '<p class="text-[13px] text-slate-500">Belum ada penilaian petugas.</p>';
 
   const bintang = (rata) => [1, 2, 3, 4, 5].map(n => {
     const isi = rata >= n - 0.25;
-    return `<svg viewBox="0 0 24 24" class="h-3.5 w-3.5 ${isi ? 'text-amber-300' : 'text-white/15'}" fill="${isi ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3.6l2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-3-5.3 3 1.1-6L3.4 10l6-.8z"/></svg>`;
+    return `<svg viewBox="0 0 24 24" class="h-3.5 w-3.5 ${isi ? 'text-amber-700' : 'text-slate-400'}" fill="${isi ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3.6l2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-3-5.3 3 1.1-6L3.4 10l6-.8z"/></svg>`;
   }).join('');
 
   return `<div class="grid gap-2.5 sm:grid-cols-2">
     ${daftar.map(d => `
-      <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5"
+      <div class="rounded-2xl border border-slate-200 bg-white/[0.03] p-3.5"
            data-tip="${aman(d.nama)} · ${aman(d.peran)}\nrata-rata ${nomor(d.rata, 2)} dari 5\n${d.n} penilaian pemda">
         <div class="flex items-baseline justify-between gap-2">
-          <span class="truncate text-[13px] font-medium text-white/85">${aman(d.nama)}</span>
-          <span class="shrink-0 text-[13px] tabular-nums text-amber-200">${nomor(d.rata, 2)}</span>
+          <span class="truncate text-[13px] font-medium text-slate-700">${aman(d.nama)}</span>
+          <span class="shrink-0 text-[13px] tabular-nums text-amber-700">${nomor(d.rata, 2)}</span>
         </div>
-        <p class="mt-0.5 text-[11px] text-white/40">${aman(d.peran)} · ${d.n} penilai</p>
+        <p class="mt-0.5 text-[11px] text-slate-500">${aman(d.peran)} · ${d.n} penilai</p>
         <div class="mt-2 flex items-center gap-0.5">${bintang(d.rata)}</div>
         <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
           <div class="sva-tumbuh h-full rounded-full bg-amber-300/80" style="width:${(d.rata / 5 * 100).toFixed(1)}%"></div>
@@ -1036,7 +1036,7 @@ function pilihanProvinsi() {
 }
 
 function bilahSaring() {
-  const gaya = 'glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink';
+  const gaya = 'glass rounded-full px-5 py-2.5 text-[13px] font-medium text-ink outline-none [&>option]:bg-white [&>option]:text-ink';
   const provs = pilihanProvinsi();
   const tampil = rekapTampil();
 
@@ -1051,21 +1051,21 @@ function bilahSaring() {
         ${['A', 'B', 'C', 'D'].map(h => `<option value="${h}"${SARING.mutu === h ? ' selected' : ''}>${h} · ${ARTI_MUTU[h]}</option>`).join('')}
       </select>
       <div class="glass flex items-center gap-2 rounded-full px-5 py-2.5">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4 text-white/50"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input id="svCari" value="${aman(SARING.cari)}" placeholder="Cari pemda atau penilai" class="w-48 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4 text-slate-500"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="svCari" value="${aman(SARING.cari)}" placeholder="Cari pemda atau penilai" class="w-48 bg-transparent text-[13px] outline-none placeholder:text-slate-500" />
       </div>
-      ${adaSaringan() ? `<button id="svReset" class="rounded-full border border-fuchsia-400/40 bg-fuchsia-400/10 px-4 py-2.5 text-[13px] font-medium text-fuchsia-200 transition hover:bg-fuchsia-400/20">
+      ${adaSaringan() ? `<button id="svReset" class="rounded-full border border-fuchsia-400/40 bg-fuchsia-400/10 px-4 py-2.5 text-[13px] font-medium text-fuchsia-700 transition hover:bg-fuchsia-400/20">
         ${tampil.length} dari ${REKAP.length} · hapus penyaring</button>` : ''}
       <div class="ml-auto flex flex-wrap gap-2">
-        <button id="svAdmMuat" class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 transition hover:bg-white/10">Muat ulang</button>
+        <button id="svAdmMuat" class="rounded-full border border-slate-300 px-5 py-2.5 text-[13px] font-medium text-slate-700 transition hover:bg-slate-100">Muat ulang</button>
         <!-- jawaban yang terlanjur masuk lewat Google Formulir putaran pertama -->
-        <button id="svAdmImpor" class="rounded-full border border-sky-400/50 bg-sky-500/15 px-5 py-2.5 text-[13px] font-medium text-sky-200 transition hover:bg-sky-500/25">Impor Google Formulir</button>
+        <button id="svAdmImpor" class="rounded-full border border-sky-400/50 bg-sky-500/15 px-5 py-2.5 text-[13px] font-medium text-sky-700 transition hover:bg-sky-500/25">Impor Google Formulir</button>
         <!-- pengisian coba-coba saat uji coba perlu bisa dibuang dari rekap -->
         <button id="svAdmHapus" disabled
-                class="rounded-full border border-red-400/50 bg-red-500/15 px-5 py-2.5 text-[13px] font-medium text-red-200 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40">
+                class="rounded-full border border-red-400/50 bg-red-500/15 px-5 py-2.5 text-[13px] font-medium text-red-700 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40">
           Hapus terpilih <span id="svAdmHapusJml"></span>
         </button>
-        <button id="svAdmExcel" class="cta-glow rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black"${tampil.length ? '' : ' disabled style="opacity:.4"'}>Unduh Excel</button>
+        <button id="svAdmExcel" class="cta-glow rounded-full bg-ink px-5 py-2.5 text-[13px] font-medium text-white"${tampil.length ? '' : ' disabled style="opacity:.4"'}>Unduh Excel</button>
       </div>
     </div>`;
 }
@@ -1093,7 +1093,7 @@ function bagianInfografis(rows) {
       ${bungkusGrafik('Sebaran mutu', 'Berapa banyak pemda pada tiap kelas mutu.', grafikDonat(rows))}
     </div>
 
-    ${ringkas ? `<p class="sva-naik mt-4 rounded-2xl border border-fuchsia-400/20 bg-fuchsia-400/[0.07] px-5 py-3 text-[13px] leading-relaxed text-fuchsia-100/90">${aman(ringkas)}</p>` : ''}
+    ${ringkas ? `<p class="sva-naik mt-4 rounded-2xl border border-fuchsia-400/20 bg-fuchsia-400/[0.07] px-5 py-3 text-[13px] leading-relaxed text-fuchsia-800">${aman(ringkas)}</p>` : ''}
 
     <div class="mt-4 grid gap-4 lg:grid-cols-2">
       ${bungkusGrafik('Sebaran jawaban tiap unsur', 'Panjang warna = banyaknya pemda yang memberi nilai itu.', grafikSebaran(rows))}
@@ -1135,10 +1135,10 @@ function renderAdminSurvei() {
         ikm == null ? '' : 'text-' + ({ A: 'emerald', B: 'sky', C: 'amber', D: 'rose' }[HURUF_MUTU(ikm)]) + '-300')}
       ${kartuAngka('Skor petugas', skorPetugas == null ? '—' : skorPetugas, 'rata-rata dari 5')}
       ${kartuAngka('Laporan pungutan', adaPungutan, adaPungutan ? 'perlu ditindaklanjuti' : 'tidak ada laporan',
-        adaPungutan ? 'text-red-400' : '')}
+        adaPungutan ? 'text-red-600' : '')}
     </div>
 
-    ${REKAP_GALAT ? `<div class="mt-5 rounded-3xl border border-amber-400/40 bg-amber-400/10 px-5 py-4 text-[13px] text-amber-200">${aman(REKAP_GALAT)}</div>` : ''}
+    ${REKAP_GALAT ? `<div class="mt-5 rounded-3xl border border-amber-400/40 bg-amber-400/10 px-5 py-4 text-[13px] text-amber-700">${aman(REKAP_GALAT)}</div>` : ''}
 
     ${bilahSaring()}
 
@@ -1147,7 +1147,7 @@ function renderAdminSurvei() {
     <div class="glass mt-6 overflow-hidden rounded-3xl">
       <div class="overflow-x-auto">
         <table class="w-full min-w-[900px] text-left text-[13px]">
-          <thead class="bg-white/[0.06] text-[11px] uppercase tracking-wider text-white/50">
+          <thead class="bg-white/[0.06] text-[11px] uppercase tracking-wider text-slate-500">
             <tr>
               <th class="w-10 px-4 py-3">
                 <input id="svPilihSemua" type="checkbox" class="h-4 w-4 cursor-pointer accent-white/90" title="Pilih semua" />
@@ -1162,23 +1162,23 @@ function renderAdminSurvei() {
               <th class="px-4 py-3 font-medium"></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-white/8">
+          <tbody class="divide-y divide-slate-200">
             ${rows.length ? rows.map(r => `
               <tr class="transition hover:bg-white/[0.04]">
                 <td class="px-4 py-3"><input type="checkbox" class="svPilih h-4 w-4 cursor-pointer accent-white/90" value="${aman(r.id)}" /></td>
-                <td class="px-4 py-3 font-medium">${aman(r.kab || '—')}<span class="block text-[11px] text-white/40">${aman(r.prov || '')}</span></td>
-                <td class="px-4 py-3 text-white/75">${aman(r.nama || '—')}<span class="block text-[11px] text-white/40">${aman((r.jawaban || {}).hp || r.email || '')}</span></td>
+                <td class="px-4 py-3 font-medium">${aman(r.kab || '—')}<span class="block text-[11px] text-slate-500">${aman(r.prov || '')}</span></td>
+                <td class="px-4 py-3 text-slate-600">${aman(r.nama || '—')}<span class="block text-[11px] text-slate-500">${aman((r.jawaban || {}).hp || r.email || '')}</span></td>
                 <td class="px-4 py-3 tabular-nums">${nilaiIndeks(r) == null ? '—' : aman(nilaiIndeks(r))}</td>
-                <td class="px-4 py-3 text-white/70">${aman(MUTU(nilaiIndeks(r)))}</td>
-                <td class="px-4 py-3 text-white/70">${aman((r.jawaban || {}).deskWilayah || '—')}</td>
+                <td class="px-4 py-3 text-slate-600">${aman(MUTU(nilaiIndeks(r)))}</td>
+                <td class="px-4 py-3 text-slate-600">${aman((r.jawaban || {}).deskWilayah || '—')}</td>
                 <td class="px-4 py-3 tabular-nums">${aman((r.jawaban || {}).skorWilayah || '—')}</td>
-                <td class="px-4 py-3 text-white/50">${aman(waktuTeks(r.dikirimAt))}</td>
+                <td class="px-4 py-3 text-slate-500">${aman(waktuTeks(r.dikirimAt))}</td>
                 <td class="px-4 py-3 text-right">
-                  <button data-detail="${aman(r.id)}" class="rounded-full border border-white/15 px-3 py-1.5 text-[12px] text-white/70 transition hover:bg-white/10">Lihat</button>
-                  <button data-hapus="${aman(r.id)}" title="Hapus penilaian ini" class="ml-1.5 rounded-full border border-white/12 px-3 py-1.5 text-[12px] text-white/45 transition hover:border-red-400/40 hover:text-red-300">Hapus</button>
+                  <button data-detail="${aman(r.id)}" class="rounded-full border border-slate-200 px-3 py-1.5 text-[12px] text-slate-600 transition hover:bg-slate-100">Lihat</button>
+                  <button data-hapus="${aman(r.id)}" title="Hapus penilaian ini" class="ml-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-[12px] text-slate-500 transition hover:border-red-400/40 hover:text-red-700">Hapus</button>
                 </td>
               </tr>`).join('')
-            : `<tr><td colspan="9" class="px-4 py-10 text-center text-white/45">${REKAP.length
+            : `<tr><td colspan="9" class="px-4 py-10 text-center text-slate-500">${REKAP.length
                 ? 'Tidak ada penilaian yang cocok dengan penyaring ini.'
                 : 'Belum ada pemda yang mengisi survei.'}</td></tr>`}
           </tbody>
@@ -1324,9 +1324,9 @@ function bukaDetail(r) {
     const tampil = p.tipe === 'skala' ? `${WAJAH[Number(v) - 1] || ''} ${v || '—'}`
                  : p.tipe === 'bintang' ? '★'.repeat(Number(v) || 0) + ' ' + (v || '')
                  : (v || '—');
-    return `<div class="border-b border-white/8 py-3">
-      <p class="text-[12px] text-white/45">${aman(p.judul)}</p>
-      <p class="mt-1 text-[14px] text-white/90">${aman(tampil)}</p>
+    return `<div class="border-b border-slate-400 py-3">
+      <p class="text-[12px] text-slate-500">${aman(p.judul)}</p>
+      <p class="mt-1 text-[14px] text-ink">${aman(tampil)}</p>
     </div>`;
   }).join('');
 
@@ -1334,16 +1334,16 @@ function bukaDetail(r) {
   if (lama) lama.remove();
   const m = document.createElement('div');
   m.id = 'svDetail';
-  m.className = 'fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm md:p-10';
+  m.className = 'fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm md:p-10';
   m.innerHTML = `
     <div class="glass w-full max-w-2xl rounded-[2rem] p-6 md:p-8">
       <div class="flex items-start justify-between gap-4">
         <div>
-          <p class="text-[11px] uppercase tracking-[0.16em] text-white/45">Penilaian pemda</p>
+          <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">Penilaian pemda</p>
           <p class="text-[18px] font-semibold">${aman(r.kab || '—')}</p>
-          <p class="text-[12px] text-white/50">${aman(r.nama || '')} · ${aman(r.email || '')} · indeks ${nilaiIndeks(r) == null ? '—' : aman(nilaiIndeks(r))} (${aman(MUTU(nilaiIndeks(r)))})</p>
+          <p class="text-[12px] text-slate-500">${aman(r.nama || '')} · ${aman(r.email || '')} · indeks ${nilaiIndeks(r) == null ? '—' : aman(nilaiIndeks(r))} (${aman(MUTU(nilaiIndeks(r)))})</p>
         </div>
-        <button data-tutup class="rounded-full p-2 text-white/60 transition hover:bg-white/10 hover:text-white">
+        <button data-tutup class="rounded-full p-2 text-slate-600 transition hover:bg-slate-100 hover:text-ink">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-5 w-5"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
@@ -1573,25 +1573,25 @@ function bukaImpor(daftar, namaBerkas) {
   /* Baris yang daerahnya tidak dikenali dan pengisinya tidak punya akun
      hampir selalu pengisian coba-coba saat menyiapkan formulir — centangnya
      dilepas lebih dulu, tetapi tetap bisa dicentang lagi kalau memang nyata. */
-  const barisPratinjau = (r, i) => `<tr class="border-b border-white/[.06]">
+  const barisPratinjau = (r, i) => `<tr class="border-b border-slate-300/[.06]">
     <td class="px-3 py-2.5">
-      <input type="checkbox" class="svImporPilih h-4 w-4 cursor-pointer rounded border-white/30 bg-transparent accent-sky-400"
+      <input type="checkbox" class="svImporPilih h-4 w-4 cursor-pointer rounded border-slate-300 bg-transparent accent-sky-400"
              value="${i}"${(r.cocok || r.akun) ? ' checked' : ''} />
     </td>
     <td class="px-3 py-2.5">
       <p class="font-medium">${aman(r.nama || '—')}</p>
-      <p class="text-[11px] text-white/40">${aman(r.email || 'tanpa email')}</p>
+      <p class="text-[11px] text-slate-500">${aman(r.email || 'tanpa email')}</p>
     </td>
-    <td class="px-3 py-2.5 text-white/60">
+    <td class="px-3 py-2.5 text-slate-600">
       <p class="text-[12px]">${aman(r.instansi || '—')}</p>
-      <p class="mt-0.5 text-[12px] ${r.cocok ? 'text-emerald-300' : 'text-amber-300'}">
+      <p class="mt-0.5 text-[12px] ${r.cocok ? 'text-emerald-700' : 'text-amber-700'}">
         ${r.cocok ? '→ ' + aman(r.kab) + ', ' + aman(r.prov) : '→ daerah tidak dikenali'}</p>
     </td>
     <td class="px-3 py-2.5 text-center tabular-nums">${r.indeks == null ? '—' : aman(r.indeks)}</td>
     <td class="px-3 py-2.5 text-[12px]">
-      ${r.akun ? '<span class="text-sky-300">akun terdaftar</span>'
-               : '<span class="text-white/50">id bayangan</span>'}
-      ${adaId.has(r.id) ? '<br><span class="text-amber-300">menimpa yang ada</span>' : ''}
+      ${r.akun ? '<span class="text-sky-700">akun terdaftar</span>'
+               : '<span class="text-slate-500">id bayangan</span>'}
+      ${adaId.has(r.id) ? '<br><span class="text-amber-700">menimpa yang ada</span>' : ''}
     </td>
   </tr>`;
 
@@ -1599,33 +1599,33 @@ function bukaImpor(daftar, namaBerkas) {
   if (lama) lama.remove();
   const m = document.createElement('div');
   m.id = 'svImpor';
-  m.className = 'fixed inset-0 z-[92] flex items-start justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm md:p-10';
+  m.className = 'fixed inset-0 z-[92] flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm md:p-10';
   m.innerHTML = `
     <div class="glass w-full max-w-4xl rounded-[2rem] p-6 md:p-8">
       <div class="flex items-start justify-between gap-4">
         <div>
-          <p class="text-[11px] uppercase tracking-[0.16em] text-white/45">Impor Google Formulir</p>
+          <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">Impor Google Formulir</p>
           <p class="text-[18px] font-semibold">${daftar.length} penilaian terbaca</p>
-          <p class="text-[12px] text-white/50">${aman(namaBerkas)}</p>
+          <p class="text-[12px] text-slate-500">${aman(namaBerkas)}</p>
         </div>
-        <button data-tutup class="rounded-full p-2 text-white/60 transition hover:bg-white/10 hover:text-white">
+        <button data-tutup class="rounded-full p-2 text-slate-600 transition hover:bg-slate-100 hover:text-ink">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-5 w-5"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
 
-      ${ragu.length ? `<div class="mt-5 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-[13px] leading-[1.7] text-amber-200/90">
+      ${ragu.length ? `<div class="mt-5 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-[13px] leading-[1.7] text-amber-700">
         <span class="font-semibold">${ragu.length} baris daerahnya tidak dikenali</span> dan pengisinya tidak punya akun —
         biasanya pengisian coba-coba saat formulirnya disiapkan. Centangnya sudah dilepas; centang lagi bila memang nyata,
         tetapi baris itu tidak akan menyalakan ceklis daerah mana pun dan tidak terhitung pada peringkat provinsi.
       </div>` : ''}
 
-      <div class="mt-5 max-h-[52vh] overflow-y-auto rounded-2xl border border-white/10">
+      <div class="mt-5 max-h-[52vh] overflow-y-auto rounded-2xl border border-slate-200">
         <table class="w-full min-w-[660px] text-left text-[13px]">
-          <thead class="sticky top-0 border-b border-white/10 bg-ink/95 text-[10px] uppercase tracking-[0.14em] text-white/45">
+          <thead class="sticky top-0 border-b border-slate-200 bg-ink/95 text-[10px] uppercase tracking-[0.14em] text-slate-500">
             <tr>
               <th class="px-3 py-3 font-semibold">
                 <input type="checkbox" id="svImporSemua" title="Pilih semua"
-                       class="h-4 w-4 cursor-pointer rounded border-white/30 bg-transparent accent-sky-400" />
+                       class="h-4 w-4 cursor-pointer rounded border-slate-300 bg-transparent accent-sky-400" />
               </th>
               <th class="px-3 py-3 font-semibold">Pengisi</th>
               <th class="px-3 py-3 font-semibold">Instansi → daerah</th>
@@ -1638,13 +1638,13 @@ function bukaImpor(daftar, namaBerkas) {
       </div>
 
       <div class="mt-5 flex flex-wrap items-center gap-3">
-        <p class="text-[12px] leading-[1.7] text-white/45">
+        <p class="text-[12px] leading-[1.7] text-slate-500">
           ${lolos.length} dari ${daftar.length} baris menempel pada daerahnya.
           Mengimpor ulang berkas yang sama menimpa baris lama, bukan menggandakannya.
         </p>
         <span class="ml-auto flex gap-2">
-          <button data-batal class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 transition hover:bg-white/10">Batal</button>
-          <button data-simpan class="cta-glow rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black">Simpan</button>
+          <button data-batal class="rounded-full border border-slate-300 px-5 py-2.5 text-[13px] font-medium text-slate-700 transition hover:bg-slate-100">Batal</button>
+          <button data-simpan class="cta-glow rounded-full bg-ink px-5 py-2.5 text-[13px] font-medium text-white">Simpan</button>
         </span>
       </div>
     </div>`;

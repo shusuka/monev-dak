@@ -4,6 +4,13 @@ Pre test dan post test pelaksanaan monitoring & evaluasi **DAK Fisik Bidang Jala
 
 Situs statis tanpa proses build: HTML + Tailwind (CDN) + JavaScript biasa, dengan Firebase Firestore sebagai basis data.
 
+Temanya terang — **baby blue `#8AAAE5` dengan putih**. Warnanya dipusatkan di dua
+tempat saja: `tailwind.config` pada `index.html` (`ink` untuk tulisan utama, `langit`
+untuk aksen) dan blok `<style>` di bawahnya (`.bg-fallback`, `.glass`). Warna tab yang
+ditulis sebagai variabel `--tab` dicampur dengan biru tua lewat `color-mix()` supaya
+tetap terbaca di atas kertas putih — nilai campurannya sudah disetel agar semua tab
+melewati ambang kontras WCAG AA.
+
 ---
 
 ## Aturan penilaian
@@ -39,6 +46,9 @@ monev-dak/
 │   ├── soal-tw2.js            bank soal TW II + aturan penilaian
 │   ├── firebase-config.js     konfigurasi Firebase
 │   ├── berita-acara.js        menu Berita Acara eMonitoring (khusus akun PFID)
+│   ├── impor-ba.js            impor notulensi Word yang sudah disusun manual
+│   ├── peta.js                peta sebaran progres di tab Berita Acara panel admin
+│   ├── peta-geo.js            batas 38 provinsi + 164 kab/kota, dibuat otomatis
 │   ├── survei.js              survei kepuasan pemda + rekap admin + impor Google Formulir
 │   ├── ceklis.js              tab Ceklis Kesiapan Pemda di panel admin
 │   ├── ba-template.docx       template notulensi — JANGAN diedit di Word
@@ -164,6 +174,17 @@ Tiap tab punya warnanya sendiri — **biru langit** untuk pre/post test, **ungu 
 ### Tab Survei Kepuasan Pemda
 
 Tab kedua di halaman admin merekap kuesioner kepuasan (`assets/survei.js`).
+
+> **Agar surveinya benar-benar terisi.** Pemda hampir selalu membuka aplikasi dari
+> ponsel, dan di sana deretan menu atas harus digulir ke samping — menu Survei
+> Kepuasan berada di ujung kanan, jadi praktis tidak pernah terlihat dan pengisinya
+> sedikit. Karena itu di bawah lebar `md` deretan menu **pindah ke batang tetap di
+> dasar layar** (`#navBawah` pada `index.html`): seluruh menu tampak sekaligus tanpa
+> digeser. Isinya tombol `data-nav` yang sama dengan deretan atas, sehingga aturan
+> menu per peran akun (`BA.syncNav`, `SURVEI.syncNav`) berlaku untuk keduanya dan
+> tidak ada daftar menu kedua yang harus dirawat. Ditambah dua pengingat: **ajakan
+> mengisi di dashboard** selama penilaiannya belum masuk, dan **titik kuning kecil**
+> pada menu Survei. Keduanya hilang sendiri begitu jawabannya terkirim.
 
 **Penyaring.** Provinsi, mutu (A–D), dan pencarian bebas atas nama pemda, penilai, email, atau nomor telepon. **Seluruh halaman ikut menyempit** — kartu ringkasan, semua grafik, tabel, dan berkas Excel yang diunduh. Tombol ungu di samping penyaring menampilkan “x dari y” sekaligus menghapus seluruh penyaring dengan sekali klik.
 
@@ -323,9 +344,66 @@ template dari dokumen baru dengan cara yang sama.
 Pustaka `pizzip` dan `docxtemplater` diambil dari unpkg saat menu ini pertama dibuka,
 jadi pembuatan dokumen memerlukan koneksi internet.
 
+### Impor notulensi yang sudah disusun manual
+
+Sebelum aplikasi ini ada, notulensi diketik langsung di Word memakai format yang sama.
+Tombol **Impor dokumen Word** pada menu Arsip Berita Acara — juga tersedia di tab
+Berita Acara panel admin — memasukkan dokumen itu apa adanya (`assets/impor-ba.js`):
+
+- **banyak berkas sekaligus**, jadi seluruh daerah bisa dimasukkan dalam sekali jalan;
+- **tabelnya dibaca langsung**, tanpa AI dan tanpa biaya token. Yang dibaca: Informasi
+  Rapat (daerah, tanggal, notulis), Progres kegiatan, Kelengkapan eMonitoring,
+  Informasi Umum, Tindak Lanjut, Kesimpulan, dan Tim penyusun, ditambah paragraf
+  catatan, progres rata-rata, permasalahan utama, serta butir kesimpulan;
+- **foto dokumentasinya ikut terbawa** — hanya gambar yang dirujuk sesudah judul
+  halaman dokumentasi, jadi kop surat tidak ikut;
+- tabelnya dikenali dari **baris judulnya**, bukan urutannya, sehingga dokumen yang
+  bagiannya tidak lengkap tetap terbaca. Yang wajib ada hanya baris **Daerah** dan
+  **Hari/Tanggal** pada tabel Informasi Rapat; tanpa keduanya berkas itu dilewati
+  dengan keterangan.
+
+Sebelum disimpan, hasil pembacaan ditampilkan lebih dulu sebagai daftar periksa —
+daerah, tanggal, jumlah ruas, progres, jumlah foto — dan tiap baris bisa dicoret.
+Berkas yang **daerah dan tanggalnya sudah ada di arsip ditandai “Menimpa yang ada”**:
+isi dokumen imporlah yang dipakai, sesuai permintaan. Foto yang sudah tersimpan
+dipertahankan bila dokumen impornya tidak membawa penggantinya.
+
+Pemda **selalu melihat versi terbaru**: daftar arsipnya diambil ulang tiap kali menunya
+dibuka, dan dibaca dengan `getDocFromServer` — bukan singgahan peramban — sehingga
+perbaikan atau impor yang baru saja dilakukan petugas langsung terlihat.
+
 ---
 
-## 6. Deploy ke GitHub + Vercel
+## 6. Peta sebaran progres (panel admin)
+
+Tab **Berita Acara** panel admin dibuka dengan peta seluruh Indonesia
+(`assets/peta.js`). Setiap kabupaten/kota penerima DAK diwarnai menurut progres pada
+berita acara terakhirnya — merah untuk yang paling tertinggal, hijau untuk yang hampir
+tuntas — dan warnanya dapat ditukar antara **progres fisik** dan **progres keuangan**.
+
+Mengklik satu daerah membuka ringkasannya di samping peta: progres fisik, progres
+keuangan, jumlah paket, pagu anggaran, realisasi kontrak, lalu tombol untuk membaca
+dokumen berita acaranya atau mengunduhnya sebagai Word. Bila daerah itu punya lebih
+dari satu berita acara, sisanya terdaftar di bawahnya. Di atas peta ada lima angka
+ringkas: daerah terlapor, rata-rata fisik, rata-rata keuangan, jumlah paket, dan
+nilai kontrak. Peta dapat diperbesar dengan gulir atau tombol dan digeser dengan
+seret; nama daerah muncul begitu cukup dekat. Tiap kartu di daftar bawahnya punya
+tombol **Di peta** yang melompat ke daerahnya.
+
+**Batas wilayahnya** ada di `assets/peta-geo.js` — 38 provinsi sebagai latar dan 164
+kabupaten/kota penerima DAK sebagai lapisan yang bisa diklik. Berkas itu dibuat
+otomatis dari GeoJSON resmi repositori [assai-id/nemesis](https://github.com/assai-id/nemesis)
+(`seed/geo/02-provinces`): tiap cincin disederhanakan dengan Ramer–Douglas–Peucker
+lalu diproyeksikan ke koordinat SVG, sehingga yang dikirim ke peramban 292 KB, bukan
+ratusan megabita. Berkasnya **jangan disunting manual**. Kunci tiap daerah dibentuk
+sama persis dengan `kunciDaerah()` pada `berita-acara.js`, jadi peta dan arsip saling
+mengenali; daerah kepulauan kecil seperti Wakatobi dan Anambas diberi bulatan penanda
+supaya tetap terlihat dan bisa diklik. Berkas peta baru diunduh saat tab ini dibuka,
+jadi pemda yang membuka aplikasi dari ponsel tidak ikut menanggung unduhannya.
+
+---
+
+## 7. Deploy ke GitHub + Vercel
 
 ```bash
 git init

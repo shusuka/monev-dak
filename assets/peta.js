@@ -43,14 +43,15 @@ function muatGeo() {
 /* ── skala warna ──────────────────────────────────────────────────
    Merah → jingga → kuning → hijau. Urutan warna ini sudah dipakai di
    seluruh aplikasi untuk arti "tertinggal → aman", jadi pembacanya tidak
-   perlu belajar sandi baru. Warnanya dipilih yang cukup terang untuk latar
-   gelap; nilai di antara dua patokan dicampur agar gradasinya mulus. */
+   perlu belajar sandi baru. Warnanya dipilih yang cukup pekat untuk terbaca
+   di atas peta putih; nilai di antara dua patokan dicampur agar gradasinya
+   mulus. */
 const SKALA = [
-  [0,   [244,  63,  94]],   // rose-500
-  [30,  [251, 146,  60]],   // orange-400
-  [55,  [250, 204,  21]],   // yellow-400
-  [80,  [163, 230,  53]],   // lime-400
-  [100, [ 16, 185, 129]]    // emerald-500
+  [0,   [225,  29,  72]],   // rose-600
+  [30,  [234,  88,  12]],   // orange-600
+  [55,  [217, 164,   6]],   // amber-600
+  [80,  [101, 163,  13]],   // lime-600
+  [100, [  5, 150, 105]]    // emerald-600
 ];
 
 function warna(v) {
@@ -64,8 +65,9 @@ function warna(v) {
   return 'rgb(16,185,129)';
 }
 
-const KOSONG      = 'rgba(255,255,255,.05)';   // daerah tanpa berita acara
-const KOSONG_TEPI = 'rgba(255,255,255,.16)';
+const KOSONG      = '#e7eefb';   // daerah tanpa berita acara
+const KOSONG_TEPI = '#b9cbe9';
+const TERPILIH    = '#12294d';   // tepi daerah yang sedang dibuka
 
 /* ── angka ────────────────────────────────────────────────────────
    Isian berita acara ditulis petugas mengikuti kebiasaan Indonesia:
@@ -139,13 +141,13 @@ function warnai() {
     const isi = v == null ? KOSONG : warna(v);
     const dipilih = kunci === PILIH;
     b.path.setAttribute('fill', isi);
-    b.path.setAttribute('fill-opacity', v == null ? '1' : '.88');
-    b.path.setAttribute('stroke', dipilih ? '#ffffff' : (v == null ? KOSONG_TEPI : 'rgba(0,0,0,.45)'));
+    b.path.setAttribute('fill-opacity', v == null ? '1' : '.9');
+    b.path.setAttribute('stroke', dipilih ? TERPILIH : (v == null ? KOSONG_TEPI : 'rgba(255,255,255,.85)'));
     b.path.setAttribute('stroke-width', dipilih ? '1.6' : '.35');
     if (b.titik) {
       b.titik.setAttribute('fill', isi);
-      b.titik.setAttribute('stroke', dipilih ? '#ffffff' : 'rgba(0,0,0,.55)');
-      b.titik.setAttribute('stroke-width', dipilih ? '1.2' : '.5');
+      b.titik.setAttribute('stroke', dipilih ? TERPILIH : '#ffffff');
+      b.titik.setAttribute('stroke-width', dipilih ? '1.2' : '.6');
     }
   });
 }
@@ -164,8 +166,8 @@ function gambarPeta(kotak) {
   /* Latar: garis 38 provinsi, termasuk provinsi tanpa penerima DAK. Tanpa
      latar ini kabupaten penerima tampak melayang tanpa bentuk Indonesia. */
   const latar = document.createElementNS(NS, 'g');
-  latar.setAttribute('fill', 'rgba(255,255,255,.035)');
-  latar.setAttribute('stroke', 'rgba(255,255,255,.13)');
+  latar.setAttribute('fill', '#f4f8fe');
+  latar.setAttribute('stroke', 'rgba(138,170,229,.75)');
   latar.setAttribute('stroke-width', '.35');
   latar.setAttribute('stroke-linejoin', 'round');
   latar.setAttribute('pointer-events', 'none');
@@ -251,8 +253,8 @@ function gambarLabel() {
     t.setAttribute('y', y - (b.titik ? 4.5 : 0.5));
     t.setAttribute('text-anchor', 'middle');
     t.setAttribute('font-size', ukuran);
-    t.setAttribute('fill', kunci === PILIH ? '#ffffff' : 'rgba(255,255,255,.82)');
-    t.setAttribute('stroke', 'rgba(0,0,0,.75)');
+    t.setAttribute('fill', kunci === PILIH ? '#0b1c33' : '#1f3557');
+    t.setAttribute('stroke', 'rgba(255,255,255,.9)');
     t.setAttribute('stroke-width', ukuran / 7);
     t.setAttribute('paint-order', 'stroke');
     t.setAttribute('font-weight', '600');
@@ -337,10 +339,10 @@ function pasangInteraksi(svg, kotak) {
     const r = DATA.get(kunci);
     const kotakR = kotak.getBoundingClientRect();
     petunjuk.innerHTML = `
-      <p class="text-[12px] font-semibold text-white">${aman(b ? b.geo.n : '')}</p>
-      <p class="text-[10.5px] text-white/55">${aman(b ? b.geo.p : '')}</p>
-      ${r ? `<p class="mt-1 text-[11px] text-white/80">Fisik <span class="font-semibold tabular-nums">${teksPersen(r.fisik)}</span> · Keuangan <span class="font-semibold tabular-nums">${teksPersen(r.keuangan)}</span></p>`
-          : '<p class="mt-1 text-[11px] text-white/45">Belum ada berita acara</p>'}`;
+      <p class="text-[12px] font-semibold text-ink">${aman(b ? b.geo.n : '')}</p>
+      <p class="text-[10.5px] text-slate-500">${aman(b ? b.geo.p : '')}</p>
+      ${r ? `<p class="mt-1 text-[11px] text-slate-700">Fisik <span class="font-semibold tabular-nums">${teksPersen(r.fisik)}</span> · Keuangan <span class="font-semibold tabular-nums">${teksPersen(r.keuangan)}</span></p>`
+          : '<p class="mt-1 text-[11px] text-slate-500">Belum ada berita acara</p>'}`;
     petunjuk.classList.remove('hidden');
     const lebar = petunjuk.offsetWidth || 160;
     petunjuk.style.left = Math.max(4, Math.min(kotakR.width - lebar - 4, e.clientX - kotakR.left + 14)) + 'px';
@@ -377,8 +379,8 @@ function pilihDaerah(kunci) {
 }
 
 const barisAngka = (judul, isi, kelas) => `
-  <div class="rounded-2xl bg-white/[.05] px-3.5 py-2.5">
-    <p class="text-[10.5px] uppercase tracking-[0.12em] text-white/45">${judul}</p>
+  <div class="rounded-2xl bg-slate-50 px-3.5 py-2.5">
+    <p class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500">${judul}</p>
     <p class="mt-1 text-[17px] font-semibold tabular-nums ${kelas || ''}">${isi}</p>
   </div>`;
 
@@ -387,10 +389,10 @@ function batangProgres(label, v) {
   return `
     <div>
       <div class="flex items-baseline justify-between gap-2">
-        <span class="text-[11.5px] text-white/60">${label}</span>
-        <span class="text-[13px] font-semibold tabular-nums" style="color:${v == null ? 'rgba(255,255,255,.4)' : warna(n)}">${teksPersen(v)}</span>
+        <span class="text-[11.5px] text-slate-600">${label}</span>
+        <span class="text-[13px] font-semibold tabular-nums" style="color:${v == null ? '#94a3b8' : warna(n)}">${teksPersen(v)}</span>
       </div>
-      <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+      <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
         <div class="h-full rounded-full" style="width:${n}%;background:${warna(n)}"></div>
       </div>
     </div>`;
@@ -403,20 +405,20 @@ function renderInfo() {
   if (!PILIH) {
     kotak.innerHTML = `
       <div class="glass flex h-full flex-col justify-center rounded-3xl px-5 py-6">
-        <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/45">Keterangan</p>
-        <p class="mt-3 text-[13px] leading-[1.7] text-white/60">
+        <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">Keterangan</p>
+        <p class="mt-3 text-[13px] leading-[1.7] text-slate-600">
           Warna tiap kabupaten/kota menunjukkan ${METRIK_LABEL[METRIK].toLowerCase()} pada berita acara terakhirnya.
           Klik satu daerah untuk melihat ringkasan progres, jumlah paket, dan anggarannya.
         </p>
         <div class="mt-5 space-y-2">
           <div class="h-2.5 rounded-full" style="background:linear-gradient(90deg,${SKALA.map(([p, c]) => `rgb(${c.join(',')}) ${p}%`).join(',')})"></div>
-          <div class="flex justify-between text-[10.5px] tabular-nums text-white/45"><span>0%</span><span>50%</span><span>100%</span></div>
-          <p class="flex items-center gap-2 pt-1 text-[11px] text-white/45">
+          <div class="flex justify-between text-[10.5px] tabular-nums text-slate-500"><span>0%</span><span>50%</span><span>100%</span></div>
+          <p class="flex items-center gap-2 pt-1 text-[11px] text-slate-500">
             <span class="inline-block h-2.5 w-4 rounded-sm" style="background:${KOSONG};box-shadow:inset 0 0 0 1px ${KOSONG_TEPI}"></span>
             Belum ada berita acara
           </p>
         </div>
-        <p class="mt-5 text-[11px] leading-[1.6] text-white/35">
+        <p class="mt-5 text-[11px] leading-[1.6] text-slate-500">
           Gulir untuk memperbesar, seret untuk menggeser. Daerah kepulauan kecil ditandai bulatan.
         </p>
       </div>`;
@@ -431,12 +433,12 @@ function renderInfo() {
   if (!r) {
     kotak.innerHTML = `
       <div class="glass flex h-full flex-col rounded-3xl px-5 py-6">
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/45">${aman(prov)}</p>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">${aman(prov)}</p>
         <h3 class="mt-1.5 text-[19px] font-semibold">${aman(nama)}</h3>
-        <p class="mt-4 rounded-2xl border border-amber-400/30 bg-amber-400/[.08] px-4 py-3 text-[12.5px] leading-[1.6] text-amber-100/80">
+        <p class="mt-4 rounded-2xl border border-amber-400/30 bg-amber-400/[.08] px-4 py-3 text-[12.5px] leading-[1.6] text-amber-800">
           Belum ada berita acara rapat pemantauan dan evaluasi untuk daerah ini.
         </p>
-        <button data-peta-tutup class="mt-auto self-start pt-4 text-[12px] font-medium text-white/50 underline decoration-white/25 underline-offset-4 hover:text-white">Tutup</button>
+        <button data-peta-tutup class="mt-auto self-start pt-4 text-[12px] font-medium text-slate-500 underline decoration-slate-400 underline-offset-4 hover:text-ink">Tutup</button>
       </div>`;
     pasangTombolInfo();
     return;
@@ -447,11 +449,11 @@ function renderInfo() {
     <div class="glass flex h-full flex-col rounded-3xl px-5 py-6">
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
-          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/45">${aman(prov)}</p>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">${aman(prov)}</p>
           <h3 class="mt-1.5 text-[19px] font-semibold leading-tight">${aman(nama)}</h3>
-          <p class="mt-1 text-[11.5px] text-white/45">Rapat ${aman(r.tanggalTeks || '—')}${r.penyusun ? ' · ' + aman(r.penyusun) : ''}</p>
+          <p class="mt-1 text-[11.5px] text-slate-500">Rapat ${aman(r.tanggalTeks || '—')}${r.penyusun ? ' · ' + aman(r.penyusun) : ''}</p>
         </div>
-        <button data-peta-tutup aria-label="Tutup" class="-mr-1 -mt-1 shrink-0 rounded-full p-1.5 text-white/45 transition hover:bg-white/10 hover:text-white">
+        <button data-peta-tutup aria-label="Tutup" class="-mr-1 -mt-1 shrink-0 rounded-full p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-ink">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-4 w-4"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
@@ -462,25 +464,25 @@ function renderInfo() {
       </div>
 
       <div class="mt-4 grid grid-cols-2 gap-2.5">
-        ${barisAngka('Jumlah paket', r.paket ? angkaId(r.paket) + ' <span class="text-[12px] font-medium text-white/45">ruas</span>' : '—')}
+        ${barisAngka('Jumlah paket', r.paket ? angkaId(r.paket) + ' <span class="text-[12px] font-medium text-slate-500">ruas</span>' : '—')}
         ${barisAngka('Pagu anggaran', teksRupiah(r.anggaran))}
       </div>
-      ${r.realisasi != null ? `<p class="mt-2 text-[11.5px] text-white/45">Realisasi kontrak ${aman(teksRupiah(r.realisasi))}${r.anggaran ? ' · ' + teksPersen(r.realisasi / r.anggaran * 100) + ' dari pagu' : ''}</p>` : ''}
-      ${r.anggaran != null ? `<p class="mt-1 text-[11px] text-white/35">Nilai kontrak seluruh ruas: ${aman(teksRupiah(r.anggaran, true))}</p>` : ''}
+      ${r.realisasi != null ? `<p class="mt-2 text-[11.5px] text-slate-500">Realisasi kontrak ${aman(teksRupiah(r.realisasi))}${r.anggaran ? ' · ' + teksPersen(r.realisasi / r.anggaran * 100) + ' dari pagu' : ''}</p>` : ''}
+      ${r.anggaran != null ? `<p class="mt-1 text-[11px] text-slate-500">Nilai kontrak seluruh ruas: ${aman(teksRupiah(r.anggaran, true))}</p>` : ''}
 
       <div class="mt-5 flex flex-wrap gap-2">
-        <button data-peta-detail="${aman(r.id)}" class="cta-glow rounded-full bg-white px-4 py-2 text-[12.5px] font-medium text-black">Lihat berita acara</button>
-        <button data-peta-unduh="${aman(r.id)}" class="rounded-full border border-white/20 px-4 py-2 text-[12.5px] font-medium text-white/80 transition hover:bg-white/10">Unduh Word</button>
+        <button data-peta-detail="${aman(r.id)}" class="cta-glow rounded-full bg-ink px-4 py-2 text-[12.5px] font-medium text-white">Lihat berita acara</button>
+        <button data-peta-unduh="${aman(r.id)}" class="rounded-full border border-slate-300 px-4 py-2 text-[12.5px] font-medium text-slate-700 transition hover:bg-slate-100">Unduh Word</button>
       </div>
 
       ${sisa > 0 ? `
-      <div class="mt-4 border-t border-white/10 pt-3">
-        <p class="text-[11px] uppercase tracking-[0.12em] text-white/40">${sisa} berita acara lain</p>
+      <div class="mt-4 border-t border-slate-200 pt-3">
+        <p class="text-[11px] uppercase tracking-[0.12em] text-slate-500">${sisa} berita acara lain</p>
         <div class="mt-2 space-y-1">
           ${r.riwayat.slice(1).map(x => `
-            <button data-peta-detail="${aman(x.id)}" class="flex w-full items-center justify-between gap-3 rounded-xl px-2.5 py-1.5 text-left text-[12px] text-white/60 transition hover:bg-white/10 hover:text-white">
+            <button data-peta-detail="${aman(x.id)}" class="flex w-full items-center justify-between gap-3 rounded-xl px-2.5 py-1.5 text-left text-[12px] text-slate-600 transition hover:bg-slate-100 hover:text-ink">
               <span class="truncate">${aman(x.tanggalTeks || x.tanggalIso || '—')}</span>
-              <span class="shrink-0 text-[11px] text-white/35">${aman(x.penyusun || '')}</span>
+              <span class="shrink-0 text-[11px] text-slate-500">${aman(x.penyusun || '')}</span>
             </button>`).join('')}
         </div>
       </div>` : ''}
@@ -522,7 +524,7 @@ function kartuRingkas() {
     <div class="kartu-tab rounded-3xl px-5 py-4">
       <p class="kartu-judul text-[11px] font-semibold uppercase tracking-[0.14em]">${judul}</p>
       <p class="kartu-angka mt-2 text-[24px] font-semibold tabular-nums leading-none">${isi}</p>
-      <p class="mt-1.5 text-[11px] text-white/40">${catatan}</p>
+      <p class="mt-1.5 text-[11px] text-slate-500">${catatan}</p>
     </div>`;
 
   return `
@@ -538,17 +540,17 @@ function kartuRingkas() {
 function kerangka() {
   const tombolMetrik = (k, label) => `
     <button data-peta-metrik="${k}" class="rounded-full px-3.5 py-1.5 text-[12px] font-medium transition ${
-      METRIK === k ? 'bg-white text-black' : 'text-white/65 hover:bg-white/10'}">${label}</button>`;
+      METRIK === k ? 'bg-ink text-white' : 'text-slate-600 hover:bg-slate-100'}">${label}</button>`;
 
   const tombolZum = (aksi, ikon, judul) => `
     <button data-peta-zum="${aksi}" title="${judul}" aria-label="${judul}"
-            class="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white/70 backdrop-blur-md transition hover:bg-white/15 hover:text-white">
+            class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/85 text-slate-600 backdrop-blur-md transition hover:bg-slate-100 hover:text-ink">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">${ikon}</svg>
     </button>`;
 
   return `
     <h2 class="mt-9 text-[20px] font-semibold tracking-[-0.01em]">Sebaran progres DAK Fisik Bidang Jalan</h2>
-    <p class="mt-2 max-w-[760px] text-[14px] leading-[1.7] text-white/60">
+    <p class="mt-2 max-w-[760px] text-[14px] leading-[1.7] text-slate-600">
       Setiap kabupaten/kota penerima DAK diwarnai menurut progres pada berita acara terakhirnya —
       merah untuk yang paling tertinggal, hijau untuk yang hampir tuntas. Klik satu daerah untuk
       melihat progres fisik, keuangan, jumlah paket, dan anggarannya, lalu buka berita acaranya.
@@ -561,19 +563,19 @@ function kerangka() {
         ${tombolMetrik('fisik', 'Progres fisik')}
         ${tombolMetrik('keuangan', 'Progres keuangan')}
       </div>
-      <p class="text-[12px] text-white/40">Warna peta mengikuti pilihan ini.</p>
+      <p class="text-[12px] text-slate-500">Warna peta mengikuti pilihan ini.</p>
     </div>
 
     <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_330px]">
       <div class="glass relative overflow-hidden rounded-3xl">
         <div id="petaKanvas" class="h-[340px] w-full sm:h-[420px] lg:h-[520px]"></div>
-        <div data-peta-tip class="pointer-events-none absolute hidden max-w-[210px] rounded-xl border border-white/15 bg-black/85 px-3 py-2 shadow-xl backdrop-blur-md"></div>
+        <div data-peta-tip class="pointer-events-none absolute hidden max-w-[210px] rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-xl"></div>
         <div class="absolute right-3 top-3 flex flex-col gap-1.5">
           ${tombolZum('in', '<path d="M12 5v14M5 12h14"/>', 'Perbesar')}
           ${tombolZum('out', '<path d="M5 12h14"/>', 'Perkecil')}
           ${tombolZum('reset', '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>', 'Kembali ke seluruh Indonesia')}
         </div>
-        <div class="pointer-events-none absolute bottom-3 left-4 flex items-center gap-2 text-[10.5px] text-white/35">
+        <div class="pointer-events-none absolute bottom-3 left-4 flex items-center gap-2 text-[10.5px] text-slate-500">
           <span class="h-1.5 w-16 rounded-full" style="background:linear-gradient(90deg,${SKALA.map(([p, c]) => `rgb(${c.join(',')}) ${p}%`).join(',')})"></span>
           <span>0% → 100% ${aman(METRIK_LABEL[METRIK].toLowerCase())}</span>
         </div>
@@ -614,12 +616,12 @@ window.PETA_DAK = {
   async render(wadah, { rekaman, kunciDari, aksi }) {
     if (!wadah) return;
     if (!window.PETA_GEO) {
-      wadah.innerHTML = `<div class="glass mt-9 flex h-[220px] items-center justify-center rounded-3xl text-[13px] text-white/45">Memuat peta wilayah…</div>`;
+      wadah.innerHTML = `<div class="glass mt-9 flex h-[220px] items-center justify-center rounded-3xl text-[13px] text-slate-500">Memuat peta wilayah…</div>`;
     }
     try {
       await muatGeo();
     } catch (e) {
-      wadah.innerHTML = `<div class="mt-9 rounded-2xl border border-amber-400/30 bg-amber-400/[.08] px-5 py-4 text-[13px] text-amber-100/80">
+      wadah.innerHTML = `<div class="mt-9 rounded-2xl border border-amber-400/30 bg-amber-400/[.08] px-5 py-4 text-[13px] text-amber-800">
         Peta wilayah tidak termuat (${aman(e.message)}). Daftar berita acara di bawah tetap dapat dipakai.</div>`;
       return;
     }
