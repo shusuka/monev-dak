@@ -194,6 +194,7 @@ let IDX      = 0;        // pertanyaan yang sedang tampil
 let JAWAB    = {};
 let TERKIRIM = null;     // rekaman yang sudah tersimpan, bila ada
 let DIMUAT   = false;
+let DIPERIKSA = false;   // status pengisian sudah pernah ditanyakan ke server
 let TINJAU   = false;    // halaman periksa sebelum kirim
 let GALAT    = '';
 
@@ -1717,10 +1718,35 @@ function pilihBerkasImpor() {
    4. TITIK MASUK
    ═══════════════════════════════════════════════════════════════ */
 window.SURVEI = {
-  /** Menu survei hanya untuk akun pemda; petugas PFID bukan respondennya. */
+  /** Menu survei hanya untuk akun pemda; petugas PFID bukan respondennya.
+      Menunya ada di dua deretan — atas dan deretan bawah untuk ponsel. */
   syncNav() {
-    const b = el('[data-nav="survei"]');
-    if (b) b.classList.toggle('hidden', !ME || pfidan());
+    els('[data-nav="survei"]').forEach(b => b.classList.toggle('hidden', !ME || pfidan()));
+  },
+
+  /** Tandai menu survei selama penilaiannya belum masuk. Titik kuning kecil
+      itu satu-satunya pengingat yang terlihat tanpa membuka menunya. */
+  tandaiBelum(belum) {
+    els('[data-nav="survei"]').forEach(b => b.classList.toggle('nav-belum', !!belum));
+  },
+
+  /** Penilaian pemda ini sudah masuk atau belum. Dibaca dashboard untuk
+      memutuskan ajakan mengisi; hasilnya disimpan supaya Firestore tidak
+      ditanya berulang tiap kali dashboard digambar ulang. */
+  async sudahDiisi(paksa) {
+    if (!ME || pfidan()) return null;
+    if (TERKIRIM) return TERKIRIM;
+    if (DIPERIKSA && !paksa) return null;
+    DIPERIKSA = true;
+    try {
+      const lama = await ambilSurveiSaya();
+      DIMUAT = true;                       // sudah dibaca, render() tak perlu mengulang
+      if (lama) { TERKIRIM = lama; JAWAB = { ...(lama.jawaban || {}) }; IDX = -1; }
+      return lama;
+    } catch (e) {
+      console.warn('[MonevDAK] status survei tidak terbaca:', e);
+      return null;
+    }
   },
 
   async render() {
@@ -1775,7 +1801,7 @@ window.SURVEI = {
   async hapus(id) { await hapusSurvei(id); },
 
   reset() {
-    IDX = 0; JAWAB = {}; TERKIRIM = null; DIMUAT = false; TINJAU = false; GALAT = '';
+    IDX = 0; JAWAB = {}; TERKIRIM = null; DIMUAT = false; DIPERIKSA = false; TINJAU = false; GALAT = '';
   }
 };
 

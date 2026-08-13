@@ -929,6 +929,112 @@ async function simpanArsip(diam, paksa, salinan) {
   return id;
 }
 
+/* ── impor dokumen Word ─────────────────────────────────────────
+   Notulensi yang sudah pernah disusun manual dibaca kembali oleh
+   assets/impor-ba.js, lalu ditulis ke arsip lewat sini. Sengaja TIDAK melewati
+   penjaga bentrokan `simpanArsip`: permintaannya jelas — bila daerah dan
+   tanggalnya sudah ada di arsip, isi dari dokumen impor yang dipakai. Yang
+   tetap dipertahankan hanya foto dokumentasi yang sudah tersimpan, sebab
+   dokumen impor belum tentu membawanya. */
+function dataImpor(h) {
+  const D = kosong();
+  const teks = v => (v == null ? '' : String(v));
+  Object.keys(D).forEach(k => { if (h[k] != null) D[k] = h[k]; });
+  D.daerah = teks(h.daerah);
+  D.tanggalIso = teks(h.tanggalIso) || isoHariIni();
+  D._prov = provinsiDari(D.daerah) || '';
+  D._kab = D.daerah;
+  /* Dua butir terakhir sudah tercetak tetap di template; kalau ikut terbaca
+     dari dokumen, butirnya akan muncul dua kali saat dicetak ulang. */
+  D.butir = butirBebas(h.butir);
+  const pasangan = PASANGAN_NOTULIS.findIndex(([a, b]) => a === D.notulis1 && b === D.notulis2);
+  D.pasangan = pasangan < 0 ? 0 : pasangan;
+  return D;
+}
+
+async function simpanImpor(baris) {
+  const D2 = dataImpor(baris.data);
+  const id = (window.slug ? window.slug(D2.daerah || 'daerah') : String(D2.daerah || 'daerah')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')) + '__' + D2.tanggalIso;
+
+  const ringkas = {
+    daerah: D2.daerah || '(tanpa daerah)',
+    kunciDaerah: kunciDaerah(D2.daerah),
+    prov: D2._prov || '', kab: D2._kab || '',
+    tanggalIso: D2.tanggalIso, tanggalTeks: tanggalIndo(D2.tanggalIso),
+    notulis1: D2.notulis1, notulis2: D2.notulis2,
+    penyusun: (ME && ME.nama) || (ADMIN && 'Admin') || '',
+    jumlahRuas: D2.progres.length
+  };
+
+  const foto = [];
+  for (const url of (baris.foto || []).slice(0, 3)) {
+    try { const u = await fotoArsip(url); if (u) foto.push(u); } catch (e) { /* lewati */ }
+  }
+
+  if (pakaiFirebase()) {
+    const { doc, getDoc, setDoc, deleteDoc, collection, getDocs, serverTimestamp } = store.fs;
+    const acuan = doc(store.db, 'beritaAcara', id);
+    const lama = await getDoc(acuan);
+    const fotoLama = lama.exists() ? (lama.data().jumlahFoto || 0) : 0;
+
+    await setDoc(acuan, {
+      ...ringkas,
+      uid: store.uid || '',
+      jumlahFoto: foto.length || fotoLama,
+      data: D2,
+      rev: revBaru(),
+      diperbaruiAt: serverTimestamp(),
+      dariImpor: baris.berkas || true
+    });
+
+    /* Foto lama hanya diganti bila dokumen impor membawa penggantinya. */
+    if (foto.length) {
+      const isi = await getDocs(collection(store.db, 'beritaAcara', id, 'foto'));
+      await Promise.all(isi.docs.map(d => deleteDoc(d.ref)));
+      await Promise.all(foto.map((url, i) =>
+        setDoc(doc(store.db, 'beritaAcara', id, 'foto', String(i)), { url })));
+    }
+    await tulisIndeks(id, { ...ringkas, jumlahFoto: foto.length || fotoLama });
+  } else {
+    const semua = bacaLokal();
+    const fotoLama = (semua[id] && semua[id].foto) || [];
+    semua[id] = {
+      ...ringkas, jumlahFoto: (foto.length ? foto : fotoLama).length,
+      data: D2, foto: foto.length ? foto : fotoLama,
+      rev: revBaru(), diperbaruiAt: Date.now(), dariImpor: baris.berkas || true
+    };
+    if (!tulisLokal(semua)) {
+      semua[id] = { ...semua[id], foto: [], jumlahFoto: 0 };
+      tulisLokal(semua);
+    }
+  }
+
+  ARSIP_DIMUAT = false;
+  return id;
+}
+
+/** Sudah ada berita acara daerah + tanggal yang sama di arsip? */
+function arsipSudahAda(daerah, tanggalIso) {
+  const kunci = kunciDaerah(daerah);
+  return ARSIP.some(r => (r.kunciDaerah || kunciDaerah(r.daerah)) === kunci && r.tanggalIso === tanggalIso);
+}
+
+/** Buka jendela impor; dipakai tombol di menu arsip dan di panel admin. */
+function bukaImporWord() {
+  if (!window.IMPOR_BA) { toast('Modul impor belum termuat, muat ulang halamannya.'); return; }
+  window.IMPOR_BA.buka({
+    sudahAda: arsipSudahAda,
+    simpan: baris => simpanImpor(baris),
+    selesai: async () => {
+      ARSIP_DIMUAT = false;
+      await tampilkanArsip();
+      if (ARSIP_ADMIN) tampilkanPeta();
+    }
+  });
+}
+
+
 /** Nama dokumen untuk salinan: nama penyusunnya dibubuhkan supaya kedua
     berita acara daerah yang sama tetap bisa dibedakan di daftar arsip. */
 function idSalinan() {
@@ -1021,10 +1127,16 @@ async function muatArsip() {
     const snap = await getDocs(query(collection(store.db, 'beritaAcara'), orderBy('diperbaruiAt', 'desc')));
     ARSIP = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } else if (pakaiFirebase()) {
-    /* Pemda: satu dokumen indeks daerahnya sendiri, bukan penelusuran koleksi. */
+    /* Pemda: satu dokumen indeks daerahnya sendiri, bukan penelusuran koleksi.
+       Dibaca langsung dari server — `getDoc` boleh menjawab dari singgahan
+       peramban, dan itu membuat berita acara yang baru saja diperbaiki atau
+       diimpor petugas belum terlihat oleh daerahnya. */
     if (!kunci) throw new Error('Profil Anda belum mencantumkan kabupaten/kota.');
-    const { doc, getDoc } = store.fs;
-    const d = await getDoc(doc(store.db, 'indeksDaerah', kunci));
+    const { doc, getDoc, getDocFromServer } = store.fs;
+    const acuan = doc(store.db, 'indeksDaerah', kunci);
+    let d;
+    try { d = await (getDocFromServer ? getDocFromServer(acuan) : getDoc(acuan)); }
+    catch (e) { d = await getDoc(acuan); }   // sedang luring: singgahan lebih baik daripada kosong
     const daftar = (d.exists() && d.data().daftar) || {};
     ARSIP = Object.entries(daftar).map(([id, x]) => ({ ...x, id }));
   } else {
@@ -1123,8 +1235,13 @@ async function segarkanKembar() {
 /** Isi satu berita acara tersimpan, tanpa menyentuh formulir yang terbuka. */
 async function ambilArsip(id) {
   if (pakaiFirebase()) {
-    const { doc, getDoc, collection, getDocs } = store.fs;
-    const d = await getDoc(doc(store.db, 'beritaAcara', id));
+    const { doc, getDoc, getDocFromServer, collection, getDocs } = store.fs;
+    /* Dibaca dari server, bukan dari singgahan: dokumen yang baru saja
+       diperbaiki petugas atau diimpor harus langsung terlihat isinya. */
+    const acuan = doc(store.db, 'beritaAcara', id);
+    let d;
+    try { d = await (getDocFromServer ? getDocFromServer(acuan) : getDoc(acuan)); }
+    catch (e) { d = await getDoc(acuan); }
     if (!d.exists()) throw new Error('Berita acara itu sudah tidak ada di arsip.');
     const snap = await getDocs(collection(store.db, 'beritaAcara', id, 'foto'));
     const foto = snap.docs
@@ -2267,6 +2384,7 @@ function kartuArsip(r, pfid, semua) {
         </p>
       </div>
       <div class="flex flex-wrap gap-2">
+        ${ARSIP_ADMIN ? `<button data-peta="${aman(r.kunciDaerah || kunciDaerah(r.daerah || r.kab || ''))}" title="Tunjukkan daerah ini di peta" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">Di peta</button>` : ''}
         <button data-pratinjau="${aman(r.id)}" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">Lihat dokumen</button>
         <button data-unduh="${aman(r.id)}" class="${KELAS_TOMBOL} !px-3 !py-1.5 !text-[12px]">Unduh Word</button>
         ${pfid ? `
@@ -2361,6 +2479,7 @@ function renderArsip() {
       ${semua ? kotakSaring('baArsipProv', IKON_SARING, 'Semua provinsi', 'Tanpa provinsi', opsiProv, ARSIP_PROV) : ''}
       ${semua ? kotakSaring('baArsipOleh', IKON_PENYUSUN, 'Semua penyusun', 'Tanpa nama', opsiOleh, ARSIP_OLEH) : ''}
       <button id="baArsipMuat" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Muat ulang</button>
+      ${semua ? `<button id="baArsipImpor" title="Masukkan notulensi Word yang sudah disusun manual, boleh banyak berkas sekaligus" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Impor dokumen Word</button>` : ''}
       ${pfid ? `<button id="baArsipBaru" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Buat berita acara baru</button>
       <button id="baArsipIndeks" title="Susun ulang daftar yang dilihat pemda, termasuk berita acara lama" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Perbarui daftar pemda</button>` : ''}
     </div>
@@ -2403,7 +2522,10 @@ function renderArsip() {
   el('#baArsipMuat').onclick = async () => {
     ARSIP_DIMUAT = false;
     await tampilkanArsip();
+    if (ARSIP_ADMIN) tampilkanPeta();
   };
+
+  if (el('#baArsipImpor')) el('#baArsipImpor').onclick = bukaImporWord;
 
   if (el('#baArsipBaru')) el('#baArsipBaru').onclick = () => {
     window.BA.reset();
@@ -2425,6 +2547,12 @@ function renderArsip() {
   /* Tombol dicari di dalam wadahnya sendiri, sebab penyaji ini dipakai juga
      oleh panel admin yang wadahnya berbeda. */
   const dalam = s => Array.from(wadah.querySelectorAll(s));
+
+  dalam('[data-peta]').forEach(t => t.onclick = () => {
+    if (!window.PETA_DAK || !window.PETA_DAK.buka(t.dataset.peta)) {
+      toast('Daerah ini tidak ada pada daftar penerima DAK, jadi belum ada di peta.');
+    }
+  });
 
   dalam('[data-pratinjau]').forEach(t => t.onclick = () => {
     const r = ARSIP.find(x => x.id === t.dataset.pratinjau) || {};
@@ -2473,6 +2601,31 @@ function renderArsip() {
 }
 
 
+/** Peta sebaran progres di atas daftar berita acara panel admin.
+    Hanya admin yang melihatnya: petanya menyatukan seluruh pemda di Indonesia,
+    sedangkan pemda hanya berhak atas daerahnya sendiri. Petanya digambar
+    terpisah dari daftar supaya perbesaran dan daerah yang sedang dibuka tidak
+    hilang tiap kali kotak pencarian diketik. */
+function tampilkanPeta() {
+  const wadah = el('#adBaPeta');
+  if (!wadah || !window.PETA_DAK) return;
+  window.PETA_DAK.render(wadah, {
+    rekaman: ARSIP,
+    kunciDari: r => r.kunciDaerah || kunciDaerah(r.daerah || r.kab || ''),
+    aksi: {
+      lihat: id => {
+        const r = ARSIP.find(x => x.id === id) || {};
+        pratinjauArsip(id, (r.daerah || '') + ' · ' + (r.tanggalTeks || ''));
+      },
+      unduh: async id => {
+        try { toast('Berkas ' + (await unduhArsip(id)) + ' diunduh.'); }
+        catch (e) { toast('Gagal membuat dokumen: ' + (e.code || e.message)); }
+      }
+    }
+  });
+}
+
+
 /** Muat arsipnya bila belum, lalu tampilkan — dipakai menu arsip maupun panel
     admin, keduanya lewat penyaji dan keadaan yang sama. */
 async function tampilkanArsip() {
@@ -2502,12 +2655,11 @@ window.BA = {
   akunPfid,
 
   /** Menu penyusunan hanya untuk petugas PFID; arsip terbuka juga bagi pemda,
-      isinya dibatasi ke daerah masing-masing. */
+      isinya dibatasi ke daerah masing-masing. Menunya ada dua tempat —
+      deretan atas dan deretan bawah untuk ponsel — jadi keduanya diatur. */
   syncNav() {
-    const b = el('[data-nav="berita"]');
-    if (b) b.classList.toggle('hidden', !akunPfid(ME));
-    const a = el('[data-nav="arsip"]');
-    if (a) a.classList.toggle('hidden', !ME);
+    els('[data-nav="berita"]').forEach(b => b.classList.toggle('hidden', !akunPfid(ME)));
+    els('[data-nav="arsip"]').forEach(a => a.classList.toggle('hidden', !ME));
   },
 
   /** Dipanggil router saat berpindah ke tampilan berita acara. */
@@ -2517,20 +2669,26 @@ window.BA = {
     render();
   },
 
-  /** Dipanggil router saat berpindah ke menu arsip. */
+  /** Dipanggil router saat berpindah ke menu arsip.
+      Isinya selalu diambil ulang: berita acara daerah bisa diperbaiki atau
+      diimpor petugas kapan saja, dan pemda yang membuka menunya harus melihat
+      versi terbaru tanpa perlu menekan "Muat ulang" atau menyegarkan halaman. */
   async renderArsip() {
     if (!ME) return;
     /* Kembali dari panel admin: isinya harus diambil ulang dengan izin akun
        yang sedang masuk, bukan sisa bacaan admin. */
-    if (ARSIP_ADMIN) { ARSIP_ADMIN = false; ARSIP_DIMUAT = false; }
+    if (ARSIP_ADMIN) ARSIP_ADMIN = false;
+    ARSIP_DIMUAT = false;
     await tampilkanArsip();
   },
 
-  /** Tab "Berita Acara" pada panel admin: seluruh berita acara, baca dan unduh. */
+  /** Tab "Berita Acara" pada panel admin: seluruh berita acara, baca dan unduh,
+      dengan peta sebaran progres di atasnya. */
   async renderAdmin(paksa) {
     if (!ARSIP_ADMIN) { ARSIP_ADMIN = true; ARSIP_DIMUAT = false; }
     if (paksa) ARSIP_DIMUAT = false;
     await tampilkanArsip();
+    tampilkanPeta();
   },
 
   /** Berapa berita acara yang sudah termuat — untuk angka kecil di tab admin. */
@@ -2543,6 +2701,7 @@ window.BA = {
     konfigDicoba = false; AI_GALAT = ''; ARSIP_STATUS = ''; SUDAH_UNDUH = false;
     ARSIP = []; ARSIP_DIMUAT = false; ARSIP_GALAT = ''; ARSIP_ADMIN = false;
     ARSIP_CARI = ''; ARSIP_PROV = ''; ARSIP_OLEH = '';
+    if (el('#adBaPeta')) el('#adBaPeta').innerHTML = '';
     KEMBAR = null; DARI_ARSIP = ''; ARSIP_DASAR = null; clearTimeout(jamKembar);
   }
 };

@@ -65,6 +65,48 @@
   }
   .tabnav.on .tabdot { background: #07080a; opacity: .85; transform: scale(1.15); }
 
+  /* ---------- deretan menu bawah untuk layar sempit ----------
+     Di ponsel deretan menu atas harus digulir ke samping, sehingga menu yang
+     berada di ujung kanan — survei kepuasan salah satunya — praktis tidak
+     pernah terlihat. Karena itu di bawah lebar md menunya pindah ke batang
+     tetap di dasar layar: seluruh menu tampak sekaligus, tanpa digeser.
+     Isinya menu yang sama persis, jadi kelas `hidden` per peran akun tetap
+     berlaku dan tidak ada daftar menu kedua yang harus dirawat. */
+  .navbtm:not(.hidden) { display: flex; }
+  .navbtm {
+    flex: 1 1 0%; min-width: 0;
+    flex-direction: column; align-items: center; justify-content: center; gap: .18rem;
+    padding: .5rem .25rem .45rem;
+    color: rgba(255,255,255,.5);
+    transition: color .2s ease;
+  }
+  .navbtm .navbtm-ikon {
+    display: flex; align-items: center; justify-content: center;
+    height: 1.6rem; width: 2.6rem; border-radius: 9999px;
+    transition: background-color .2s ease, color .2s ease;
+  }
+  .navbtm .navbtm-ikon svg { height: 1.05rem; width: 1.05rem; }
+  .navbtm .navbtm-teks {
+    font-size: 10px; line-height: 1.1; font-weight: 500;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .navbtm.on { color: rgb(var(--tab)); }
+  .navbtm.on .navbtm-ikon { background: rgb(var(--tab) / .18); color: rgb(var(--tab)); }
+  .navbtm.on .navbtm-teks { font-weight: 600; }
+
+  /* Titik penanda "belum diisi" pada menu survei — pengingat kecil yang tetap
+     terlihat walaupun menunya tidak sedang dibuka. */
+  .nav-belum { position: relative; }
+  .nav-belum::after {
+    content: ''; position: absolute; top: .3rem; right: .55rem;
+    height: .45rem; width: .45rem; border-radius: 9999px;
+    background: #fbbf24; box-shadow: 0 0 0 2px #07080a;
+    animation: denyut 1.8s ease-in-out infinite;
+  }
+  .tabnav.nav-belum::after { top: .28rem; right: .5rem; box-shadow: 0 0 0 2px rgba(7,8,10,.9); }
+  @keyframes denyut { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.35); opacity: .55; } }
+  @media (prefers-reduced-motion: reduce) { .nav-belum::after { animation: none; } }
+
   /* ---------- CTA glow ---------- */
   .cta-glow { transition: box-shadow .35s ease, transform .35s ease; }
   .cta-glow:hover { box-shadow: 0 0 0 1px rgba(255,255,255,.7), 0 0 28px rgba(255,255,255,.55), 0 0 70px rgba(255,255,255,.28); transform: translateY(-1px); }
@@ -114,6 +156,10 @@
   .kartu-tab .kartu-angka { color: rgb(var(--tab)); }
 
   @media (prefers-reduced-motion: reduce) { .kartu-tab:hover { transform: none; } }
+
+  /* ---------- peta sebaran (assets/peta.js) ---------- */
+  .peta-daerah { cursor: pointer; transition: fill-opacity .15s ease; }
+  .peta-daerah:hover { fill-opacity: 1; stroke: #fff; stroke-width: 1.1; }
 
   /* ---------- conic gradient submit button ---------- */
   .gbtn { position: relative; width: 52px; height: 52px; flex: 0 0 52px; border-radius: 9999px; }
@@ -681,8 +727,12 @@
       <div id="adCeklis"></div>
     </div>
 
-    <!-- seluruh notulensi yang disusun petugas PFID; isinya diisi oleh BA.renderAdmin() -->
-    <div id="adPanelBa" class="hidden">
+    <!-- seluruh notulensi yang disusun petugas PFID; isinya diisi oleh BA.renderAdmin().
+         Peta sengaja berada di wadahnya sendiri: daftar di bawahnya digambar
+         ulang tiap kali kotak pencarian diketik, dan peta yang ikut digambar
+         ulang akan kehilangan perbesaran serta daerah yang sedang dibuka. -->
+    <div id="adPanelBa" class="hidden" style="--tab:52 211 153">
+      <div id="adBaPeta"></div>
       <div id="adBa"></div>
     </div>
   </section>
@@ -722,7 +772,9 @@
         <span class="hidden text-[16px] font-medium tracking-wide sm:inline">MonevDAK</span>
       </button>
 
-      <nav class="no-scrollbar ml-2 flex flex-1 items-center gap-1 overflow-x-auto text-[13px] font-medium">
+      <!-- Di bawah lebar md deretan ini disembunyikan; menunya pindah ke
+           #navBawah supaya tidak ada menu yang tersembunyi di luar layar. -->
+      <nav class="no-scrollbar ml-2 hidden flex-1 items-center gap-1 overflow-x-auto text-[13px] font-medium md:flex">
         <button data-nav="dashboard" onclick="go('dashboard')" style="--tab:56 189 248"  class="tabnav"><span class="tabdot"></span>Dashboard</button>
         <button data-nav="rank"      onclick="go('rank')"      style="--tab:251 191 36"  class="tabnav"><span class="tabdot"></span>Peringkat</button>
         <button data-nav="compare"   onclick="go('compare')"   style="--tab:167 139 250" class="tabnav"><span class="tabdot"></span>Perbandingan</button>
@@ -731,7 +783,7 @@
         <button data-nav="survei"    onclick="go('survei')"    style="--tab:232 121 249" class="tabnav hidden"><span class="tabdot"></span>Survei Kepuasan</button>
       </nav>
 
-      <div class="flex items-center gap-3">
+      <div class="ml-auto flex items-center gap-3">
         <div class="hidden text-right sm:block">
           <p id="chipName" class="text-[13px] font-semibold leading-tight"></p>
           <p id="chipRegion" class="text-[11px] leading-tight text-white/55"></p>
@@ -759,6 +811,11 @@
         <button onclick="go('arsip')" class="font-semibold underline decoration-sky-200/40 underline-offset-4 hover:text-white">Arsip Berita Acara</button>.
       </p>
     </div>
+
+    <!-- Ajakan mengisi survei kepuasan. Menu survei ada di deretan menu, tetapi
+         yang benar-benar dilihat pemda saat masuk adalah dashboard ini — jadi
+         ajakannya ditaruh di sini, bukan hanya mengandalkan menu. -->
+    <div id="dashSurvei" class="mt-7 hidden"></div>
 
     <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div class="glass rounded-3xl p-6"><p class="text-[12px] uppercase tracking-[0.16em] text-white/50">Nilai pre test</p><p id="kpiPre" class="mt-3 text-[32px] font-semibold tabular-nums">—</p></div>
@@ -844,17 +901,47 @@
   <!-- ─── SURVEI KEPUASAN — akun pemda, isinya dibangun assets/survei.js ─── -->
   <section id="view-survei" data-view class="mx-auto max-w-4xl px-5 py-10 md:px-10 md:py-14"></section>
 
-  <footer class="border-t border-white/10 bg-black/50 backdrop-blur-xl">
+  <footer class="border-t border-white/10 bg-black/50 pb-[76px] backdrop-blur-xl md:pb-0">
     <div class="mx-auto flex max-w-7xl flex-col gap-2 px-5 py-8 text-[12px] text-white/45 md:flex-row md:items-center md:justify-between md:px-10">
       <p>MonevDAK · Pre test &amp; post test DAK Fisik Bidang Jalan</p>
       <p>Bank soal: SE Menteri PU No. 5/SE/Mn/2026 (Lampiran I &amp; II)</p>
     </div>
   </footer>
+
+  <!-- ─── DERETAN MENU BAWAH (ponsel) ───
+       Menu yang sama dengan deretan atas, tetapi seluruhnya terlihat tanpa
+       digeser. Tulisannya diperpendek supaya lima menu muat di layar 360 px. -->
+  <nav id="navBawah" class="fixed inset-x-0 bottom-0 z-40 flex border-t border-white/10 bg-black/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl md:hidden">
+    <button data-nav="dashboard" data-navbawah onclick="go('dashboard')" style="--tab:56 189 248" class="navbtm">
+      <span class="navbtm-ikon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10V20h13V10"/></svg></span>
+      <span class="navbtm-teks">Beranda</span>
+    </button>
+    <button data-nav="rank" data-navbawah onclick="go('rank')" style="--tab:251 191 36" class="navbtm">
+      <span class="navbtm-ikon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V12"/><path d="M10 20V5"/><path d="M16 20v-6"/><path d="M2 20h20"/></svg></span>
+      <span class="navbtm-teks">Peringkat</span>
+    </button>
+    <button data-nav="compare" data-navbawah onclick="go('compare')" style="--tab:167 139 250" class="navbtm">
+      <span class="navbtm-ikon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 3 4-6 5 5"/><path d="M3 21h18"/></svg></span>
+      <span class="navbtm-teks">Grafik</span>
+    </button>
+    <button data-nav="berita" data-navbawah onclick="go('berita')" style="--tab:251 113 133" class="navbtm hidden">
+      <span class="navbtm-ikon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg></span>
+      <span class="navbtm-teks">Notulensi</span>
+    </button>
+    <button data-nav="arsip" data-navbawah onclick="go('arsip')" style="--tab:52 211 153" class="navbtm hidden">
+      <span class="navbtm-ikon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg></span>
+      <span class="navbtm-teks">Arsip</span>
+    </button>
+    <button data-nav="survei" data-navbawah onclick="go('survei')" style="--tab:232 121 249" class="navbtm hidden">
+      <span class="navbtm-ikon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h3v15H6V5h3"/><path d="M9 12l2 2 4-4"/></svg></span>
+      <span class="navbtm-teks">Survei</span>
+    </button>
+  </nav>
 </div>
 
 
 <!-- mode lokal indicator -->
-<div id="modeBadge" class="fixed bottom-4 left-4 z-[70] hidden flex max-w-[240px] items-start gap-2 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-3.5 py-2.5 text-[11px] leading-[1.55] text-amber-200 backdrop-blur-xl md:max-w-[300px] md:text-[12px]">
+<div id="modeBadge" class="fixed bottom-[84px] left-4 z-[70] hidden flex max-w-[240px] md:bottom-4 items-start gap-2 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-3.5 py-2.5 text-[11px] leading-[1.55] text-amber-200 backdrop-blur-xl md:max-w-[300px] md:text-[12px]">
   <span class="flex-1"><strong class="font-semibold">Mode lokal.</strong> Firebase belum dikonfigurasi, data hanya tersimpan di peramban ini.</span>
   <button onclick="this.parentElement.classList.add('hidden')" aria-label="Tutup" class="-mr-1 -mt-0.5 shrink-0 rounded-full p-1 text-amber-200/70 transition hover:bg-amber-400/20 hover:text-amber-100">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="h-3 w-3"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -862,7 +949,7 @@
 </div>
 
 <!-- toast -->
-<div id="toast" class="pointer-events-none fixed bottom-6 left-1/2 z-[80] -translate-x-1/2 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black opacity-0 shadow-2xl transition-all duration-300"></div>
+<div id="toast" class="pointer-events-none fixed bottom-[88px] left-1/2 z-[80] md:bottom-6 -translate-x-1/2 rounded-full bg-white px-6 py-3 text-[14px] font-medium text-black opacity-0 shadow-2xl transition-all duration-300"></div>
 
 <script src="assets/wilayah.js"></script>
 <script src="assets/soal-tw2.js"></script>
@@ -1279,9 +1366,12 @@ async function go(view) {
   $$('[data-nav]').forEach(b => {
     const on = b.dataset.nav === view;
     b.classList.toggle('on', on);
-    /* Di layar sempit deretan menu bisa digulir; menu yang sedang dibuka
-       ditarik ke tengah supaya tidak tersembunyi di luar layar. */
-    if (on && b.scrollIntoView) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    /* Deretan menu atas bisa digulir ke samping; menu yang sedang dibuka
+       ditarik ke tengah supaya tidak tersembunyi di luar layar. Deretan bawah
+       tidak pernah digulir, dan menariknya justru menggeser seluruh halaman. */
+    if (on && b.scrollIntoView && !('navbawah' in b.dataset)) {
+      b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    }
   });
 
   window.scrollTo({ top: 0 });
@@ -1796,6 +1886,51 @@ async function renderDashboard() {
   }).join('');
 
   $('#dashTw').innerHTML = aktifCard + lain;
+
+  renderAjakanSurvei();
+}
+
+
+/** Ajakan mengisi survei kepuasan pada dashboard pemda.
+    Kartunya digambar setelah statusnya diketahui, jadi dashboard tidak
+    tertahan menunggu Firestore. Petugas PFID bukan responden survei, dan
+    baginya kartunya tidak pernah muncul. */
+async function renderAjakanSurvei() {
+  const kotak = $('#dashSurvei');
+  if (!kotak) return;
+  kotak.classList.add('hidden');
+  if (!ME || pfid() || !window.SURVEI) return;
+
+  const terkirim = await window.SURVEI.sudahDiisi();
+  window.SURVEI.tandaiBelum(!terkirim);
+
+  /* Dashboard bisa sudah berpindah ke tampilan lain selagi Firestore dijawab. */
+  if (!ME || pfid()) return;
+
+  if (terkirim) {
+    kotak.className = 'mt-7 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-fuchsia-400/25 bg-fuchsia-500/[.08] px-5 py-3.5';
+    kotak.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 shrink-0 text-fuchsia-300"><path d="M20 6 9 17l-5-5"/></svg>
+      <p class="text-[13px] text-fuchsia-100/85">Terima kasih, penilaian kepuasan ${esc(ME.kab)} sudah kami terima.</p>
+      <button onclick="go('survei')" class="ml-auto text-[12px] font-semibold text-fuchsia-200 underline decoration-fuchsia-300/40 underline-offset-4 hover:text-white">Ubah jawaban</button>`;
+    return;
+  }
+
+  kotak.className = 'mt-7 rounded-3xl border border-fuchsia-400/40 bg-fuchsia-500/[.13] px-5 py-5 md:px-6';
+  kotak.innerHTML = `
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div class="min-w-[240px] flex-1">
+        <p class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-fuchsia-200">
+          <span class="flex h-1.5 w-1.5 rounded-full bg-amber-400"></span>Belum diisi
+        </p>
+        <h3 class="mt-2 text-[17px] font-semibold leading-snug text-fuchsia-50">Survei kepuasan Rapat Koordinasi TW II</h3>
+        <p class="mt-1.5 max-w-[520px] text-[13px] leading-[1.6] text-fuchsia-100/75">
+          Penilaian ${esc(ME.kab)} atas pelayanan kami sangat dibutuhkan sebagai bahan perbaikan.
+          Sekitar dua menit — nama, instansi, dan email sudah terisi dari akun Anda.
+        </p>
+      </div>
+      <button onclick="go('survei')" class="cta-glow shrink-0 rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black">Isi survei sekarang</button>
+    </div>`;
 }
 
 
@@ -2739,6 +2874,10 @@ function exportXLS() {
   toast(rows.length + ' baris diunduh sebagai Excel.');
 }
 </script>
+<!-- assets/peta-geo.js (batas wilayah, ±290 KB) sengaja tidak dipasang di sini;
+     peta.js mengambilnya sendiri saat admin membuka tab Berita Acara. -->
+<script src="assets/peta.js"></script>
+<script src="assets/impor-ba.js"></script>
 <script src="assets/berita-acara.js"></script>
 <script src="assets/survei.js"></script>
 <script src="assets/ceklis.js"></script>
