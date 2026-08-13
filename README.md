@@ -4,12 +4,11 @@ Pre test dan post test pelaksanaan monitoring & evaluasi **DAK Fisik Bidang Jala
 
 Situs statis tanpa proses build: HTML + Tailwind (CDN) + JavaScript biasa, dengan Firebase Firestore sebagai basis data.
 
-Temanya terang — **baby blue `#8AAAE5` dengan putih**. Warnanya dipusatkan di dua
-tempat saja: `tailwind.config` pada `index.html` (`ink` untuk tulisan utama, `langit`
-untuk aksen) dan blok `<style>` di bawahnya (`.bg-fallback`, `.glass`). Warna tab yang
-ditulis sebagai variabel `--tab` dicampur dengan biru tua lewat `color-mix()` supaya
-tetap terbaca di atas kertas putih — nilai campurannya sudah disetel agar semua tab
-melewati ambang kontras WCAG AA.
+Temanya gelap: latar hitam dengan video jalan sebagai panggung, kartu kaca buram
+(`.glass`), dan tulisan putih. Warnanya dipusatkan di `tailwind.config` pada
+`index.html` (`ink`) dan blok `<style>` di bawahnya (`.bg-fallback`, `.glass`); tiap
+menu membawa warnanya sendiri lewat variabel `--tab`. Tema terang baby blue pernah
+dicoba pada 13 Agustus 2026 lalu dikembalikan — hasilnya terlalu terang.
 
 ---
 

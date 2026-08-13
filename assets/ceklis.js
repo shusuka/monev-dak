@@ -244,16 +244,16 @@ function kartu(label, angka, sub, warna) {
   return `<div class="kartu-tab rounded-3xl p-5">
     <p class="kartu-judul text-[11px] uppercase tracking-[0.14em]">${aman(label)}</p>
     <p class="mt-2.5 text-[28px] font-semibold tabular-nums ${warna || 'kartu-angka'}" data-naik="${angka}">${angka}</p>
-    <p class="mt-1 text-[11px] text-slate-500">${sub}</p>
+    <p class="mt-1 text-[11px] text-white/50">${sub}</p>
   </div>`;
 }
 
 function lencana(status) {
   const w = {
-    lengkap:  'bg-emerald-400/20 text-emerald-700',
-    sebagian: 'bg-amber-400/20 text-amber-700',
-    belum:    'bg-red-400/20 text-red-700',
-    kosong:   'bg-slate-100 text-slate-600'
+    lengkap:  'bg-emerald-400/20 text-emerald-300',
+    sebagian: 'bg-amber-400/20 text-amber-300',
+    belum:    'bg-red-400/20 text-red-300',
+    kosong:   'bg-white/10 text-white/55'
   }[status];
   return `<span class="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${w}">${LABEL[status]}</span>`;
 }
@@ -262,18 +262,18 @@ function kepalaProvinsi(prov, daftar, luar) {
   const dak = daftar.filter(d => !d.luar);
   const lengkap = dak.filter(d => d.skor === 3).length;
   const pct = dak.length ? Math.round(lengkap / dak.length * 100) : 0;
-  return `<tr class="border-b border-slate-200 bg-slate-50">
+  return `<tr class="border-b border-white/10 bg-white/[.04]">
     <td colspan="7" class="px-5 py-3">
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
         <span class="text-[13px] font-semibold tracking-[-0.01em]">${aman(prov)}</span>
         ${luar
-          ? '<span class="rounded-full bg-amber-400/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-amber-700">Di luar daftar DAK</span>'
-          : `<span class="text-[12px] text-slate-500">${lengkap} dari ${dak.length} daerah lengkap</span>
+          ? '<span class="rounded-full bg-amber-400/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-amber-300">Di luar daftar DAK</span>'
+          : `<span class="text-[12px] text-white/45">${lengkap} dari ${dak.length} daerah lengkap</span>
              <span class="ml-auto flex items-center gap-2">
-               <span class="h-1.5 w-28 overflow-hidden rounded-full bg-slate-100">
+               <span class="h-1.5 w-28 overflow-hidden rounded-full bg-white/10">
                  <span class="block h-full rounded-full bg-emerald-400/80" style="width:${pct}%"></span>
                </span>
-               <span class="w-9 text-right text-[12px] tabular-nums text-slate-500">${pct}%</span>
+               <span class="w-9 text-right text-[12px] tabular-nums text-white/55">${pct}%</span>
              </span>`}
       </div>
     </td>
@@ -285,13 +285,13 @@ function baris(d, i) {
      bawah tidak menunggu setengah menit pada 164 daerah. */
   const tunda = Math.min(i * 26, 900);
   const orang = d.orang.length;
-  return `<tr class="ck-baris border-b border-slate-300/[.06] ${d.skor === 3 ? 'ck-lengkap' : ''} ${d.status === 'kosong' ? 'ck-kosong' : ''}">
-    <td class="px-5 py-3 tabular-nums text-slate-500">${i + 1}</td>
+  return `<tr class="ck-baris border-b border-white/[.06] ${d.skor === 3 ? 'ck-lengkap' : ''} ${d.status === 'kosong' ? 'ck-kosong' : ''}">
+    <td class="px-5 py-3 tabular-nums text-white/40">${i + 1}</td>
     <td class="px-5 py-3">
       <p class="font-medium">${aman(d.kab)}</p>
-      <p class="text-[12px] text-slate-500">${aman(d.prov)}</p>
+      <p class="text-[12px] text-white/40">${aman(d.prov)}</p>
     </td>
-    <td class="px-5 py-3 text-center tabular-nums ${orang ? 'text-slate-600' : 'text-slate-500'}">${orang || '—'}</td>
+    <td class="px-5 py-3 text-center tabular-nums ${orang ? 'text-white/70' : 'text-white/30'}">${orang || '—'}</td>
     <td class="px-5 py-3 text-center">${sel(d.c.pre, tunda)}</td>
     <td class="px-5 py-3 text-center">${sel(d.c.post, tunda + 90)}</td>
     <td class="px-5 py-3 text-center">${sel(d.c.survei, tunda + 180)}</td>
@@ -324,23 +324,23 @@ function gambar() {
 
   wadah.innerHTML = `${GAYA}
 
-  <p class="mt-7 max-w-[760px] text-[14px] leading-[1.7] text-slate-600">
+  <p class="mt-7 max-w-[760px] text-[14px] leading-[1.7] text-white/60">
     Kesiapan tiap pemerintah daerah penerima DAK Fisik Bidang Jalan dalam satu layar:
     pre test, post test, dan survei kepuasan. Satu daerah dihitung sudah bila ada satu
     pesertanya yang mengisi. Seluruh ${r.total} daerah penerima tampil di sini, termasuk
     yang belum mendaftar sama sekali — baris itulah yang perlu ditagih.
   </p>
 
-  ${galatSurvei ? `<div class="mt-6 rounded-3xl border border-amber-400/40 bg-amber-400/10 p-5 text-[13px] leading-[1.7] text-amber-700">
-    <p class="font-semibold text-amber-700">Kolom survei belum dapat dipercaya</p>
+  ${galatSurvei ? `<div class="mt-6 rounded-3xl border border-amber-400/40 bg-amber-400/10 p-5 text-[13px] leading-[1.7] text-amber-200/90">
+    <p class="font-semibold text-amber-200">Kolom survei belum dapat dipercaya</p>
     <p class="mt-1.5">${aman(galatSurvei)}</p>
   </div>` : ''}
 
   <!-- jalan progres: roller berjalan sampai titik daerah yang sudah lengkap -->
   <div class="mt-7">
     <div class="flex flex-wrap items-end justify-between gap-3">
-      <p class="text-[13px] text-slate-500">Daerah yang sudah lengkap tiga-tiganya</p>
-      <p class="text-[13px] font-semibold tabular-nums text-emerald-700">${r.lengkap} / ${r.total} · ${pct}%</p>
+      <p class="text-[13px] text-white/55">Daerah yang sudah lengkap tiga-tiganya</p>
+      <p class="text-[13px] font-semibold tabular-nums text-emerald-300">${r.lengkap} / ${r.total} · ${pct}%</p>
     </div>
     <div class="ck-jalan mt-3">
       <div class="ck-aspal" data-lebar="${pct}"></div>
@@ -354,19 +354,19 @@ function gambar() {
 
   <div class="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
     ${kartu('Daerah penerima DAK', r.total, r.luar ? 'kerangka ceklis · +' + r.luar + ' di luar daftar' : 'kerangka ceklis')}
-    ${kartu('Sudah pre test', r.pre, r.total ? Math.round(r.pre / r.total * 100) + '% daerah' : '—', 'text-emerald-600')}
-    ${kartu('Sudah post test', r.post, r.total ? Math.round(r.post / r.total * 100) + '% daerah' : '—', 'text-emerald-600')}
-    ${kartu('Sudah survei', r.survei, r.total ? Math.round(r.survei / r.total * 100) + '% daerah' : '—', 'text-emerald-600')}
-    ${kartu('Lengkap 3 ceklis', r.lengkap, 'pre + post + survei', 'text-emerald-600')}
-    ${kartu('Belum mendaftar', r.kosong, 'belum ada akunnya', r.kosong ? 'text-red-600' : '')}
+    ${kartu('Sudah pre test', r.pre, r.total ? Math.round(r.pre / r.total * 100) + '% daerah' : '—', 'text-emerald-400')}
+    ${kartu('Sudah post test', r.post, r.total ? Math.round(r.post / r.total * 100) + '% daerah' : '—', 'text-emerald-400')}
+    ${kartu('Sudah survei', r.survei, r.total ? Math.round(r.survei / r.total * 100) + '% daerah' : '—', 'text-emerald-400')}
+    ${kartu('Lengkap 3 ceklis', r.lengkap, 'pre + post + survei', 'text-emerald-400')}
+    ${kartu('Belum mendaftar', r.kosong, 'belum ada akunnya', r.kosong ? 'text-red-400' : '')}
   </div>
 
   <div class="mt-8 flex flex-wrap items-center gap-3">
-    <select id="ckProv" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-ink outline-none [&>option]:bg-white [&>option]:text-ink">
+    <select id="ckProv" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink">
       <option value="">Semua provinsi</option>
       ${provs.map(p => `<option value="${aman(p)}"${SARING.prov === p ? ' selected' : ''}>${aman(p)}</option>`).join('')}
     </select>
-    <select id="ckStatus" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-ink outline-none [&>option]:bg-white [&>option]:text-ink">
+    <select id="ckStatus" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink">
       <option value="">Semua status</option>
       <option value="lengkap">Lengkap (3 ceklis)</option>
       <option value="sebagian">Sebagian (1–2 ceklis)</option>
@@ -375,21 +375,21 @@ function gambar() {
       ${r.luar ? `<option value="luar">Di luar daftar DAK (${r.luar})</option>` : ''}
     </select>
     <div class="glass flex items-center gap-2 rounded-full px-5 py-2.5">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4 text-slate-500"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="ckCari" value="${aman(SARING.cari)}" placeholder="Cari daerah atau nama peserta" class="w-52 bg-transparent text-[13px] outline-none placeholder:text-slate-500" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="h-4 w-4 text-white/50"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="ckCari" value="${aman(SARING.cari)}" placeholder="Cari daerah atau nama peserta" class="w-52 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
     </div>
     <div class="ml-auto flex flex-wrap gap-2">
-      ${r.luar ? `<button id="ckBersih" class="rounded-full border border-red-400/50 bg-red-500/15 px-5 py-2.5 text-[13px] font-medium text-red-700 transition hover:bg-red-500/25">
+      ${r.luar ? `<button id="ckBersih" class="rounded-full border border-red-400/50 bg-red-500/15 px-5 py-2.5 text-[13px] font-medium text-red-200 transition hover:bg-red-500/25">
         Hapus ${r.luar} daerah di luar daftar</button>` : ''}
-      <button id="ckCsv" class="rounded-full border border-slate-300 px-5 py-2.5 text-[13px] font-medium text-slate-700 transition hover:bg-slate-100">Unduh CSV</button>
-      <button id="ckXls" class="cta-glow rounded-full bg-ink px-5 py-2.5 text-[13px] font-medium text-white">Unduh Excel</button>
+      <button id="ckCsv" class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 transition hover:bg-white/10">Unduh CSV</button>
+      <button id="ckXls" class="cta-glow rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black">Unduh Excel</button>
     </div>
   </div>
 
   <div class="glass mt-6 overflow-hidden rounded-3xl">
     <div class="overflow-x-auto">
       <table class="w-full min-w-[820px] text-left text-[14px]">
-        <thead class="border-b border-slate-200 text-[11px] uppercase tracking-[0.14em] text-slate-500">
+        <thead class="border-b border-white/10 text-[11px] uppercase tracking-[0.14em] text-white/45">
           <tr>
             <th class="px-5 py-4 font-semibold">#</th>
             <th class="px-5 py-4 font-semibold">Kabupaten/Kota</th>
@@ -403,11 +403,11 @@ function gambar() {
         <tbody>
           ${rows.length
             ? kelompok.map(k => kepalaProvinsi(k.prov, k.isi, k.luar) + k.isi.map(d => baris(d, nomor++)).join('')).join('')
-            : '<tr><td colspan="7" class="px-5 py-12 text-center text-slate-500">Tidak ada daerah yang cocok dengan penyaring.</td></tr>'}
+            : '<tr><td colspan="7" class="px-5 py-12 text-center text-white/50">Tidak ada daerah yang cocok dengan penyaring.</td></tr>'}
         </tbody>
       </table>
     </div>
-    <p class="border-t border-slate-200 px-5 py-4 text-[12px] leading-[1.7] text-slate-500">
+    <p class="border-t border-white/10 px-5 py-4 text-[12px] leading-[1.7] text-white/40">
       Menampilkan ${rows.length} baris dari ${r.total} daerah penerima DAK${r.luar ? ' ditambah ' + r.luar + ' daerah di luar daftar' : ''}.
       Tombol unduh mengikuti penyaring yang sedang aktif.<br>
       Kolom Peserta adalah jumlah akun terdaftar dari daerah itu; ceklis menyala bila salah satunya sudah mengisi.
