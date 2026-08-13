@@ -67,6 +67,11 @@ function warna(v) {
 const KOSONG      = 'rgba(255,255,255,.05)';   // daerah tanpa berita acara
 const KOSONG_TEPI = 'rgba(255,255,255,.16)';
 
+/* Jari-jari bulatan penanda daerah kecil, dalam satuan peta pada tampilan
+   seluruh Indonesia. Pada perbesaran lain nilainya diskalakan oleh
+   sesuaikanPenanda() supaya besarnya di layar tidak berubah. */
+const JARI_PENANDA = 3.2;
+
 /* ── angka ────────────────────────────────────────────────────────
    Isian berita acara ditulis petugas mengikuti kebiasaan Indonesia:
    koma sebagai desimal, titik sebagai pemisah ribuan. */
@@ -141,11 +146,14 @@ function warnai() {
     b.path.setAttribute('fill', isi);
     b.path.setAttribute('fill-opacity', v == null ? '1' : '.88');
     b.path.setAttribute('stroke', dipilih ? '#ffffff' : (v == null ? KOSONG_TEPI : 'rgba(0,0,0,.45)'));
-    b.path.setAttribute('stroke-width', dipilih ? '1.6' : '.35');
+    /* Lebar garis dalam piksel layar, bukan satuan peta — lihat
+       `vector-effect: non-scaling-stroke` pada .peta-daerah. Tanpa itu garis
+       tepi ikut menebal tiap kali peta diperbesar sampai menutupi isinya. */
+    b.path.setAttribute('stroke-width', dipilih ? '2' : '.6');
     if (b.titik) {
       b.titik.setAttribute('fill', isi);
       b.titik.setAttribute('stroke', dipilih ? '#ffffff' : 'rgba(0,0,0,.55)');
-      b.titik.setAttribute('stroke-width', dipilih ? '1.2' : '.5');
+      b.titik.setAttribute('stroke-width', dipilih ? '1.8' : '.9');
     }
   });
 }
@@ -166,12 +174,14 @@ function gambarPeta(kotak) {
   const latar = document.createElementNS(NS, 'g');
   latar.setAttribute('fill', 'rgba(255,255,255,.035)');
   latar.setAttribute('stroke', 'rgba(255,255,255,.13)');
-  latar.setAttribute('stroke-width', '.35');
+  latar.setAttribute('stroke-width', '.7');
   latar.setAttribute('stroke-linejoin', 'round');
   latar.setAttribute('pointer-events', 'none');
   geo.provinsi.forEach(p => {
     const el = document.createElementNS(NS, 'path');
     el.setAttribute('d', p.d);
+    /* Tidak diwariskan dari <g>, jadi dipasang di tiap garis provinsi. */
+    el.setAttribute('vector-effect', 'non-scaling-stroke');
     latar.appendChild(el);
   });
   svg.appendChild(latar);
@@ -202,23 +212,22 @@ function gambarPeta(kotak) {
   kotak.appendChild(svg);
   SVG = svg;
 
-  /* Daerah kepulauan kecil — Wakatobi, Anambas, Sitaro, Nias — hanya beberapa
-     piksel pada peta seluruh Indonesia, praktis mustahil dilihat apalagi
-     diklik. Untuk itu dipasang bulatan di titik wakilnya, jadi daerahnya
-     tetap terbaca warnanya dan tetap bisa dibuka. */
+  /* Daerah kepulauan kecil — Wakatobi, Anambas, Sitaro, Nias — dan kota-kota
+     mungil hanya beberapa piksel pada peta seluruh Indonesia, praktis mustahil
+     dilihat apalagi diklik. Untuk itu dipasang bulatan di titik wakilnya, jadi
+     daerahnya tetap terbaca warnanya dan tetap bisa dibuka. Ukuran wilayahnya
+     dicatat karena bulatan itu harus menyingkir begitu bentuk aslinya sudah
+     cukup besar — lihat sesuaikanPenanda(). */
   BENTUK.forEach((b, kunci) => {
-    let kecil = !!b.geo.s;      // ditandai saat peta dibangun: wilayahnya mungil
-    if (!kecil) {
-      try {
-        const k = b.path.getBBox();
-        kecil = Math.max(k.width, k.height) < 7;
-      } catch (e) { kecil = true; /* peta belum terpasang; beri penanda, aman */ }
-    }
+    b.luas = luasPath(b.geo.d);
+    let sisi = 0;
+    try { const k = b.path.getBBox(); sisi = Math.max(k.width, k.height); } catch (e) { /* biar 0 */ }
+    const kecil = !!b.geo.s || sisi < 7;
     if (!kecil) return;
     const c = document.createElementNS(NS, 'circle');
     c.setAttribute('cx', b.geo.x);
     c.setAttribute('cy', b.geo.y);
-    c.setAttribute('r', '3.2');
+    c.setAttribute('r', JARI_PENANDA);
     c.setAttribute('class', 'peta-daerah');
     c.dataset.kunci = kunci;
     penanda.appendChild(c);
@@ -226,6 +235,7 @@ function gambarPeta(kotak) {
   });
 
   pasangInteraksi(svg, kotak);
+  sesuaikanPenanda();
   warnai();
   gambarLabel();
 }
@@ -248,7 +258,11 @@ function gambarLabel() {
     jumlah++;
     const t = document.createElementNS(NS, 'text');
     t.setAttribute('x', x);
-    t.setAttribute('y', y - (b.titik ? 4.5 : 0.5));
+    /* Nama digeser ke atas bila bulatan penandanya sedang tampak, supaya tidak
+       menimpanya. Jaraknya mengikuti ukuran huruf — keduanya menyusut bersama
+       perbesaran, jadi jaraknya di layar tetap sama. */
+    const adaPenanda = b.titik && b.titik.style.display !== 'none';
+    t.setAttribute('y', y - (adaPenanda ? ukuran * 1.5 : ukuran * 0.2));
     t.setAttribute('text-anchor', 'middle');
     t.setAttribute('font-size', ukuran);
     t.setAttribute('fill', kunci === PILIH ? '#ffffff' : 'rgba(255,255,255,.82)');
@@ -261,6 +275,50 @@ function gambarLabel() {
   });
 }
 
+/** Luas seluruh poligon sebuah daerah, dalam satuan peta persegi.
+    Dipakai untuk menakar seberapa besar daerah itu benar-benar tampak.
+    Kotak pembatasnya tidak bisa dipakai: kotak Wakatobi selebar kabupaten
+    biasa padahal isinya pulau-pulau mungil yang berjauhan. */
+function luasPath(d) {
+  let total = 0;
+  for (const bagian of String(d || '').split('M').slice(1)) {
+    const n = bagian.match(/-?[\d.]+/g);
+    if (!n || n.length < 6) continue;
+    const titik = Math.floor(n.length / 2);
+    let a = 0;
+    for (let i = 0; i < titik; i++) {
+      const j = (i + 1) % titik;
+      a += (+n[2 * i]) * (+n[2 * j + 1]) - (+n[2 * j]) * (+n[2 * i + 1]);
+    }
+    total += Math.abs(a / 2);
+  }
+  return total;
+}
+
+/** Sesuaikan bulatan penanda dengan perbesaran yang sedang dipakai.
+    Jari-jarinya ditulis dalam satuan peta, jadi tanpa penyesuaian ini bulatan
+    itu ikut membesar bersama peta dan justru menutupi bentuk daerah yang
+    hendak dilihat. Dua hal yang dikerjakan:
+      · jari-jarinya dikecilkan sebanding perbesaran, sehingga besarnya di
+        layar tetap sama dari tampilan seluruh Indonesia sampai perbesaran
+        penuh — sebesar titik penunjuk, bukan sebesar kabupaten;
+      · bulatannya disingkirkan begitu bentuk asli daerahnya sudah menempati
+        cukup banyak layar untuk dilihat dan diklik sendiri. Yang tersisa
+        hanyalah penanda bagi gugusan pulau yang memang tetap mungil. */
+function sesuaikanPenanda() {
+  if (!DASAR || !VB) return;
+  const skala = VB[2] / DASAR[2];
+  /* Yang dibandingkan luas daratannya dengan luas layar yang sedang tampak,
+     bukan lebar kotak pembatasnya — ambang ini kira-kira sebesar titik yang
+     masih nyaman diklik. */
+  const ambang = VB[2] * VB[3] * 0.0004;
+  BENTUK.forEach(b => {
+    if (!b.titik) return;
+    b.titik.setAttribute('r', (JARI_PENANDA * skala).toFixed(2));
+    b.titik.style.display = (b.luas > ambang) ? 'none' : '';
+  });
+}
+
 function terapkanVB() {
   const b = DASAR;
   VB[2] = Math.max(38, Math.min(b[2], VB[2]));
@@ -268,6 +326,7 @@ function terapkanVB() {
   VB[0] = Math.max(b[0] - VB[2] * .2, Math.min(b[0] + b[2] - VB[2] * .8, VB[0]));
   VB[1] = Math.max(b[1] - VB[3] * .2, Math.min(b[1] + b[3] - VB[3] * .8, VB[1]));
   SVG.setAttribute('viewBox', VB.join(' '));
+  sesuaikanPenanda();
   gambarLabel();
 }
 

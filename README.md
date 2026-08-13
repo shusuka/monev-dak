@@ -408,8 +408,15 @@ sehingga menjalankan ulang tidak mengunduh lagi. Nama daerah yang ejaannya berbe
 antara `wilayah.js` dan nemesis dipadankan lewat tabel `ALIAS` di dalam skrip —
 tambahkan barisnya di sana, jangan mengubah ejaan di `wilayah.js`. Kunci tiap daerah dibentuk
 sama persis dengan `kunciDaerah()` pada `berita-acara.js`, jadi peta dan arsip saling
-mengenali; daerah kepulauan kecil seperti Wakatobi dan Anambas diberi bulatan penanda
-supaya tetap terlihat dan bisa diklik. Berkas peta baru diunduh saat tab ini dibuka,
+mengenali; daerah kecil — kota mungil seperti Lubuklinggau maupun gugusan pulau
+seperti Wakatobi dan Anambas — diberi bulatan penanda supaya tetap terlihat dan bisa
+diklik. Bulatan itu **tetap sebesar titik di layar pada perbesaran berapa pun**, dan
+**menyingkir sendiri** begitu bentuk asli daerahnya sudah menempati cukup banyak layar
+(`sesuaikanPenanda()` pada `peta.js`). Yang ditakar luas daratannya, bukan kotak
+pembatasnya: kotak Wakatobi selebar kabupaten biasa padahal isinya pulau-pulau kecil
+yang berjauhan. Karena alasan yang sama semua garis tepi memakai
+`vector-effect: non-scaling-stroke` — tanpa itu garisnya ikut menebal tiap kali peta
+diperbesar sampai menutupi daerah yang hendak dilihat. Berkas peta baru diunduh saat tab ini dibuka,
 jadi pemda yang membuka aplikasi dari ponsel tidak ikut menanggung unduhannya.
 
 ---

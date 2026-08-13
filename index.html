@@ -158,8 +158,11 @@
   @media (prefers-reduced-motion: reduce) { .kartu-tab:hover { transform: none; } }
 
   /* ---------- peta sebaran (assets/peta.js) ---------- */
-  .peta-daerah { cursor: pointer; transition: fill-opacity .15s ease; }
-  .peta-daerah:hover { fill-opacity: 1; stroke: #fff; stroke-width: 1.1; }
+  /* Lebar garis dihitung dalam piksel layar, bukan satuan peta: tanpa ini
+     garis tepi ikut menebal tiap kali peta diperbesar, sampai daerah kecil
+     tertutup garisnya sendiri. */
+  .peta-daerah { cursor: pointer; vector-effect: non-scaling-stroke; transition: fill-opacity .15s ease; }
+  .peta-daerah:hover { fill-opacity: 1; stroke: #fff; stroke-width: 1.6; }
 
   /* ---------- conic gradient submit button ---------- */
   .gbtn { position: relative; width: 52px; height: 52px; flex: 0 0 52px; border-radius: 9999px; }
