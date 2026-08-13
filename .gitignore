@@ -8,3 +8,4 @@ _demo-*.html
 tmpview-*.html
 _uji/
 server.mjs
+.geo-cache/

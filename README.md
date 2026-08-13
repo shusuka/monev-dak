@@ -53,6 +53,8 @@ monev-dak/
 │   ├── ceklis.js              tab Ceklis Kesiapan Pemda di panel admin
 │   ├── ba-template.docx       template notulensi — JANGAN diedit di Word
 │   └── logo-pu.png            logo Kementerian PU — LETAKKAN BERKASNYA DI SINI
+├── scripts/
+│   └── build-peta.mjs         pembangun peta-geo.js dari GeoJSON assai-id/nemesis
 ├── firestore.rules            security rules, tempel di Firebase Console
 ├── vercel.json                konfigurasi hosting statis
 └── README.md
@@ -395,7 +397,17 @@ kabupaten/kota penerima DAK sebagai lapisan yang bisa diklik. Berkas itu dibuat
 otomatis dari GeoJSON resmi repositori [assai-id/nemesis](https://github.com/assai-id/nemesis)
 (`seed/geo/02-provinces`): tiap cincin disederhanakan dengan Ramer–Douglas–Peucker
 lalu diproyeksikan ke koordinat SVG, sehingga yang dikirim ke peramban 292 KB, bukan
-ratusan megabita. Berkasnya **jangan disunting manual**. Kunci tiap daerah dibentuk
+ratusan megabita. Berkasnya **jangan disunting manual** — jalankan ulang
+
+```
+node scripts/build-peta.mjs
+```
+
+bila daftar penerima DAK di `assets/wilayah.js` berubah. Skripnya membaca daftar itu
+langsung, mengunduh GeoJSON yang diperlukan, dan menyinggahkannya di `.geo-cache/`
+sehingga menjalankan ulang tidak mengunduh lagi. Nama daerah yang ejaannya berbeda
+antara `wilayah.js` dan nemesis dipadankan lewat tabel `ALIAS` di dalam skrip —
+tambahkan barisnya di sana, jangan mengubah ejaan di `wilayah.js`. Kunci tiap daerah dibentuk
 sama persis dengan `kunciDaerah()` pada `berita-acara.js`, jadi peta dan arsip saling
 mengenali; daerah kepulauan kecil seperti Wakatobi dan Anambas diberi bulatan penanda
 supaya tetap terlihat dan bisa diklik. Berkas peta baru diunduh saat tab ini dibuka,
