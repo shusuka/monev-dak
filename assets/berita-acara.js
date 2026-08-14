@@ -767,6 +767,7 @@ let ARSIP_CARI   = '';
 let ARSIP_PROV   = '';        // saringan provinsi, hanya untuk petugas PFID
 let ARSIP_OLEH   = '';        // saringan penyusun, hanya untuk petugas PFID
 let ARSIP_ADMIN  = false;     // arsip sedang ditampilkan di panel admin
+let ARSIP_BUKA   = {};        // provinsi yang kartunya sedang terbuka di panel admin
 let ARSIP_STATUS = '';        // keterangan simpan terakhir pada langkah periksa
 let SUDAH_UNDUH  = false;     // Word-nya sudah diunduh, daerah ini boleh ditutup
 
@@ -2412,6 +2413,75 @@ function kotakSaring(id, ikon, labelSemua, labelKosong, opsi, terpilih) {
       </div>`;
 }
 
+/* ── kartu provinsi (panel admin) ───────────────────────────────
+   Admin melihat berita acara seluruh Indonesia sekaligus, jadi daftar
+   datarnya cepat menjadi ratusan baris. Isinya dikelompokkan per provinsi:
+   yang tampil mula-mula hanya kartu provinsi, daftar pemda-nya keluar setelah
+   kartunya dibuka. Warna tiap provinsi berbeda supaya kartunya terbedakan
+   sekilas tanpa harus membaca namanya. */
+const WARNA_PROV = [
+  '56 189 248',   // langit
+  '52 211 153',   // zamrud
+  '251 191 36',   // kuning
+  '167 139 250',  // ungu
+  '251 113 133',  // mawar
+  '45 212 191',   // toska
+  '232 121 249',  // magenta
+  '250 146 60',   // jingga
+  '129 140 248',  // nila
+  '163 230 53',   // hijau muda
+  '244 114 182',  // merah muda
+  '96 165 250'    // biru
+];
+const WARNA_TANPA_PROV = '148 163 184';   // abu, selalu untuk yang tanpa provinsi
+
+/** Warna tiap provinsi diambil dari urutan abjad seluruh isi arsip — bukan dari
+    hasil saringan — supaya sebuah provinsi tidak berganti warna hanya karena
+    kotak pencarian diketik. */
+function petaWarnaProv(rekaman) {
+  const peta = { [TANPA_ISI]: WARNA_TANPA_PROV };
+  Array.from(new Set(rekaman.map(r => provArsip(r)).filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b, 'id'))
+    .forEach((prov, i) => { peta[prov] = WARNA_PROV[i % WARNA_PROV.length]; });
+  return peta;
+}
+
+/** Kelompokkan berita acara per provinsi, urut abjad, tanpa provinsi di bawah. */
+function grupProvinsi(daftar) {
+  const grup = {};
+  daftar.forEach(r => {
+    const k = provArsip(r) || TANPA_ISI;
+    (grup[k] = grup[k] || []).push(r);
+  });
+  return Object.keys(grup)
+    .sort((a, b) => (a === TANPA_ISI) - (b === TANPA_ISI) || a.localeCompare(b, 'id'))
+    .map(k => ({ prov: k, rekaman: grup[k] }));
+}
+
+const IKON_PANAH = '<path d="m9 6 6 6-6 6"/>';
+
+function kartuProvinsi(prov, rekaman, warna, terbuka, pfid) {
+  const pemda = new Set(rekaman.map(r => r.kunciDaerah || kunciDaerah(r.daerah || r.kab || ''))).size;
+  const nama = prov === TANPA_ISI ? 'Tanpa provinsi' : prov;
+  return `
+  <div class="overflow-hidden rounded-3xl border" style="--prov:${warna}; border-color:rgb(var(--prov)/.28); background:linear-gradient(180deg, rgb(var(--prov)/.10), rgb(var(--prov)/.03));">
+    <button data-prov="${aman(prov)}" aria-expanded="${terbuka}" class="flex w-full items-center gap-4 px-5 py-4 text-left transition hover:bg-white/[.06] md:px-6 md:py-5">
+      <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl" style="background:rgb(var(--prov)/.16); color:rgb(var(--prov));">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             class="h-[18px] w-[18px] transition-transform duration-200" style="transform:rotate(${terbuka ? 90 : 0}deg)">${IKON_PANAH}</svg>
+      </span>
+      <span class="min-w-0 flex-1">
+        <span class="block truncate text-[16px] font-semibold" style="color:rgb(var(--prov));">${aman(nama)}</span>
+        <span class="mt-0.5 block text-[12px] text-white/50">${pemda} pemda · ${rekaman.length} berita acara</span>
+      </span>
+      <span class="shrink-0 rounded-full px-3 py-1 text-[12px] font-semibold" style="background:rgb(var(--prov)/.14); color:rgb(var(--prov));">${rekaman.length}</span>
+    </button>
+    ${terbuka ? `<div class="space-y-3 border-t px-4 pb-5 pt-4 md:px-5" style="border-color:rgb(var(--prov)/.18);">
+      ${rekaman.map(r => kartuArsip(r, pfid, false)).join('')}
+    </div>` : ''}
+  </div>`;
+}
+
 function renderArsip() {
   /* Satu penyaji untuk dua tempat: menu arsip di aplikasi, dan tab berita acara
      di panel admin. Keduanya tidak pernah tampil bersamaan — admin memakai
@@ -2451,6 +2521,16 @@ function renderArsip() {
 
   const daftar = ARSIP.filter(r => cocokCari(r) && cocokProv(r) && cocokOleh(r));
 
+  /* Panel admin memuat berita acara seluruh Indonesia, jadi daftarnya
+     dikelompokkan menjadi kartu provinsi yang isinya keluar saat dibuka.
+     Begitu ada pencarian atau saringan, kelompoknya dibuka sendiri — yang
+     dicari orang adalah barisnya, bukan nama provinsinya. */
+  const grup      = admin ? grupProvinsi(daftar) : [];
+  const warnaProv = admin ? petaWarnaProv(ARSIP) : {};
+  const paksaBuka = !!cari || !!ARSIP_PROV || !!ARSIP_OLEH || grup.length === 1;
+  const bukaProv  = g => paksaBuka || !!ARSIP_BUKA[g.prov];
+  const adaTertutup = grup.some(g => !bukaProv(g));
+
   /* Dipakai pada pesan "tidak ada yang cocok" supaya sebabnya kelihatan. */
   const saringanTerpakai = [
     ARSIP_PROV && (ARSIP_PROV === TANPA_ISI ? 'tanpa provinsi' : ARSIP_PROV),
@@ -2478,6 +2558,7 @@ function renderArsip() {
       </div>
       ${semua ? kotakSaring('baArsipProv', IKON_SARING, 'Semua provinsi', 'Tanpa provinsi', opsiProv, ARSIP_PROV) : ''}
       ${semua ? kotakSaring('baArsipOleh', IKON_PENYUSUN, 'Semua penyusun', 'Tanpa nama', opsiOleh, ARSIP_OLEH) : ''}
+      ${admin && grup.length > 1 && !paksaBuka ? `<button id="baArsipSemuaProv" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">${adaTertutup ? 'Buka semua provinsi' : 'Tutup semua provinsi'}</button>` : ''}
       <button id="baArsipMuat" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Muat ulang</button>
       ${semua ? `<button id="baArsipImpor" title="Masukkan notulensi Word yang sudah disusun manual, boleh banyak berkas sekaligus" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Impor dokumen Word</button>` : ''}
       ${pfid ? `<button id="baArsipBaru" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Buat berita acara baru</button>
@@ -2487,7 +2568,9 @@ function renderArsip() {
     ${ARSIP_GALAT ? `<div class="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-[13px] text-rose-200">${aman(ARSIP_GALAT)}</div>` : ''}
 
     <div class="mt-7 space-y-4">
-      ${daftar.length ? daftar.map(r => kartuArsip(r, pfid, semua)).join('') : `
+      ${daftar.length ? (admin
+        ? grup.map(g => kartuProvinsi(g.prov, g.rekaman, warnaProv[g.prov] || WARNA_TANPA_PROV, bukaProv(g), pfid)).join('')
+        : daftar.map(r => kartuArsip(r, pfid, semua)).join('')) : `
         <div class="glass rounded-3xl px-6 py-14 text-center">
           <p class="text-[15px] font-medium text-white/75">${ARSIP.length
             ? (saringanTerpakai.length
@@ -2519,6 +2602,12 @@ function renderArsip() {
     renderArsip();
   };
 
+  if (el('#baArsipSemuaProv')) el('#baArsipSemuaProv').onclick = () => {
+    ARSIP_BUKA = {};
+    if (adaTertutup) grup.forEach(g => { ARSIP_BUKA[g.prov] = true; });
+    renderArsip();
+  };
+
   el('#baArsipMuat').onclick = async () => {
     ARSIP_DIMUAT = false;
     await tampilkanArsip();
@@ -2547,6 +2636,15 @@ function renderArsip() {
   /* Tombol dicari di dalam wadahnya sendiri, sebab penyaji ini dipakai juga
      oleh panel admin yang wadahnya berbeda. */
   const dalam = s => Array.from(wadah.querySelectorAll(s));
+
+  /* Kartu provinsi dibuka/ditutup di tempat; gulirannya tidak dipindahkan
+     supaya kartu yang barusan diklik tetap di bawah kursor. */
+  dalam('[data-prov]').forEach(t => t.onclick = () => {
+    const k = t.dataset.prov;
+    if (ARSIP_BUKA[k]) delete ARSIP_BUKA[k];
+    else ARSIP_BUKA[k] = true;
+    renderArsip();
+  });
 
   dalam('[data-peta]').forEach(t => t.onclick = () => {
     if (!window.PETA_DAK || !window.PETA_DAK.buka(t.dataset.peta)) {
@@ -2700,7 +2798,7 @@ window.BA = {
     D = kosong(); FOTO = []; LANGKAH = 'identitas'; GALAT = ''; KABAR = '';
     konfigDicoba = false; AI_GALAT = ''; ARSIP_STATUS = ''; SUDAH_UNDUH = false;
     ARSIP = []; ARSIP_DIMUAT = false; ARSIP_GALAT = ''; ARSIP_ADMIN = false;
-    ARSIP_CARI = ''; ARSIP_PROV = ''; ARSIP_OLEH = '';
+    ARSIP_CARI = ''; ARSIP_PROV = ''; ARSIP_OLEH = ''; ARSIP_BUKA = {};
     if (el('#adBaPeta')) el('#adBaPeta').innerHTML = '';
     KEMBAR = null; DARI_ARSIP = ''; ARSIP_DASAR = null; clearTimeout(jamKembar);
   }

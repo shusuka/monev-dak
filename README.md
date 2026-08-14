@@ -373,6 +373,23 @@ Pemda **selalu melihat versi terbaru**: daftar arsipnya diambil ulang tiap kali 
 dibuka, dan dibaca dengan `getDocFromServer` — bukan singgahan peramban — sehingga
 perbaikan atau impor yang baru saja dilakukan petugas langsung terlihat.
 
+### Kartu provinsi di panel admin
+
+Admin membaca berita acara seluruh Indonesia sekaligus, sehingga daftar datarnya cepat
+menjadi ratusan baris. Di tab **Berita Acara** panel admin — dan hanya di sana; menu
+Arsip milik petugas PFID maupun pemda tetap berupa daftar biasa — isinya dikelompokkan
+menjadi **kartu per provinsi**. Yang tampil mula-mula hanya kartu provinsi beserta
+jumlah pemda dan jumlah berita acaranya; daftar pemda-nya keluar setelah kartunya
+diklik, dan tombol **Buka semua provinsi** membuka atau menutup semuanya sekaligus.
+
+Tiap provinsi memakai **warna sendiri** — garis tepi, latar, nama, dan angkanya sewarna
+— diambil dari urutan abjad seluruh isi arsip, bukan dari hasil saringan, supaya sebuah
+provinsi tidak berganti warna hanya karena kotak pencarian diketik. Berita acara yang
+daerahnya tidak ada di `assets/wilayah.js` berkumpul di kartu abu **Tanpa provinsi**
+paling bawah. Begitu kotak pencarian diisi atau saringan provinsi/penyusun dipakai,
+kelompoknya **terbuka sendiri** — yang dicari orang adalah barisnya, bukan nama
+provinsinya.
+
 ---
 
 ## 6. Peta sebaran progres (panel admin)
