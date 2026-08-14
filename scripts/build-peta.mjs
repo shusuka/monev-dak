@@ -53,7 +53,9 @@ const WILAYAH = window.WILAYAH;
 /* Sama persis dengan slugKunci/kunciDaerah di assets/berita-acara.js. */
 const slugKunci = (s) => String(s == null ? "" : s).toLowerCase()
   .replace(/[^a-z0-9 ]/g, "").trim().replace(/\s+/g, "-");
-const kunciDaerah = (t) => slugKunci(String(t || "").replace(/^\s*(kabupaten|kab\.?)\s+/i, ""));
+const kunciDaerah = (t) => slugKunci(String(t || "")
+  .replace(/^\s*(kabupaten|kab\.?)\s+/i, "")
+  .replace(/^\s*kep\.?\s+/i, "Kepulauan "));
 
 /* Nama pada GeoJSON kadang berbeda ejaan dengan daftar DAK. Padanannya
    ditulis di sini supaya daftar DAK tidak perlu diubah — ejaan di

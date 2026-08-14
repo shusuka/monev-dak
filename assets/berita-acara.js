@@ -716,8 +716,15 @@ const slugKunci = s => String(s == null ? '' : s).toLowerCase()
   .replace(/[^a-z0-9 ]/g, '').trim().replace(/\s+/g, '-');
 
 /* "Kab Magelang" dan "Magelang" harus menghasilkan kunci yang sama, sedangkan
-   "Kota Magelang" tetap terpisah — di daftar wilayah keduanya daerah berbeda. */
-const kunciDaerah = teks => slugKunci(String(teks || '').replace(/^\s*(kabupaten|kab\.?)\s+/i, ''));
+   "Kota Magelang" tetap terpisah — di daftar wilayah keduanya daerah berbeda.
+
+   Nama daerah kepulauan kerap ditulis singkat — "Kab Kep. Siau Tagulandang
+   Biaro" untuk "Kepulauan Siau Tagulandang Biaro" di assets/wilayah.js.
+   Singkatannya dipanjangkan lebih dulu supaya kuncinya sama, sehingga berita
+   acaranya tetap dikenali provinsinya, petanya, dan daftar arsip pemdanya. */
+const kunciDaerah = teks => slugKunci(String(teks || '')
+  .replace(/^\s*(kabupaten|kab\.?)\s+/i, '')
+  .replace(/^\s*kep\.?\s+/i, 'Kepulauan '));
 
 /** Daerah milik pengguna yang sedang masuk; petugas PFID tidak terikat daerah. */
 const kunciSaya = () => (ME ? kunciDaerah(ME.kab) : '');
@@ -1100,15 +1107,23 @@ async function hapusIndeks(id, kunci) {
 }
 
 /** Susun ulang seluruh indeks daerah dari arsip yang ada, sekaligus mengisi
-    kunciDaerah pada berita acara lama yang disimpan sebelum fitur ini ada. */
+    kunciDaerah pada berita acara lama yang disimpan sebelum fitur ini ada.
+
+    Kuncinya selalu dihitung ulang dari nama daerahnya, bukan diambil dari yang
+    tersimpan: berita acara yang kuncinya terbentuk sebelum sebuah ejaan dikenali
+    — "Kab Kep. Siau Tagulandang Biaro", misalnya — jadi ikut diperbaiki, dan
+    daerahnya kembali menemukan arsipnya sendiri. */
 async function perbaikiIndeks() {
   if (!pakaiFirebase()) return 0;
   const { doc, setDoc } = store.fs;
   let jumlah = 0;
   for (const r of ARSIP) {
-    const kunci = r.kunciDaerah || kunciDaerah(r.daerah);
+    const kunci = kunciDaerah(r.daerah) || r.kunciDaerah;
     if (!kunci) continue;
-    if (!r.kunciDaerah) await setDoc(doc(store.db, 'beritaAcara', r.id), { kunciDaerah: kunci }, { merge: true });
+    if (r.kunciDaerah !== kunci) {
+      await setDoc(doc(store.db, 'beritaAcara', r.id), { kunciDaerah: kunci }, { merge: true });
+      r.kunciDaerah = kunci;      // daftar di layar ikut memakai kunci barunya
+    }
     await setDoc(doc(store.db, 'indeksDaerah', kunci),
       { daftar: { [r.id]: ringkasIndeks(r.id, { ...r, kunciDaerah: kunci }) } }, { merge: true });
     jumlah++;
