@@ -15,8 +15,8 @@
    langsung kelihatan kosong.
 
    Isi kolomnya diturunkan dari notulensi, bukan diketik ulang:
+     Proses Tender     daerahnya sudah melewati atau sedang menjalani tender
      Terkontrak        ada ruas yang nilai kontraknya terisi
-     Proses Tender     sebaliknya, belum ada satu pun nilai kontrak
      Badan Jalan       tabel Kesimpulan: Jenis atau Target Penanganan tidak sesuai
      Bahu · Marka      tabel Kesimpulan: kolom senama tidak sesuai
      Fisik · Keuangan  progres rata-rata pada Evaluasi Pelaksanaan; bila
@@ -137,9 +137,15 @@ function turunkan(rekaman) {
   const fisik    = angka(d.fisikRata);
   const keuangan = angka(d.keuanganRata);
 
+  /* Tender dan kontrak bukan dua pilihan yang saling meniadakan, melainkan dua
+     tahap berurutan: paket yang sudah terkontrak pasti sudah lewat tender,
+     jadi centangnya ikut menyala. Daerah yang belum berkontrak pun sedang
+     berada di proses tender — karena itu kolomnya menyala untuk setiap daerah
+     yang sudah punya berita acara, dan dimatikan sendiri di layar bila
+     ternyata tendernya memang belum jalan. */
   return {
+    tender:     true,
     terkontrak: kontrak,
-    tender:     !kontrak,
     badan: kes.some(k => !sesuai(k.jenisPenanganan) || !sesuai(k.targetPenanganan)),
     bahu:  kes.some(k => !sesuai(k.bahu)),
     marka: kes.some(k => !sesuai(k.marka)),
@@ -160,7 +166,9 @@ function pilihTerbaru(daftar) {
     waktuAngka(b.diperbaruiAt) - waktuAngka(a.diperbaruiAt))[0];
 }
 
-/** Baris rekap lengkap: daftar daerah digabung dengan isi yang diturunkan. */
+/** Baris rekap: daftar 164 daerah penerima digabung dengan isi yang
+    diturunkan, plus daftar berita acara yang daerahnya tidak ada di daftar
+    itu — yang terakhir tidak ikut ke berkas, hanya jadi peringatan di layar. */
 function susun(rekaman, kunci) {
   const perDaerah = {};
   (rekaman || []).forEach(r => {
@@ -181,24 +189,17 @@ function susun(rekaman, kunci) {
     });
   });
 
-  /* Berita acara yang nama daerahnya di luar daftar wilayah — salah ketik,
-     atau daerah yang belum dimasukkan ke daftar — tidak boleh hilang begitu
-     saja. Barisnya ditaruh paling bawah supaya kelihatan dan bisa dibetulkan. */
-  const luar = [];
-  Object.keys(perDaerah).forEach(k => {
-    const arsip = pilihTerbaru(perDaerah[k]);
-    luar.push({
-      prov: '', kab: arsip.daerah || '', kunci: k, luar: true,
-      labelProv: arsip.prov ? 'Provinsi ' + arsip.prov : '(di luar daftar wilayah)',
-      labelKab: arsip.daerah || '(tanpa daerah)',
-      ada: true,
-      tanggalIso: arsip.tanggalIso || '',
-      jumlahBa: perDaerah[k].length,
-      isi: turunkan(arsip)
-    });
-  });
+  /* Rekapnya harus berisi tepat 164 daerah penerima DAK — tidak lebih. Berita
+     acara yang nama daerahnya di luar daftar itu (salah ketik, atau daerah
+     yang memang bukan penerima) karena itu tidak ikut ke berkas. Tetapi tidak
+     boleh hilang diam-diam juga: namanya disebut di layar supaya ketahuan dan
+     bisa dibetulkan di arsipnya. */
+  const luar = Object.keys(perDaerah).map(k => ({
+    daerah: (pilihTerbaru(perDaerah[k]).daerah || '(tanpa daerah)'),
+    jumlah: perDaerah[k].length
+  })).sort((a, b) => a.daerah.localeCompare(b.daerah));
 
-  return baris.concat(luar);
+  return { baris, luar };
 }
 
 
@@ -266,7 +267,7 @@ function lembarXml(judul, baris) {
     barisXml(1, KOLOM.map(k => sel(k + '1', G_JUDUL, k === 'A' ? judul : null)).join(''), 50.25) +
     barisXml(2, [
       sel('A2', G_KEPALA, 'Provinsi'), sel('B2', G_KEPALA, 'Nama Daerah'),
-      sel('C2', G_KEPALA, 'Terkontrak'), sel('D2', G_KEPALA, 'Proses Tender'),
+      sel('C2', G_KEPALA, 'Proses Tender'), sel('D2', G_KEPALA, 'Terkontrak'),
       sel('E2', G_KEPALA, 'Penyesuaian Penanganan'), sel('F2', G_KEPALA, null), sel('G2', G_KEPALA, null),
       sel('H2', G_KEPALA, 'Rerata Progres\n(%)'), sel('I2', G_KEPALA, null),
       sel('J2', G_KEPALA, 'Keterangan')
@@ -283,8 +284,8 @@ function lembarXml(judul, baris) {
     const n = i + 4;
     const tanda = v => (v ? CENTANG : STRIP);
     const nilai = b.ada ? [
-      sel('C' + n, G_TENGAH, tanda(b.isi.terkontrak)),
-      sel('D' + n, G_TENGAH, tanda(b.isi.tender)),
+      sel('C' + n, G_TENGAH, tanda(b.isi.tender)),
+      sel('D' + n, G_TENGAH, tanda(b.isi.terkontrak)),
       sel('E' + n, G_TENGAH, tanda(b.isi.badan)),
       sel('F' + n, G_TENGAH, tanda(b.isi.bahu)),
       sel('G' + n, G_TENGAH, tanda(b.isi.marka)),
@@ -367,6 +368,7 @@ async function buatXlsx(judul, namaLembar, baris) {
    Yang diubah di sini tidak menyentuh arsip — hanya berkas yang akan keluar.
    ═══════════════════════════════════════════════════════════════ */
 let BARIS  = [];
+let LUAR   = [];        // berita acara di luar 164 daerah penerima
 let SEMUA  = true;      // ikutkan daerah yang belum ada berita acaranya
 let SIBUK  = false;
 let PESAN  = '';
@@ -388,7 +390,7 @@ function tutup() {
   const m = el('#baRekap');
   if (m) m.remove();
   document.removeEventListener('keydown', tombolEsc);
-  BARIS = []; SIBUK = false; PESAN = '';
+  BARIS = []; LUAR = []; SIBUK = false; PESAN = '';
 }
 
 function tombolEsc(e) { if (e.key === 'Escape' && !SIBUK) tutup(); }
@@ -424,11 +426,10 @@ function barisTampil(b, i) {
       <td class="px-3 py-2">
         <p class="text-[12.5px] font-medium text-slate-800">${aman(b.labelKab)}</p>
         <p class="mt-0.5 text-[11px] text-slate-400">${aman(b.tanggalIso || 'tanpa tanggal')}${
-          b.jumlahBa > 1 ? ` · ${b.jumlahBa} berita acara, dipakai yang terbaru` : ''}${
-          b.luar ? ' · di luar daftar wilayah' : ''}</p>
+          b.jumlahBa > 1 ? ` · ${b.jumlahBa} berita acara, dipakai yang terbaru` : ''}</p>
       </td>
-      <td class="px-2 py-2 text-center">${tombolTanda(i, 'terkontrak', b.isi.terkontrak)}</td>
       <td class="px-2 py-2 text-center">${tombolTanda(i, 'tender', b.isi.tender)}</td>
+      <td class="px-2 py-2 text-center">${tombolTanda(i, 'terkontrak', b.isi.terkontrak)}</td>
       <td class="px-2 py-2 text-center">${tombolTanda(i, 'badan', b.isi.badan)}</td>
       <td class="px-2 py-2 text-center">${tombolTanda(i, 'bahu', b.isi.bahu)}</td>
       <td class="px-2 py-2 text-center">${tombolTanda(i, 'marka', b.isi.marka)}</td>
@@ -447,13 +448,12 @@ function render() {
   if (!m) return;
 
   const terisi = BARIS.filter(b => b.ada).length;
-  const luar   = BARIS.filter(b => b.luar).length;
 
   m.querySelector('#baRekapIsi').innerHTML = `
     <div class="flex flex-wrap items-center justify-between gap-3">
       <p class="text-[12.5px] text-slate-500">
         <span class="font-semibold text-slate-800">${terisi}</span> daerah sudah punya berita acara,
-        dari ${BARIS.length - luar} daerah penerima DAK.${luar ? ` ${luar} berita acara di luar daftar wilayah ikut disertakan di baris paling bawah.` : ''}
+        dari ${BARIS.length} daerah penerima DAK.
       </p>
       <label class="flex cursor-pointer items-center gap-2 text-[12.5px] text-slate-600">
         <input type="checkbox" id="baRekapSemua" ${SEMUA ? 'checked' : ''} class="h-4 w-4 accent-slate-900" />
@@ -467,8 +467,8 @@ function render() {
           <tr class="text-[11px] uppercase tracking-[0.08em] text-slate-500">
             <th class="px-3 py-2.5">Provinsi</th>
             <th class="px-3 py-2.5">Nama daerah</th>
-            <th class="px-2 py-2.5 text-center">Terkontrak</th>
             <th class="px-2 py-2.5 text-center">Tender</th>
+            <th class="px-2 py-2.5 text-center">Terkontrak</th>
             <th class="px-2 py-2.5 text-center">Badan jalan</th>
             <th class="px-2 py-2.5 text-center">Bahu</th>
             <th class="px-2 py-2.5 text-center">Marka</th>
@@ -481,6 +481,11 @@ function render() {
       </table>
     </div>
 
+    ${LUAR.length ? `
+      <p class="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-[12.5px] leading-[1.6] text-amber-800">
+        ${LUAR.length} berita acara tidak masuk rekap karena daerahnya di luar 164 penerima DAK:
+        ${aman(LUAR.map(x => x.daerah).join(', '))}. Betulkan nama daerahnya di arsip bila itu salah ketik.
+      </p>` : ''}
     ${PESAN ? `<p class="mt-3 rounded-2xl bg-emerald-50 px-4 py-3 text-[12.5px] text-emerald-800">${aman(PESAN)}</p>` : ''}`;
 
   const unduh = m.querySelector('#baRekapUnduh');
@@ -493,10 +498,11 @@ function render() {
     const b = BARIS[+t.dataset.rekapBalik];
     const k = t.dataset.kolom;
     b.isi[k] = !b.isi[k];
-    /* Terkontrak dan Proses Tender adalah dua sisi keadaan yang sama; membalik
-       yang satu tanpa yang lain menghasilkan baris yang tidak masuk akal. */
-    if (k === 'terkontrak') b.isi.tender = !b.isi.terkontrak;
-    if (k === 'tender') b.isi.terkontrak = !b.isi.tender;
+    /* Terkontrak mengandaikan tendernya sudah jalan. Menyalakan kontrak ikut
+       menyalakan tender; mematikan tender ikut mematikan kontrak. Arah
+       sebaliknya dibiarkan — daerah boleh sudah tender tanpa berkontrak. */
+    if (k === 'terkontrak' && b.isi.terkontrak) b.isi.tender = true;
+    if (k === 'tender' && !b.isi.tender) b.isi.terkontrak = false;
     PESAN = '';
     render();
   });
@@ -552,7 +558,8 @@ window.REKAP_BA = {
   buka(opsi) {
     tutup();
     const kunci = (opsi && opsi.kunci) || (s => String(s || '').toLowerCase().trim());
-    BARIS = susun((opsi && opsi.rekaman) || [], kunci);
+    const hasil = susun((opsi && opsi.rekaman) || [], kunci);
+    BARIS = hasil.baris; LUAR = hasil.luar;
     SEMUA = true; SIBUK = false; PESAN = '';
 
     const m = document.createElement('div');
