@@ -339,6 +339,8 @@ let ANTRE = [];        // { berkas, data, foto, galat, status, pilih }
 let SIBUK = false;
 let OPSI = null;
 let RINGKAS = '';
+let MEMBACA = null;    // { sudah, total } selama berkas sedang dibaca
+let CATATAN = '';      // keterangan pilihan berkas, mis. folder tanpa .docx
 
 const KELAS_TOMBOL = 'rounded-full border border-slate-300 px-4 py-2 text-[13px] font-medium text-slate-600 transition hover:bg-slate-100';
 const KELAS_UTAMA  = 'cta-glow rounded-full bg-slate-900 px-5 py-2.5 text-[13px] font-medium text-white transition disabled:opacity-40';
@@ -347,7 +349,7 @@ function tutup() {
   const m = el('#baImpor');
   if (m) m.remove();
   document.removeEventListener('keydown', tombolEsc);
-  ANTRE = []; SIBUK = false; RINGKAS = '';
+  ANTRE = []; SIBUK = false; RINGKAS = ''; MEMBACA = null; CATATAN = '';
 }
 
 function tombolEsc(e) { if (e.key === 'Escape' && !SIBUK) tutup(); }
@@ -390,7 +392,17 @@ function render() {
   const dipilih = siap.filter(x => x.pilih);
   const gagal = ANTRE.filter(x => x.galat).length;
 
-  m.querySelector('#baImporIsi').innerHTML = ANTRE.length ? `
+  /* Satu folder bisa berisi ratusan dokumen; tanpa penghitung, layar terlihat
+     berhenti padahal sedang membaca. */
+  const kemajuan = MEMBACA ? `
+    <div class="mb-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+      <p class="text-[12.5px] text-slate-600">Membaca dokumen ${MEMBACA.sudah} dari ${MEMBACA.total}…</p>
+      <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+        <div class="h-full rounded-full bg-slate-800 transition-[width]" style="width:${Math.round(MEMBACA.sudah / MEMBACA.total * 100)}%"></div>
+      </div>
+    </div>` : '';
+
+  m.querySelector('#baImporIsi').innerHTML = (ANTRE.length || MEMBACA) ? kemajuan + `
     <div class="overflow-x-auto rounded-2xl border border-slate-200">
       <table class="w-full min-w-[720px] border-collapse text-left">
         <thead class="bg-slate-50">
@@ -408,13 +420,17 @@ function render() {
       </table>
     </div>
     ${gagal ? `<p class="mt-3 text-[12.5px] text-rose-600">${gagal} berkas tidak terbaca. Pastikan dokumennya memakai format notulensi PFID — tabel Informasi Rapat harus memuat baris Daerah dan Hari/Tanggal.</p>` : ''}
+    ${CATATAN ? `<p class="mt-3 text-[12.5px] text-amber-700">${aman(CATATAN)}</p>` : ''}
     ${RINGKAS ? `<p class="mt-3 rounded-2xl bg-emerald-50 px-4 py-3 text-[12.5px] text-emerald-800">${aman(RINGKAS)}</p>` : ''}
   ` : `
-    <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
+    <div id="baImporLepas" class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center transition">
       <p class="text-[14px] font-medium text-slate-700">Belum ada dokumen dipilih.</p>
-      <p class="mx-auto mt-2 max-w-[420px] text-[12.5px] leading-[1.6] text-slate-500">
-        Pilih satu atau banyak berkas .docx sekaligus — seluruh daerah bisa dimasukkan dalam sekali jalan.
+      <p class="mx-auto mt-2 max-w-[460px] text-[12.5px] leading-[1.6] text-slate-500">
+        Pilih berkas .docx satu per satu, atau pilih satu folder sekaligus — isinya ditelusuri
+        sampai ke subfolder, jadi folder yang berisi berita acara tiap pemda cukup dipilih sekali.
+        Foldernya juga boleh diseret dan dijatuhkan ke sini.
       </p>
+      ${CATATAN ? `<p class="mt-3 text-[12.5px] text-amber-700">${aman(CATATAN)}</p>` : ''}
     </div>`;
 
   const simpan = m.querySelector('#baImporSimpan');
@@ -432,35 +448,128 @@ function render() {
   };
 }
 
-async function pilihBerkas() {
+/* ── mengumpulkan berkas ────────────────────────────────────────
+   Impor folder membawa jalur relatifnya. Jalur itu dipakai sebagai nama
+   berkas, sehingga dua "Notulensi.docx" di folder pemda yang berbeda tidak
+   saling menimpa di daftar antrean. */
+const jalurBerkas = b => b.webkitRelativePath || b.jalurRelatif || b.name;
+
+/* Hanya .docx yang diproses. Word meninggalkan berkas kunci "~$nama.docx" di
+   folder yang sedang dibuka — bentuknya bukan dokumen utuh, dan kalau ikut
+   terbaca hasilnya cuma baris gagal yang membingungkan. */
+const berkasWord = b => /\.docx$/i.test(b.name) && !/^~\$/.test(b.name);
+
+async function kumpulkan(semua) {
+  const mentah = Array.from(semua || []);
+  if (!mentah.length) return;
+
+  const daftar = mentah.filter(berkasWord);
+  CATATAN = daftar.length === mentah.length ? ''
+    : daftar.length
+      ? `${mentah.length - daftar.length} berkas dilewati karena bukan dokumen Word (.docx).`
+      : 'Tidak ada berkas .docx di dalam pilihan itu. Pastikan foldernya berisi notulensi berbentuk Word, bukan PDF atau hasil pindaian.';
+  if (!daftar.length) { render(); return; }
+
+  MEMBACA = { sudah: 0, total: daftar.length };
+  render();
+
+  await muatPizzip();
+  for (const berkas of daftar) {
+    const nama = jalurBerkas(berkas);
+    let baris;
+    try {
+      baris = await bacaSatu(berkas);
+      baris.berkas = nama;
+      baris.pilih = true;
+      baris.timpa = OPSI.sudahAda(baris.data.daerah, baris.data.tanggalIso);
+    } catch (e) {
+      baris = { berkas: nama, data: null, foto: [], galat: e.message, pilih: false };
+    }
+    /* Berkas dengan jalur sama dibaca ulang, bukan ditumpuk. */
+    const lama = ANTRE.findIndex(x => x.berkas === baris.berkas);
+    if (lama > -1) ANTRE[lama] = baris; else ANTRE.push(baris);
+    MEMBACA.sudah++;
+    render();
+  }
+  MEMBACA = null;
+  render();
+}
+
+/** Kotak pilih berkas bawaan peramban; `folder` mengubahnya jadi pilih folder. */
+function pilih(folder) {
   const inp = document.createElement('input');
   inp.type = 'file';
-  inp.accept = '.docx';
   inp.multiple = true;
-  inp.onchange = async () => {
-    const daftar = Array.from(inp.files || []);
-    if (!daftar.length) return;
-    const m = el('#baImpor');
-    if (m) m.querySelector('#baImporIsi').innerHTML =
-      `<p class="px-2 py-10 text-center text-[13px] text-slate-500">Membaca ${daftar.length} dokumen…</p>`;
-
-    await muatPizzip();
-    for (const berkas of daftar) {
-      let baris;
-      try {
-        baris = await bacaSatu(berkas);
-        baris.pilih = true;
-        baris.timpa = OPSI.sudahAda(baris.data.daerah, baris.data.tanggalIso);
-      } catch (e) {
-        baris = { berkas: berkas.name, data: null, foto: [], galat: e.message, pilih: false };
-      }
-      /* Berkas dengan nama sama dibaca ulang, bukan ditumpuk. */
-      const lama = ANTRE.findIndex(x => x.berkas === baris.berkas);
-      if (lama > -1) ANTRE[lama] = baris; else ANTRE.push(baris);
-      render();
-    }
-  };
+  if (folder) {
+    /* webkitdirectory menelusuri seluruh isi folder termasuk subfoldernya, jadi
+       satu folder induk berisi map per pemda cukup dipilih sekali. Penyaring
+       .docx sengaja tidak dipasang di sini — beberapa peramban justru
+       mengosongkan pilihan folder bila `accept` ikut diisi. */
+    inp.webkitdirectory = true;
+    inp.directory = true;
+  } else {
+    inp.accept = '.docx';
+  }
+  inp.onchange = () => kumpulkan(inp.files);
   inp.click();
+}
+
+const pilihBerkas = () => pilih(false);
+const pilihFolder = () => pilih(true);
+
+/* ── seret dan jatuhkan ─────────────────────────────────────────
+   Folder yang dijatuhkan hanya bisa ditelusuri lewat webkitGetAsEntry; tanpa
+   itu peramban cuma memberikan berkas yang ada di permukaan. */
+function bacaEntri(entri, awalan) {
+  return new Promise(selesai => {
+    if (entri.isFile) {
+      entri.file(f => { f.jalurRelatif = awalan + f.name; selesai([f]); }, () => selesai([]));
+      return;
+    }
+    if (!entri.isDirectory) { selesai([]); return; }
+    const pembaca = entri.createReader();
+    const isi = [];
+    /* readEntries hanya memberi sebagian isi tiap panggilan; dibaca terus
+       sampai jawabannya kosong. */
+    const lanjut = () => pembaca.readEntries(async hasil => {
+      if (!hasil.length) {
+        const dalam = await Promise.all(isi.map(e => bacaEntri(e, awalan + entri.name + '/')));
+        selesai([].concat.apply([], dalam));
+        return;
+      }
+      isi.push.apply(isi, hasil);
+      lanjut();
+    }, () => selesai([]));
+    lanjut();
+  });
+}
+
+async function berkasDariJatuhan(dt) {
+  const item = Array.from(dt.items || []).filter(x => x.kind === 'file');
+  if (item.length && item[0].webkitGetAsEntry) {
+    const entri = item.map(x => x.webkitGetAsEntry()).filter(Boolean);
+    if (entri.length) {
+      const kelompok = await Promise.all(entri.map(e => bacaEntri(e, '')));
+      return [].concat.apply([], kelompok);
+    }
+  }
+  return Array.from(dt.files || []);
+}
+
+function pasangJatuhan(m) {
+  const sorot = nyala => {
+    const zona = m.querySelector('#baImporLepas');
+    if (zona) zona.classList.toggle('border-slate-500', nyala);
+    if (zona) zona.classList.toggle('bg-slate-100', nyala);
+  };
+  m.addEventListener('dragover', e => { e.preventDefault(); if (!SIBUK) sorot(true); });
+  m.addEventListener('dragleave', e => { if (e.target === m) sorot(false); });
+  m.addEventListener('drop', async e => {
+    e.preventDefault();
+    sorot(false);
+    if (SIBUK || MEMBACA) return;
+    await kumpulkan(await berkasDariJatuhan(e.dataTransfer));
+  });
 }
 
 async function simpanSemua() {
@@ -498,9 +607,9 @@ window.IMPOR_BA = {
       opsi.simpan({ data, foto, berkas }) → Promise, menulis satu dokumen
       opsi.selesai(jumlah) → dipanggil sekali setelah semuanya tersimpan */
   buka(opsi) {
-    OPSI = opsi;
-    ANTRE = []; SIBUK = false; RINGKAS = '';
     tutup();
+    OPSI = opsi;
+    ANTRE = []; SIBUK = false; RINGKAS = ''; MEMBACA = null; CATATAN = '';
 
     const m = document.createElement('div');
     m.id = 'baImpor';
@@ -513,8 +622,9 @@ window.IMPOR_BA = {
             <h3 class="mt-1.5 text-[20px] font-semibold text-slate-900">Impor dokumen Word</h3>
             <p class="mt-2 max-w-[620px] text-[13px] leading-[1.65] text-slate-500">
               Notulensi yang sudah pernah disusun manual dapat dimasukkan ke arsip apa adanya —
-              tabelnya dibaca langsung dari dokumen, tanpa memakai AI. Bila daerah dan tanggalnya
-              sudah ada di arsip, isi dari dokumen inilah yang dipakai.
+              tabelnya dibaca langsung dari dokumen, tanpa memakai AI. Berkasnya boleh dipilih
+              satu per satu, atau satu folder sekaligus beserta seluruh subfoldernya. Bila daerah
+              dan tanggalnya sudah ada di arsip, isi dari dokumen inilah yang dipakai.
             </p>
           </div>
           <button id="baImporTutup" aria-label="Tutup" class="-mr-1 -mt-1 shrink-0 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
@@ -524,6 +634,7 @@ window.IMPOR_BA = {
 
         <div class="mt-6 flex flex-wrap gap-2">
           <button id="baImporPilih" class="${KELAS_TOMBOL}">Pilih dokumen .docx…</button>
+          <button id="baImporFolder" title="Seluruh .docx di dalamnya ikut terbaca, termasuk yang berada di subfolder" class="${KELAS_TOMBOL}">Pilih folder…</button>
         </div>
 
         <div id="baImporIsi" class="mt-5"></div>
@@ -538,12 +649,13 @@ window.IMPOR_BA = {
     m.querySelector('#baImporTutup').onclick = () => { if (!SIBUK) tutup(); };
     m.querySelector('#baImporBatal').onclick = () => { if (!SIBUK) tutup(); };
     m.querySelector('#baImporPilih').onclick = pilihBerkas;
+    m.querySelector('#baImporFolder').onclick = pilihFolder;
     m.querySelector('#baImporSimpan').onclick = simpanSemua;
     m.onclick = e => { if (e.target === m && !SIBUK) tutup(); };
     document.addEventListener('keydown', tombolEsc);
+    pasangJatuhan(m);
 
     render();
-    pilihBerkas();
   },
 
   /** Dibuka juga oleh pengujian: baca satu berkas tanpa tampilan. */

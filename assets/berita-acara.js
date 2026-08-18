@@ -1043,6 +1043,17 @@ function bukaImporWord() {
 }
 
 
+/* ── rekapitulasi ke Excel ──────────────────────────────────────
+   Notulensi menjawab "bagaimana satu daerah"; pimpinan menanyakan "bagaimana
+   seluruh daerah". assets/rekap-ba.js merangkum arsip yang sudah dimuat di
+   layar ini menjadi satu lembar berformat rekapitulasi rakor — tanpa membaca
+   ulang Firestore, jadi yang terekap persis yang sedang terlihat. */
+function bukaRekapExcel() {
+  if (!window.REKAP_BA) { toast('Modul rekap belum termuat, muat ulang halamannya.'); return; }
+  window.REKAP_BA.buka({ rekaman: ARSIP, kunci: kunciDaerah });
+}
+
+
 /** Nama dokumen untuk salinan: nama penyusunnya dibubuhkan supaya kedua
     berita acara daerah yang sama tetap bisa dibedakan di daftar arsip. */
 function idSalinan() {
@@ -2575,7 +2586,8 @@ function renderArsip() {
       ${semua ? kotakSaring('baArsipOleh', IKON_PENYUSUN, 'Semua penyusun', 'Tanpa nama', opsiOleh, ARSIP_OLEH) : ''}
       ${admin && grup.length > 1 && !paksaBuka ? `<button id="baArsipSemuaProv" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">${adaTertutup ? 'Buka semua provinsi' : 'Tutup semua provinsi'}</button>` : ''}
       <button id="baArsipMuat" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Muat ulang</button>
-      ${semua ? `<button id="baArsipImpor" title="Masukkan notulensi Word yang sudah disusun manual, boleh banyak berkas sekaligus" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Impor dokumen Word</button>` : ''}
+      ${semua ? `<button id="baArsipImpor" title="Masukkan notulensi Word yang sudah disusun manual — boleh banyak berkas, boleh satu folder sekaligus" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Impor dokumen Word</button>` : ''}
+      ${semua ? `<button id="baArsipRekap" title="Rangkum seluruh berita acara menjadi satu lembar Excel berformat rekapitulasi rakor" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Rekap Excel</button>` : ''}
       ${pfid ? `<button id="baArsipBaru" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Buat berita acara baru</button>
       <button id="baArsipIndeks" title="Susun ulang daftar yang dilihat pemda, termasuk berita acara lama" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80 transition hover:bg-white/10">Perbarui daftar pemda</button>` : ''}
     </div>
@@ -2630,6 +2642,8 @@ function renderArsip() {
   };
 
   if (el('#baArsipImpor')) el('#baArsipImpor').onclick = bukaImporWord;
+
+  if (el('#baArsipRekap')) el('#baArsipRekap').onclick = bukaRekapExcel;
 
   if (el('#baArsipBaru')) el('#baArsipBaru').onclick = () => {
     window.BA.reset();
