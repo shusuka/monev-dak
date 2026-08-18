@@ -50,12 +50,20 @@ const kunciDaerah = teks => slugKunci(String(teks || '')
 /* ═══════════════════════════════════════════════════════════════
    1. KERANGKA 164 DAERAH
    ═══════════════════════════════════════════════════════════════ */
+/* Daftar wilayah menyimpan kabupaten tanpa awalan — "Magelang" — sedangkan
+   kota memakainya. Di pesan WhatsApp yang dikirim ke orangnya, penyebutan
+   seperti itu berbahaya: "Magelang" saja tidak membedakan Kabupaten Magelang
+   dari Kota Magelang, dan keduanya sama-sama penerima DAK. Karena itu nama
+   yang dipakai menyebut daerah selalu bentuk lengkapnya. */
+const labelKab = nama => (/^kota\b/i.test(nama) ? nama : 'Kab. ' + nama);
+const labelPanjang = nama => (/^kota\b/i.test(nama) ? nama : 'Kabupaten ' + nama);
+
 function daftarDaerah() {
   const w = window.WILAYAH || {};
   const keluar = [];
   Object.keys(w).sort((a, b) => a.localeCompare(b, 'id')).forEach(prov => {
     String(w[prov] || '').split(',').map(s => s.trim()).filter(Boolean).forEach(kab => {
-      keluar.push({ prov, kab, kunci: kunciDaerah(kab) });
+      keluar.push({ prov, kab, label: labelKab(kab), kunci: kunciDaerah(kab) });
     });
   });
   return keluar;
@@ -135,10 +143,13 @@ const nomorTampil = wa => {
 /* ═══════════════════════════════════════════════════════════════
    3. PESAN WHATSAPP
    ═══════════════════════════════════════════════════════════════ */
+/* Nama daerah disebut lengkap beserta provinsinya. Penerima pesan perlu tahu
+   pasti daerah mana yang dimaksud sebelum menindaklanjuti — "Magelang" saja
+   bisa berarti dua pemda yang berbeda. */
 const PESAN_BAKU =
   'Selamat {waktu} Bapak/Ibu {nama}. Ingin menginfokan bahwa progres pelaporan ' +
-  'di eMonitoring {daerah} yang ter-update per {tanggal} baru mencapai ' +
-  'fisik {fisik}% dan keuangan {keuangan}%. Mohon segera update datanya. Terima kasih.';
+  'di eMonitoring untuk {daerah}, Provinsi {provinsi}, yang ter-update per {tanggal} ' +
+  'baru mencapai fisik {fisik}% dan keuangan {keuangan}%. Mohon segera update datanya. Terima kasih.';
 
 const salamJam = jam => (jam < 11 ? 'pagi' : jam < 15 ? 'siang' : jam < 18 ? 'sore' : 'malam');
 
@@ -172,7 +183,8 @@ function susunPesan(baris, pola) {
   const isi = (pola || ambilPesan())
     .replace(/\{waktu\}/g, salamJam(new Date().getHours()))
     .replace(/\{nama\}/g, baris.namaKontak || '')
-    .replace(/\{daerah\}/g, baris.kab || '')
+    .replace(/\{daerah\}/g, baris.label || labelKab(baris.kab || ''))
+    .replace(/\{daerahPanjang\}/g, labelPanjang(baris.kab || ''))
     .replace(/\{provinsi\}/g, baris.prov || '')
     .replace(/\{fisik\}/g, angkaId(baris.fisik))
     .replace(/\{keuangan\}/g, angkaId(baris.keuangan))
@@ -486,7 +498,7 @@ async function uraiBerkas(berkas) {
        berkas yang ditambal di bawah. */
     const sudah = cocok.findIndex(x => x.kunci === daerah.kunci);
     const isi = {
-      kunci: daerah.kunci, prov: daerah.prov, kab: daerah.kab,
+      kunci: daerah.kunci, prov: daerah.prov, kab: daerah.kab, label: daerah.label,
       fisik, keuangan,
       namaKontak: String(ambil(r, 'namaKontak') || '').replace(/\s+/g, ' ').trim(),
       hp: nomorWa(ambil(r, 'hp')),
@@ -581,6 +593,28 @@ function kartu(judul, nilai, ket, warna) {
 const bar = (v, warna) => `
   <div class="em-bar w-[86px]"><i style="width:${v == null ? 0 : Math.max(0, Math.min(100, v))}%;background:${warna}"></i></div>`;
 
+/* Kepala kelompok provinsi, sebaris penuh di dalam tabel — bentuk yang sama
+   dengan ceklis kesiapan, supaya kedua tab terbaca dengan cara yang sama. */
+function kepalaProvinsi(prov, isi) {
+  const ada = isi.filter(b => b.ada);
+  const tagih = isi.filter(b => statusBaris(b) === 'rendah').length;
+  const rerata = k => {
+    const a = ada.map(b => b[k]).filter(v => v != null);
+    return a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length * 10) / 10 : null;
+  };
+  const f = rerata('fisik'), u = rerata('keuangan');
+  return `<tr class="border-b border-white/10 bg-white/[.04]">
+    <td colspan="7" class="px-4 py-3">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span class="text-[13px] font-semibold tracking-[-0.01em]">${aman(prov)}</span>
+        <span class="text-[12px] text-white/45">${ada.length} dari ${isi.length} daerah ada datanya</span>
+        ${tagih ? `<span class="rounded-full bg-amber-400/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-amber-300">${tagih} perlu ditagih</span>` : ''}
+        ${f == null ? '' : `<span class="ml-auto text-[12px] tabular-nums text-white/50">rerata fisik ${aman(angkaId(f))}% · keuangan ${aman(angkaId(u))}%</span>`}
+      </div>
+    </td>
+  </tr>`;
+}
+
 function barisHtml(b, i) {
   const st = statusBaris(b);
   const nilai = v => (v == null ? '<span class="text-white/25">—</span>' : `<span class="tabular-nums">${aman(angkaId(v))}%</span>`);
@@ -588,7 +622,7 @@ function barisHtml(b, i) {
   <tr class="border-t border-white/8 align-middle hover:bg-white/[.03]">
     <td class="px-4 py-3 text-[12px] tabular-nums text-white/35">${i}</td>
     <td class="px-4 py-3">
-      <p class="text-[13.5px] font-medium text-white/85">${aman(b.kab)}</p>
+      <p class="text-[13.5px] font-medium text-white/85">${aman(b.label)}</p>
       <p class="mt-0.5 text-[11.5px] text-white/40">${aman(b.prov)}${b.tanggalData ? ' · data ' + aman(tanggalIndo(b.tanggalData)) : ''}</p>
     </td>
     <td class="px-4 py-3">
@@ -653,7 +687,17 @@ function render() {
     (!SARING.prov || b.prov === SARING.prov) &&
     (!SARING.status || statusBaris(b) === SARING.status ||
       (SARING.status === 'tanpaNomor' && !b.wa)) &&
-    (!cari || (b.kab + ' ' + b.prov + ' ' + b.namaKontak).toLowerCase().includes(cari)));
+    (!cari || (b.label + ' ' + b.kab + ' ' + b.prov + ' ' + b.namaKontak).toLowerCase().includes(cari)));
+
+  /* Daftar dipecah per provinsi. Urutan daerah di dalamnya tidak diubah —
+     daftar wilayah sudah menaruh kabupaten lebih dulu, kota di belakang. */
+  const kelompok = [];
+  tampil.forEach(b => {
+    const akhir = kelompok[kelompok.length - 1];
+    if (akhir && akhir.prov === b.prov) akhir.isi.push(b);
+    else kelompok.push({ prov: b.prov, isi: [b] });
+  });
+  let nomor = 0;
 
   wadah.innerHTML = `${GAYA}
 
@@ -711,8 +755,8 @@ function render() {
             <th class="px-4 py-3 font-medium">Status</th>
           </tr>
         </thead>
-        <tbody>${tampil.length
-          ? tampil.map((b, i) => barisHtml(b, i + 1)).join('')
+        <tbody>${kelompok.length
+          ? kelompok.map(k => kepalaProvinsi(k.prov, k.isi) + k.isi.map(b => barisHtml(b, ++nomor)).join('')).join('')
           : `<tr><td colspan="7" class="px-4 py-14 text-center text-[14px] text-white/50">Tidak ada daerah yang cocok dengan penyaring itu.</td></tr>`}
         </tbody>
       </table>
@@ -747,7 +791,7 @@ function render() {
     if (!b) return;
     try {
       await navigator.clipboard.writeText(susunPesan(b));
-      toast('Pesan untuk ' + b.kab + ' tersalin.');
+      toast('Pesan untuk ' + b.label + ' tersalin.');
     } catch (e) {
       toast('Peramban menolak menyalin. Buka Format pesan untuk menyalinnya manual.');
     }
@@ -763,7 +807,8 @@ function bukaFormatPesan() {
   if (lama) lama.remove();
 
   const contoh = susunBaris().find(b => b.ada) ||
-    { kab: 'Kabupaten Contoh', prov: 'Jawa Tengah', namaKontak: 'Andini', fisik: 32.5, keuangan: 21, tanggalData: isoHariIni() };
+    { kab: 'Magelang', label: 'Kab. Magelang', prov: 'Jawa Tengah',
+      namaKontak: 'Andini', fisik: 32.5, keuangan: 21, tanggalData: isoHariIni() };
 
   const m = document.createElement('div');
   m.id = 'emFormat';
@@ -777,9 +822,11 @@ function bukaFormatPesan() {
           <p class="mt-2 max-w-[520px] text-[13px] leading-[1.65] text-white/55">
             Penanda di dalam kurung kurawal diganti sendiri saat tombol Kontak ditekan.
             Tersedia: <code class="text-white/75">{waktu}</code> <code class="text-white/75">{nama}</code>
-            <code class="text-white/75">{daerah}</code> <code class="text-white/75">{provinsi}</code>
-            <code class="text-white/75">{fisik}</code> <code class="text-white/75">{keuangan}</code>
-            <code class="text-white/75">{tanggal}</code>.
+            <code class="text-white/75">{daerah}</code> <code class="text-white/75">{daerahPanjang}</code>
+            <code class="text-white/75">{provinsi}</code> <code class="text-white/75">{fisik}</code>
+            <code class="text-white/75">{keuangan}</code> <code class="text-white/75">{tanggal}</code>.
+            <span class="mt-1 block text-white/40">{daerah} menghasilkan “Kab. Magelang”, {daerahPanjang}
+            menghasilkan “Kabupaten Magelang” — keduanya sengaja tidak pernah menyebut “Magelang” saja.</span>
           </p>
         </div>
         <button id="emFmtTutup" aria-label="Tutup" class="-mr-1 -mt-1 shrink-0 rounded-full p-2 text-white/40 transition hover:bg-white/10 hover:text-white">
@@ -948,7 +995,7 @@ function renderUnggah() {
         <tbody>
           ${cocok.map(r => `
             <tr class="border-t border-white/8">
-              <td class="px-4 py-2"><p class="text-[12.5px] text-white/80">${aman(r.kab)}</p>
+              <td class="px-4 py-2"><p class="text-[12.5px] text-white/80">${aman(r.label)}</p>
                 <p class="text-[11px] text-white/35">${aman(r.prov)}</p></td>
               <td class="px-4 py-2 text-[12.5px] tabular-nums text-white/70">${r.fisik == null ? '—' : aman(angkaId(r.fisik)) + '%'}</td>
               <td class="px-4 py-2 text-[12.5px] tabular-nums text-white/70">${r.keuangan == null ? '—' : aman(angkaId(r.keuangan)) + '%'}</td>
@@ -1031,7 +1078,7 @@ async function unduhContoh() {
   const survei = dariSurvei();
   const baris = [kepala].concat(daftarDaerah().map(d => {
     const s = survei.get(d.kunci);
-    return [d.prov, d.kab, '', '', s ? s.nama : '', s ? nomorTampil(s.wa) : '', ''];
+    return [d.prov, d.label, '', '', s ? s.nama : '', s ? nomorTampil(s.wa) : '', ''];
   }));
 
   const isiBaris = baris.map((r, i) => {
