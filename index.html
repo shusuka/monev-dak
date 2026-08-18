@@ -677,6 +677,7 @@
       <button data-atab="survei" onclick="setTabAdmin('survei')" style="--tab:232 121 249" class="tabnav text-[13px]"><span class="tabdot"></span>Survei Kepuasan Pemda<span id="adTabSurveiJml" class="opacity-70"></span></button>
       <button data-atab="ceklis" onclick="setTabAdmin('ceklis')" style="--tab:250 204 21"  class="tabnav text-[13px]"><span class="tabdot"></span>Ceklis Kesiapan Pemda<span id="adTabCeklisJml" class="opacity-70"></span></button>
       <button data-atab="berita" onclick="setTabAdmin('berita')" style="--tab:52 211 153" class="tabnav text-[13px]"><span class="tabdot"></span>Berita Acara<span id="adTabBaJml" class="opacity-70"></span></button>
+      <button data-atab="emon"   onclick="setTabAdmin('emon')"   style="--tab:251 146 60" class="tabnav text-[13px]"><span class="tabdot"></span>Progres eMonitoring<span id="adTabEmonJml" class="opacity-70"></span></button>
     </div>
 
     <div id="adPanelTest" style="--tab:56 189 248">
@@ -737,6 +738,12 @@
     <div id="adPanelBa" class="hidden" style="--tab:52 211 153">
       <div id="adBaPeta"></div>
       <div id="adBa"></div>
+    </div>
+
+    <!-- Progres eMonitoring: angka yang dipakai menagih, diunggah admin
+         secara berkala, lengkap dengan tombol hubungi lewat WhatsApp. -->
+    <div id="adPanelEmon" class="hidden" style="--tab:251 146 60">
+      <div id="adEmon"></div>
     </div>
   </section>
 
@@ -2445,9 +2452,11 @@ async function keluarAdmin() {
      berikutnya yang masuk di perangkat yang sama. */
   if (window.BA) window.BA.reset();
   if (window.CEKLIS) window.CEKLIS.reset();
+  if (window.EMON) window.EMON.reset();
   $('#adBa').innerHTML = '';       // jangan sampai daftar admin lama sempat terlihat
   $('#adTabBaJml').textContent = '';
   $('#adTabCeklisJml').textContent = '';
+  $('#adTabEmonJml').textContent = '';
   setTabAdmin('test');
   $('#adEmail').value = ''; $('#adPass').value = '';
   try { await store.keluarAkun(); } catch (e) { console.warn(e); }
@@ -2462,9 +2471,11 @@ function setTabAdmin(tab) {
   $('#adPanelSurvei').classList.toggle('hidden', tab !== 'survei');
   $('#adPanelCeklis').classList.toggle('hidden', tab !== 'ceklis');
   $('#adPanelBa').classList.toggle('hidden', tab !== 'berita');
+  $('#adPanelEmon').classList.toggle('hidden', tab !== 'emon');
   $('#adJudul').textContent = { survei: 'Hasil survei kepuasan pemda',
                                 ceklis: 'Ceklis kesiapan pemda',
-                                berita: 'Berita acara eMonitoring' }[tab]
+                                berita: 'Berita acara eMonitoring',
+                                emon:   'Progres pelaporan eMonitoring' }[tab]
                               || 'Progres pengisian seluruh pemda';
   /* Digambar ulang tiap kali tabnya dibuka supaya animasi ceklisnya berjalan
      dari awal, bukan tabel yang sudah terlanjur diam. */
@@ -2472,6 +2483,8 @@ function setTabAdmin(tab) {
   /* Daftarnya baru diambil saat tabnya dibuka: admin yang hanya melihat nilai
      tidak perlu menunggu seluruh berita acara terbaca. */
   if (tab === 'berita' && window.BA) window.BA.renderAdmin().then(tandaiJumlahBa);
+  /* Sama seperti berita acara: koleksinya baru dibaca saat tabnya dibuka. */
+  if (tab === 'emon' && window.EMON) window.EMON.render();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -2519,6 +2532,10 @@ async function muatAdmin(paksa) {
     await window.BA.renderAdmin(true);
     tandaiJumlahBa();
   }
+  /* Sama untuk progres eMonitoring: hanya ikut dimuat ulang bila tabnya sedang
+     dibuka. Nomor teleponnya bersandar pada rekap survei, jadi urutannya harus
+     sesudah SURVEI.renderAdmin() di atas. */
+  if (window.EMON && !$('#adPanelEmon').classList.contains('hidden')) await window.EMON.render(true);
   if (paksa) toast('Data admin dimuat ulang.');
 }
 
@@ -2885,5 +2902,6 @@ function exportXLS() {
 <script src="assets/berita-acara.js"></script>
 <script src="assets/survei.js"></script>
 <script src="assets/ceklis.js"></script>
+<script src="assets/emonitoring.js"></script>
 </body>
 </html>

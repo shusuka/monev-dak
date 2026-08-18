@@ -191,6 +191,19 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Progres pelaporan tiap daerah di aplikasi eMonitoring. Angkanya tidak
+    // bisa diambil sendiri oleh aplikasi ini, jadi admin mengunggahnya secara
+    // berkala dari berkas .xlsx atau .csv; satu dokumen per daerah, dinamai
+    // kunci daerahnya (mis. `magelang`) supaya unggahan berikutnya menimpa
+    // baris yang sama, bukan menumpuk.
+    //
+    // Isinya angka progres, nama kontak, dan nomor telepon yang dipakai
+    // menagih lewat WhatsApp — bukan data yang boleh dibaca pemda, karena
+    // memuat nomor daerah lain. Hanya admin dan petugas PFID yang membacanya.
+    match /emonitoring/{kunci} {
+      allow read, write: if isAdmin() || isPfid();
+    }
+
     // tutup koleksi lain
     match /{document=**} {
       allow read, write: if false;
