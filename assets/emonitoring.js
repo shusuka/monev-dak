@@ -11,15 +11,24 @@
    ceklis kesiapan — sehingga daerah yang belum pernah melapor sekalipun tetap
    punya barisnya sendiri.
 
-   Nomor telepon dicari berurutan: kolom pada berkas unggahan lebih dulu,
-   baru nomor yang pernah diisi daerah itu pada survei kepuasan. Nomor survei
-   dipakai apa adanya, tidak disalin ke tempat lain.
+   Nomor telepon dicari berurutan: nomor yang diketik admin sendiri lebih
+   dulu, lalu kolom pada berkas unggahan, baru nomor yang pernah diisi daerah
+   itu pada survei kepuasan. Nomor survei dipakai apa adanya, tidak disalin ke
+   tempat lain — termasuk tidak dijadikan isi awal kotak isian manual.
 
-   Kolom berkas unggahan dikenali dari judulnya, bukan urutannya, supaya
-   formatnya masih boleh berubah tanpa menyentuh berkas ini. Yang dicari:
-     Provinsi · Kabupaten/Kota · Fisik (%) · Keuangan (%) ·
-     Nama Kontak · No HP · Tanggal Data
-   Hanya nama daerah, fisik, dan keuangan yang wajib ada.
+   Dua bentuk berkas diterima, dan bentuknya dikenali sendiri dari judul kolom:
+
+     1. Unduhan mentah eMonitoring — satu baris satu paket. Kolomnya per
+        triwulan (Fisik TW I…IV, Realisasi TW I…IV) beserta Dana DAK dan
+        kolom tgl… (tglkontrak, tglpho, tglded, tglabd). Diringkas jadi satu
+        baris per daerah; lihat ringkasMentah() untuk caranya.
+     2. Rekap sederhana — satu baris satu daerah:
+        Provinsi · Kabupaten/Kota · Fisik (%) · Keuangan (%) ·
+        Nama Kontak · No HP · Tanggal Data
+        Hanya nama daerah, fisik, dan keuangan yang wajib ada.
+
+   Kolom dikenali dari judulnya, bukan urutannya, supaya format berkas masih
+   boleh berubah tanpa menyentuh berkas ini.
 
    Penyimpanannya di koleksi Firestore `emonitoring`, satu dokumen per daerah,
    supaya admin di perangkat lain melihat angka yang sama. Bila Firebase tidak
@@ -81,7 +90,8 @@ const ALIAS = {
   sidrap: 'Sidenreng Rappang', yapen: 'Kepulauan Yapen',
   tanimbar: 'Kepulauan Tanimbar', mtb: 'Kepulauan Tanimbar',
   anambas: 'Kepulauan Anambas', pegaf: 'Pegunungan Arfak',
-  'lubuk linggau': 'Kota Lubuklinggau', 'tanjung pinang': 'Kota Tanjungpinang'
+  'lubuk linggau': 'Kota Lubuklinggau', 'tanjung pinang': 'Kota Tanjungpinang',
+  'pare pare': 'Kota Parepare'
 };
 
 let PETA_KUNCI = null;
@@ -233,37 +243,74 @@ async function muat(paksa) {
   DIMUAT = true;
 }
 
-/** Tulis hasil unggahan. `bersihkan` membuang daerah yang tidak ada di berkas
-    itu, dipakai bila admin memang mengganti seluruh datanya. */
+/** Tulis hasil unggahan. Isi lama daerah itu tidak dibuang, hanya ditimpa
+    kolom yang memang ada di berkasnya: unduhan mentah eMonitoring tidak
+    memuat kontak sama sekali, dan nomor yang diketik admin harus selamat.
+    `bersihkan` membuang daerah yang tidak ada di berkas itu — kecuali daerah
+    yang nomornya diisi manual, yang dilepas cuma angka progresnya. */
 async function simpan(baru, bersihkan) {
   const sekarang = Date.now();
   const isi = {};
-  Object.keys(baru).forEach(k => { isi[k] = { ...baru[k], diperbaruiAt: sekarang }; });
-  const gabung = bersihkan ? isi : { ...DATA, ...isi };
+  Object.keys(baru).forEach(k => {
+    isi[k] = { ...(DATA[k] || {}), ...baru[k], diperbaruiAt: sekarang };
+  });
+
+  const sisa = {};
+  if (bersihkan) {
+    Object.keys(DATA).forEach(k => {
+      const x = DATA[k] || {};
+      if (k in isi || !(x.hpManual || x.namaKontakManual)) return;
+      sisa[k] = { kunciDaerah: k, prov: x.prov || '', kab: x.kab || '',
+                  namaKontakManual: x.namaKontakManual || '', hpManual: x.hpManual || '',
+                  kontakAt: x.kontakAt || sekarang };
+    });
+  }
+
+  const tulis = bersihkan ? { ...isi, ...sisa } : isi;
+  const gabung = bersihkan ? tulis : { ...DATA, ...isi };
 
   if (pakaiFirebase()) {
     const { doc, setDoc, deleteDoc, writeBatch } = store.fs;
-    const buang = bersihkan ? Object.keys(DATA).filter(k => !(k in isi)) : [];
+    const buang = bersihkan ? Object.keys(DATA).filter(k => !(k in tulis)) : [];
     if (writeBatch) {
       /* Satu batch Firestore memuat 500 tulisan; 164 daerah masih jauh di
          bawahnya, tetapi pemotongannya tetap dipasang untuk jaga-jaga. */
-      const semua = Object.keys(isi).map(k => ['set', k]).concat(buang.map(k => ['hapus', k]));
+      const semua = Object.keys(tulis).map(k => ['set', k]).concat(buang.map(k => ['hapus', k]));
       for (let i = 0; i < semua.length; i += 400) {
         const b = writeBatch(store.db);
         semua.slice(i, i + 400).forEach(([jenis, k]) => {
           const acuan = doc(store.db, 'emonitoring', k);
-          if (jenis === 'set') b.set(acuan, isi[k]); else b.delete(acuan);
+          if (jenis === 'set') b.set(acuan, tulis[k]); else b.delete(acuan);
         });
         await b.commit();
       }
     } else {
-      for (const k of Object.keys(isi)) await setDoc(doc(store.db, 'emonitoring', k), isi[k]);
+      for (const k of Object.keys(tulis)) await setDoc(doc(store.db, 'emonitoring', k), tulis[k]);
       for (const k of buang) await deleteDoc(doc(store.db, 'emonitoring', k));
     }
   }
 
   DATA = gabung;
   tulisLokal(gabung);            // cadangan lokal selalu ikut ditulis
+}
+
+/** Nomor dan nama yang diketik admin untuk satu daerah. Disimpan pada dokumen
+    daerah itu juga, tetapi di kolom sendiri (`hpManual`, `namaKontakManual`)
+    supaya unggahan berikutnya tidak menimpanya. Nilai kosong menghapus kolom
+    itu, artinya daerah tersebut kembali memakai nomor berkas atau survei. */
+async function simpanKontak(kunci, nama, wa) {
+  const d = daftarDaerah().find(x => x.kunci === kunci);
+  const isi = { ...(DATA[kunci] || {}), kunciDaerah: kunci,
+                prov: (d && d.prov) || '', kab: (d && d.kab) || '', kontakAt: Date.now() };
+  if (nama) isi.namaKontakManual = nama; else delete isi.namaKontakManual;
+  if (wa) isi.hpManual = wa; else delete isi.hpManual;
+
+  if (pakaiFirebase()) {
+    const { doc, setDoc } = store.fs;
+    await setDoc(doc(store.db, 'emonitoring', kunci), isi);
+  }
+  DATA = { ...DATA, [kunci]: isi };
+  tulisLokal(DATA);
 }
 
 
@@ -469,6 +516,127 @@ function tanggalDari(sel) {
   return '';
 }
 
+/* ── format mentah eMonitoring ──────────────────────────────────
+   Berkas yang diunduh langsung dari aplikasi eMonitoring berisi satu baris
+   per paket, bukan per daerah: satu kabupaten bisa punya sepuluh baris, dan
+   di antaranya ada paket penunjang yang nilainya kecil.
+
+   Cara meringkasnya jadi satu angka per daerah:
+     · triwulan — angka TW bersifat kumulatif, dan triwulan yang belum jalan
+                  disalin dari triwulan sebelumnya. Yang dipakai angka
+                  terbesar di antara TW I–IV, jadi urutan kolomnya bebas dan
+                  triwulan berjalan tidak perlu ditebak.
+     · fisik    — rata-rata tertimbang Dana DAK, bukan rata-rata biasa: paket
+                  jalan Rp 30 M tidak boleh setara paket perjalanan dinas
+                  Rp 150 juta. Bila dananya kosong, jatuh ke rata-rata biasa.
+     · keuangan — jumlah realisasi dibagi jumlah Dana DAK daerah itu.
+     · tanggal  — yang terbaru di antara seluruh kolom tgl… milik daerah itu
+                  (tglkontrak, tglpho, tglded, tglabd, dan tgl… lain yang
+                  menyusul). Itulah tanggal progres terakhir daerah tersebut,
+                  dan itu yang disebut di pesan penagihan. Daerah yang belum
+                  punya satu tanggal pun memakai tanggal terbaru seluruh
+                  berkas — keadaan berkasnya sendiri.
+   ═══════════════════════════════════════════════════════════════ */
+function petaMentah(kepala) {
+  const satu = pola => {
+    for (let i = 0; i < kepala.length; i++) if (pola.test(String(kepala[i] || ''))) return i;
+    return null;
+  };
+  const banyak = pola => kepala.map((h, i) => (pola.test(String(h || '')) ? i : -1)).filter(i => i > -1);
+
+  /* "Fisik TW …" tidak pernah ada pada rekap sederhana; itu penanda yang
+     memisahkan kedua bentuk berkas. */
+  const fisik = banyak(/fisik\s*tw/i);
+  const kab   = satu(/kab\s*\.?\s*\/\s*kota|kabupaten|nama\s*daerah/i);
+  const dana  = satu(/dana\s*dak|pagu/i);
+  const real  = banyak(/realisasi\s*tw/i);
+  /* Dana atau realisasi harus ikut ada. Rekap buatan tangan yang kebetulan
+     menamai satu kolomnya "Fisik TW II (%)" bukan berkas mentah, dan lebih
+     baik dibaca sebagai rekap biasa supaya kolom Keuangan-nya tidak hilang. */
+  if (!fisik.length || kab == null || (dana == null && !real.length)) return null;
+
+  return { kab, prov: satu(/provinsi/i), dana, fisik, real, tgl: banyak(/^\s*tgl/i) };
+}
+
+function cariKepalaMentah(baris) {
+  for (let i = 0; i < Math.min(baris.length, 15); i++) {
+    const peta = petaMentah(baris[i]);
+    if (peta) return { nomor: i, peta };
+  }
+  return null;
+}
+
+/** Baris per paket → satu baris per daerah, bentuknya sama dengan hasil
+    pembacaan rekap sederhana supaya sisa berkas ini tidak perlu tahu bedanya. */
+function ringkasMentah(baris, nomorKepala, peta) {
+  const terbesar = (r, kolom) => {
+    let n = null;
+    kolom.forEach(i => { const v = angka(r[i]); if (v != null && (n == null || v > n)) n = v; });
+    return n;
+  };
+
+  const kumpul = new Map();
+  const gagal  = new Map();
+  let tanggalBerkas = '', jumlahBaris = 0;
+
+  baris.slice(nomorKepala + 1).forEach(r => {
+    const nama = String(r[peta.kab] == null ? '' : r[peta.kab]).trim();
+    if (!nama) return;
+    jumlahBaris++;
+
+    let tanggal = '';
+    peta.tgl.forEach(i => { const t = tanggalDari(r[i]); if (t > tanggal) tanggal = t; });
+    if (tanggal > tanggalBerkas) tanggalBerkas = tanggal;
+
+    const daerah = cocokkanDaerah(nama);
+    if (!daerah) {
+      const g = gagal.get(nama) || { teks: nama, baris: 0 };
+      g.baris++; gagal.set(nama, g);
+      return;
+    }
+
+    const dana  = angka(peta.dana == null ? null : r[peta.dana]) || 0;
+    const fisik = terbesar(r, peta.fisik);
+    const real  = terbesar(r, peta.real);
+
+    const a = kumpul.get(daerah.kunci) || {
+      ...daerah, paket: 0, dana: 0, real: 0,
+      danaFisik: 0, fisikTertimbang: 0, fisikJumlah: 0, fisikN: 0, tanggalData: ''
+    };
+    a.paket++;
+    a.dana += dana;
+    if (real != null) a.real += real;
+    if (fisik != null) {
+      a.fisikJumlah += fisik; a.fisikN++;
+      if (dana > 0) { a.fisikTertimbang += fisik * dana; a.danaFisik += dana; }
+    }
+    if (tanggal > a.tanggalData) a.tanggalData = tanggal;
+    kumpul.set(daerah.kunci, a);
+  });
+
+  const bulat = v => (v == null ? null : Math.round(v * 100) / 100);
+  const cocok = Array.from(kumpul.values()).map(a => ({
+    kunci: a.kunci, prov: a.prov, kab: a.kab, label: a.label,
+    fisik: bulat(a.danaFisik > 0 ? a.fisikTertimbang / a.danaFisik
+                 : a.fisikN ? a.fisikJumlah / a.fisikN : null),
+    keuangan: bulat(a.dana > 0 ? a.real / a.dana * 100 : null),
+    namaKontak: '', hp: '', hpMentah: '',
+    tanggalData: a.tanggalData || tanggalBerkas,
+    paket: a.paket, dana: a.dana
+  }));
+  cocok.sort((x, y) => x.prov.localeCompare(y.prov, 'id') || x.kab.localeCompare(y.kab, 'id'));
+
+  return {
+    cocok,
+    gagal: Array.from(gagal.values()),
+    /* Berkas mentah tidak punya kolom kontak sama sekali; daftar ini yang
+       dipakai simpanUnggahan untuk memutuskan kolom mana yang boleh ditimpa. */
+    kolom: ['prov', 'kab', 'fisik', 'keuangan', 'tanggal'],
+    mentah: { baris: jumlahBaris, tanggal: tanggalBerkas }
+  };
+}
+
+
 /** Satu berkas → daftar baris siap simpan, plus baris yang daerahnya tak
     dikenali supaya bisa diperlihatkan, bukan dibuang diam-diam. */
 async function uraiBerkas(berkas) {
@@ -477,9 +645,15 @@ async function uraiBerkas(berkas) {
     ? await bacaXlsx(await bacaBerkas(berkas))
     : bacaCsv(await bacaBerkas(berkas, 'teks'));
 
+  /* Bentuk mentah diperiksa lebih dulu: berkas eMonitoring juga punya kolom
+     Provinsi dan Kab/Kota, tetapi angkanya tersebar per triwulan sehingga
+     pembacaan rekap sederhana akan salah membacanya. */
+  const mentah = cariKepalaMentah(baris);
+  if (mentah) return ringkasMentah(baris, mentah.nomor, mentah.peta);
+
   const kepala = cariKepala(baris);
   if (!kepala) {
-    throw new Error('judul kolomnya tidak ditemukan. Berkas harus punya satu baris judul yang memuat nama daerah, Fisik, dan Keuangan — unduh berkas contoh di jendela ini bila ragu.');
+    throw new Error('judul kolomnya tidak ditemukan. Berkas boleh berupa unduhan mentah eMonitoring (berkolom Kab/Kota, Dana DAK, dan Fisik TW …), atau rekap satu baris per daerah yang memuat nama daerah, Fisik, dan Keuangan — unduh berkas contoh di jendela ini bila ragu.');
   }
 
   const { nomor, peta } = kepala;
@@ -547,16 +721,23 @@ function susunBaris() {
   return daftarDaerah().map(d => {
     const x = DATA[d.kunci] || null;
     const s = survei.get(d.kunci) || null;
-    const wa = (x && nomorWa(x.hp)) || (s && s.wa) || '';
+    /* Nomor yang diketik admin menang atas nomor berkas: ia diisi justru
+       karena berkasnya tidak memuat nomor, atau nomornya sudah tidak aktif. */
+    const wa = (x && nomorWa(x.hpManual)) || (x && nomorWa(x.hp)) || (s && s.wa) || '';
     return {
       ...d,
-      ada: !!x,
+      /* Dokumen yang isinya cuma nomor manual belum berarti daerah itu punya
+         data progres — ia tetap dihitung "belum ada data". */
+      ada: !!x && (x.fisik != null || x.keuangan != null),
       fisik: x ? (x.fisik == null ? null : x.fisik) : null,
       keuangan: x ? (x.keuangan == null ? null : x.keuangan) : null,
       tanggalData: x ? (x.tanggalData || '') : '',
-      namaKontak: (x && x.namaKontak) || (s && s.nama) || peserta.get(d.kunci) || '',
+      namaKontak: (x && x.namaKontakManual) || (x && x.namaKontak) ||
+                  (s && s.nama) || peserta.get(d.kunci) || '',
       wa,
-      sumberWa: (x && nomorWa(x.hp)) ? 'unggahan' : (wa ? 'survei' : '')
+      sumberWa: (x && nomorWa(x.hpManual)) ? 'diisi admin'
+              : (x && nomorWa(x.hp)) ? 'unggahan'
+              : wa ? 'survei' : ''
     };
   });
 }
@@ -633,9 +814,14 @@ function barisHtml(b, i) {
     </td>
     <td class="px-4 py-3">
       ${b.namaKontak ? `<p class="text-[12.5px] text-white/70">${aman(b.namaKontak)}</p>` : '<p class="text-[12.5px] text-white/25">tanpa nama</p>'}
-      ${b.wa
-        ? `<p class="mt-0.5 text-[11.5px] tabular-nums text-white/40">${aman(nomorTampil(b.wa))} · ${aman(b.sumberWa)}</p>`
-        : '<p class="mt-0.5 text-[11.5px] text-amber-300/70">nomor belum ada</p>'}
+      <div class="mt-0.5 flex flex-wrap items-center gap-2">
+        ${b.wa
+          ? `<span class="text-[11.5px] tabular-nums text-white/40">${aman(nomorTampil(b.wa))} · ${aman(b.sumberWa)}</span>`
+          : '<span class="text-[11.5px] text-amber-300/70">nomor belum ada</span>'}
+        <button data-em-kontak="${aman(b.kunci)}"
+          title="Ketik sendiri nama dan nomor WhatsApp daerah ini"
+          class="rounded-full border border-white/15 px-2 py-0.5 text-[11px] text-white/50 transition hover:bg-white/10 hover:text-white/80">${b.wa ? 'Ubah' : 'Isi nomor'}</button>
+      </div>
     </td>
     <td class="px-4 py-3 text-right">
       ${b.wa ? `
@@ -764,9 +950,9 @@ function render() {
   </div>
 
   <p class="mt-4 text-[12px] leading-[1.7] text-white/35">
-    Nomor telepon diambil dari kolom pada berkas unggahan; bila kosong, dipakai nomor yang
-    pernah diisi daerah itu pada survei kepuasan. ${bisaWa.length} dari ${semua.length} daerah
-    sudah punya nomor yang bisa dihubungi.
+    Nomor telepon dipakai berurutan: nomor yang diketik admin lewat tombol Isi nomor, lalu
+    kolom pada berkas unggahan, lalu nomor yang pernah diisi daerah itu pada survei kepuasan.
+    ${bisaWa.length} dari ${semua.length} daerah sudah punya nomor yang bisa dihubungi.
   </p>`;
 
   el('#emProv').onchange = e => { SARING.prov = e.target.value; render(); };
@@ -785,6 +971,9 @@ function render() {
     render();
     toast('Data eMonitoring dimuat ulang.');
   };
+
+  wadah.querySelectorAll('[data-em-kontak]').forEach(t =>
+    t.onclick = () => bukaKontak(t.dataset.emKontak));
 
   wadah.querySelectorAll('[data-em-salin]').forEach(t => t.onclick = async () => {
     const b = semua.find(x => x.kunci === t.dataset.emSalin);
@@ -865,6 +1054,107 @@ function bukaFormatPesan() {
 }
 
 
+/* ── jendela nomor kontak ───────────────────────────────────────
+   Unduhan mentah eMonitoring tidak memuat nomor telepon sama sekali, dan
+   tidak semua daerah pernah mengisi survei kepuasan. Nomor yang diketik di
+   sini menempel pada daerahnya, bukan pada berkas unggahannya, sehingga
+   unggahan berikutnya tidak menghapusnya.
+
+   Kotak isian sengaja dibiarkan kosong meski daerahnya sudah punya nomor
+   dari survei: nomor survei milik daerah itu, bukan salinan yang boleh
+   berpindah tempat. Yang ditampilkan hanya keterangan di bawahnya.
+   ═══════════════════════════════════════════════════════════════ */
+function bukaKontak(kunci) {
+  const lama = el('#emKontak');
+  if (lama) lama.remove();
+
+  const baris = susunBaris().find(b => b.kunci === kunci);
+  if (!baris) return;
+  const tersimpan = DATA[kunci] || {};
+  const adaManual = !!(tersimpan.hpManual || tersimpan.namaKontakManual);
+
+  const m = document.createElement('div');
+  m.id = 'emKontak';
+  m.className = 'fixed inset-0 z-[96] flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-10 backdrop-blur-md';
+  m.innerHTML = `
+    <div class="glass w-full max-w-lg rounded-[1.75rem] p-6 md:p-8">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">Nomor kontak</p>
+          <h3 class="mt-1.5 text-[20px] font-semibold">${aman(baris.label)}</h3>
+          <p class="mt-1 text-[12.5px] text-white/45">${aman(baris.prov)}</p>
+        </div>
+        <button id="emKtkTutup" aria-label="Tutup" class="-mr-1 -mt-1 shrink-0 rounded-full p-2 text-white/40 transition hover:bg-white/10 hover:text-white">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-5 w-5"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <label class="mt-6 block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">Nama kontak</label>
+      <input id="emKtkNama" value="${aman(tersimpan.namaKontakManual || '')}" placeholder="Nama yang disapa di pesan"
+        class="mt-2 w-full rounded-2xl border border-white/12 bg-black/40 px-4 py-2.5 text-[13.5px] text-white outline-none transition focus:border-white/35" />
+
+      <label class="mt-4 block text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">Nomor WhatsApp</label>
+      <input id="emKtkHp" value="${aman(tersimpan.hpManual ? nomorTampil(nomorWa(tersimpan.hpManual)) : '')}" placeholder="0812-3456-7890" inputmode="tel"
+        class="mt-2 w-full rounded-2xl border border-white/12 bg-black/40 px-4 py-2.5 text-[13.5px] tabular-nums text-white outline-none transition focus:border-white/35" />
+
+      <p class="mt-3 text-[12px] leading-[1.65] text-white/45">
+        ${baris.wa && !adaManual
+          ? `Sekarang daerah ini memakai ${aman(nomorTampil(baris.wa))} dari ${aman(baris.sumberWa)}. Nomor yang diketik di sini akan dipakai menggantikannya.`
+          : 'Nomor yang diketik di sini dipakai lebih dulu daripada nomor dari berkas unggahan maupun survei kepuasan, dan tidak terhapus saat data eMonitoring diunggah ulang.'}
+        ${adaManual ? '<span class="mt-1 block text-white/35">Kosongkan kedua isian lalu simpan untuk kembali memakai nomor berkas atau survei.</span>' : ''}
+      </p>
+
+      <p id="emKtkGalat" class="mt-3 text-[12.5px] leading-[1.6] text-amber-300"></p>
+
+      <div class="mt-6 flex flex-wrap items-center justify-end gap-2">
+        <button id="emKtkBatal" class="rounded-full border border-white/20 px-4 py-2 text-[13px] font-medium text-white/70 transition hover:bg-white/10">Batal</button>
+        <button id="emKtkSimpan" class="cta-glow rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-black transition disabled:opacity-40">Simpan nomor</button>
+      </div>
+    </div>`;
+  document.body.appendChild(m);
+
+  let sibuk = false;
+  const tutup = () => { if (!sibuk) m.remove(); };
+  m.querySelector('#emKtkTutup').onclick = tutup;
+  m.querySelector('#emKtkBatal').onclick = tutup;
+  m.onclick = e => { if (e.target === m) tutup(); };
+  m.querySelector('#emKtkNama').focus();
+
+  const tombol = m.querySelector('#emKtkSimpan');
+  const simpanNomor = async () => {
+    if (sibuk) return;
+    const nama = m.querySelector('#emKtkNama').value.replace(/\s+/g, ' ').trim();
+    const diketik = m.querySelector('#emKtkHp').value.trim();
+    const wa = nomorWa(diketik);
+    const galat = m.querySelector('#emKtkGalat');
+
+    /* Nomor yang salah ketik lebih berbahaya daripada nomor yang kosong:
+       pesan penagihan akan terkirim ke orang lain. */
+    if (diketik && !wa) {
+      galat.textContent = '“' + diketik + '” bukan nomor seluler Indonesia. Tulis seperti 0812-3456-7890 atau +62 812 3456 7890.';
+      return;
+    }
+    galat.textContent = '';
+    sibuk = true; tombol.disabled = true; tombol.textContent = 'Menyimpan…';
+    try {
+      await simpanKontak(kunci, nama, wa);
+      sibuk = false;
+      m.remove();
+      render();
+      toast(wa ? 'Nomor ' + baris.label + ' disimpan.' : 'Nomor manual ' + baris.label + ' dihapus.');
+    } catch (e) {
+      sibuk = false; tombol.disabled = false; tombol.textContent = 'Simpan nomor';
+      galat.textContent = 'Gagal disimpan: ' + (e.code || e.message) +
+        (e.code === 'permission-denied' ? '. Tempelkan ulang firestore.rules di Firebase Console.' : '');
+    }
+  };
+  tombol.onclick = simpanNomor;
+  m.querySelectorAll('#emKtkNama, #emKtkHp').forEach(i => {
+    i.onkeydown = e => { if (e.key === 'Enter') simpanNomor(); };
+  });
+}
+
+
 /* ── jendela unggah ─────────────────────────────────────────────
    Isinya diperlihatkan lebih dulu, tidak pernah langsung tersimpan: daerah
    yang tidak dikenali harus kelihatan sebelum datanya masuk.
@@ -889,8 +1179,11 @@ function bukaUnggah() {
           <h3 class="mt-1.5 text-[20px] font-semibold">Unggah data</h3>
           <p class="mt-2 max-w-[640px] text-[13px] leading-[1.65] text-white/55">
             Berkas .xlsx atau .csv. Kolomnya dikenali dari judulnya, jadi urutannya bebas dan
-            kolom lain boleh ikut ada. Yang wajib: nama daerah, Fisik, dan Keuangan. Yang
-            opsional: Provinsi, Nama Kontak, No HP, dan Tanggal Data.
+            kolom lain boleh ikut ada. Unduhan mentah dari eMonitoring bisa langsung diunggah
+            apa adanya — barisnya yang per paket diringkas sendiri jadi satu angka per daerah,
+            dan tanggal progres terakhirnya diambil dari kolom tglkontrak, tglpho, tglded, dan
+            tglabd. Bentuk rekap satu baris per daerah juga tetap diterima; yang wajib nama
+            daerah, Fisik, dan Keuangan, sisanya opsional.
           </p>
         </div>
         <button id="emUpTutup" aria-label="Tutup" class="-mr-1 -mt-1 shrink-0 rounded-full p-2 text-white/40 transition hover:bg-white/10 hover:text-white">
@@ -973,7 +1266,9 @@ function renderUnggah() {
       <p class="text-[12.5px] text-white/55">
         <span class="font-semibold text-white/85">${cocok.length}</span> daerah terbaca dari
         <span class="text-white/75">${aman(HASIL.berkas)}</span>.
-        ${gagal.length ? `<span class="text-amber-300">${gagal.length} baris daerahnya tidak dikenali.</span>` : ''}
+        ${HASIL.mentah ? `<span class="text-white/45">Unduhan mentah eMonitoring: ${HASIL.mentah.baris} baris paket diringkas per daerah${
+          HASIL.mentah.tanggal ? `, progres terakhir seluruh berkas ${aman(tanggalIndo(HASIL.mentah.tanggal))}` : ''}.</span>` : ''}
+        ${gagal.length ? `<span class="text-amber-300">${gagal.length} nama daerah tidak dikenali.</span>` : ''}
       </p>
       <label class="flex cursor-pointer items-center gap-2 text-[12.5px] text-white/60">
         <input type="checkbox" id="emUpGanti" ${GANTI ? 'checked' : ''} class="h-4 w-4 accent-white" />
@@ -996,7 +1291,7 @@ function renderUnggah() {
           ${cocok.map(r => `
             <tr class="border-t border-white/8">
               <td class="px-4 py-2"><p class="text-[12.5px] text-white/80">${aman(r.label)}</p>
-                <p class="text-[11px] text-white/35">${aman(r.prov)}</p></td>
+                <p class="text-[11px] text-white/35">${aman(r.prov)}${r.paket ? ' · ' + r.paket + ' paket' : ''}</p></td>
               <td class="px-4 py-2 text-[12.5px] tabular-nums text-white/70">${r.fisik == null ? '—' : aman(angkaId(r.fisik)) + '%'}</td>
               <td class="px-4 py-2 text-[12.5px] tabular-nums text-white/70">${r.keuangan == null ? '—' : aman(angkaId(r.keuangan)) + '%'}</td>
               <td class="px-4 py-2 text-[12px] text-white/55">${aman(r.namaKontak || '—')}${
@@ -1025,15 +1320,22 @@ async function simpanUnggahan() {
   SIBUK = true;
   renderUnggah();
 
+  const kolom = HASIL.kolom || [];
   const baru = {};
   HASIL.cocok.forEach(r => {
-    baru[r.kunci] = {
+    const isi = {
       kunciDaerah: r.kunci, prov: r.prov, kab: r.kab,
       fisik: r.fisik, keuangan: r.keuangan,
-      namaKontak: r.namaKontak, hp: r.hp,
       tanggalData: r.tanggalData,
       dariBerkas: HASIL.berkas || ''
     };
+    /* Kolom yang memang tidak ada di berkasnya tidak ikut ditulis: unduhan
+       mentah eMonitoring tidak memuat kontak sama sekali, dan nama serta
+       nomor yang sudah tersimpan tidak boleh hilang karenanya. */
+    if (kolom.indexOf('namaKontak') > -1) isi.namaKontak = r.namaKontak;
+    if (kolom.indexOf('hp') > -1) isi.hp = r.hp;
+    if (r.paket != null) { isi.paket = r.paket; isi.dana = r.dana; }
+    baru[r.kunci] = isi;
   });
 
   try {
