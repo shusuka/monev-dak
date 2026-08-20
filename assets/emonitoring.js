@@ -159,7 +159,8 @@ const nomorTampil = wa => {
 const PESAN_BAKU =
   'Selamat {waktu} Bapak/Ibu {nama}. Ingin menginfokan bahwa progres pelaporan ' +
   'di eMonitoring untuk {daerah}, Provinsi {provinsi}, yang ter-update per {tanggal} ' +
-  'baru mencapai fisik {fisik}% dan keuangan {keuangan}%. Mohon segera update datanya. Terima kasih.';
+  'baru mencapai fisik {fisik}% dan keuangan {keuangan}%. Batas pelaporan {periode} ' +
+  'tanggal {tenggat}. Mohon segera update datanya. Terima kasih.';
 
 const salamJam = jam => (jam < 11 ? 'pagi' : jam < 15 ? 'siang' : jam < 18 ? 'sore' : 'malam');
 
@@ -176,6 +177,63 @@ const isoHariIni = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
+
+/* ── tenggat pelaporan ──────────────────────────────────────────
+   eMonitoring dilaporkan empat kali setahun, dan tiap triwulan punya batas
+   akhir pelaporan tanggal 7 pada bulan sesudah triwulan itu tutup:
+
+     TW I  (Jan–Mar) → 7 April       TW III (Jul–Sep) → 7 Oktober
+     TW II (Apr–Jun) → 7 Juli        TW IV  (Okt–Des) → 7 Januari tahun berikutnya
+
+   Batasnya dihitung dalam hari kerja, jadi tanggal 7 yang jatuh di akhir
+   pekan bergeser ke Senin.
+
+   Dari sinilah status tiap daerah dibaca — bukan dari besar kecilnya persen.
+   Pemda yang fisiknya baru 5% di awal triwulan tidak salah apa-apa; yang
+   perlu ditagih adalah pemda yang datanya tidak bergerak melewati tenggat.
+   ═══════════════════════════════════════════════════════════════ */
+const TANGGAL_TENGGAT = 7;              // ganti di sini bila aturannya berubah
+const BULAN_TENGGAT = [3, 6, 9, 0];     // indeks bulan: April, Juli, Oktober, Januari
+const ANGKA_TW = ['I', 'II', 'III', 'IV'];
+
+const isoDari = d => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+
+/** Batas akhir pelaporan satu triwulan, sudah digeser bila jatuh akhir pekan. */
+function tenggatTW(tahun, tw) {
+  const d = new Date(Date.UTC(tw === 4 ? tahun + 1 : tahun, BULAN_TENGGAT[tw - 1], TANGGAL_TENGGAT));
+  const hari = d.getUTCDay();
+  if (hari === 0) d.setUTCDate(d.getUTCDate() + 1);       // Minggu → Senin
+  if (hari === 6) d.setUTCDate(d.getUTCDate() + 2);       // Sabtu → Senin
+  return { tw, tahun, iso: isoDari(d), label: 'TW ' + ANGKA_TW[tw - 1] + ' ' + tahun };
+}
+
+/** Seluruh tenggat di sekitar hari ini, terurut, beserta yang barusan lewat
+    dan yang akan datang. Dihitung ulang tiap kali tabelnya digambar, supaya
+    halaman yang dibiarkan terbuka semalaman tetap benar. */
+function keadaanTenggat(hariIni) {
+  const th = +String(hariIni).slice(0, 4);
+  const semua = [];
+  for (let t = th - 3; t <= th + 1; t++) for (let tw = 1; tw <= 4; tw++) semua.push(tenggatTW(t, tw));
+  semua.sort((a, b) => a.iso.localeCompare(b.iso));
+  const lewat = semua.filter(x => x.iso <= hariIni);
+  return { hariIni, semua,
+           terakhir: lewat[lewat.length - 1] || null,
+           berikut: semua.find(x => x.iso > hariIni) || null };
+}
+
+let TENGGAT = keadaanTenggat(isoHariIni());
+
+/** Berapa tenggat yang lewat sejak daerah itu terakhir bergerak. Tenggat yang
+    jatuh tepat pada tanggal datanya tidak dihitung — hari itu mereka memang
+    masih melapor. */
+function tenggatTerlewat(tanggalData) {
+  if (!tanggalData) return null;
+  return TENGGAT.semua.filter(x => x.iso > tanggalData && x.iso <= TENGGAT.hariIni).length;
+}
+
+const selisihHari = (dari, sampai) =>
+  Math.round((Date.parse(sampai + 'T00:00:00Z') - Date.parse(dari + 'T00:00:00Z')) / 86400000);
+
 
 function ambilPesan() {
   try { return localStorage.getItem(LS_PESAN) || PESAN_BAKU; } catch (e) { return PESAN_BAKU; }
@@ -198,6 +256,8 @@ function susunPesan(baris, pola) {
     .replace(/\{provinsi\}/g, baris.prov || '')
     .replace(/\{fisik\}/g, angkaId(baris.fisik))
     .replace(/\{keuangan\}/g, angkaId(baris.keuangan))
+    .replace(/\{periode\}/g, (TENGGAT.berikut && TENGGAT.berikut.label) || '')
+    .replace(/\{tenggat\}/g, (TENGGAT.berikut && tanggalIndo(TENGGAT.berikut.iso)) || '')
     .replace(/\{tanggal\}/g, tanggalIndo(baris.tanggalData) || 'hari ini');
   return isi.replace(/[ \t]{2,}/g, ' ').replace(/\s+([.,])/g, '$1').trim();
 }
@@ -742,13 +802,45 @@ function susunBaris() {
   });
 }
 
-/* Ambang "perlu ditagih". Bukan aturan resmi — sekadar penyaring supaya
-   daerah yang paling tertinggal gampang dikumpulkan. */
-const AMBANG = 50;
-const statusBaris = b =>
-  !b.ada ? 'kosong'
-  : (b.fisik != null && b.fisik < AMBANG) || (b.keuangan != null && b.keuangan < AMBANG) ? 'rendah'
-  : 'aman';
+/* Perlu ditagih atau tidak dihitung dari tanggal progres terakhir daerah itu
+   dibanding tenggat pelaporan triwulanan — lihat blok tenggat di atas. Besar
+   kecilnya persen tidak ikut menentukan. */
+function statusBaris(b) {
+  if (!b.ada) return 'kosong';
+  const n = tenggatTerlewat(b.tanggalData);
+  if (n == null) return 'ditagih';          // ada angkanya, tanggalnya tidak
+  return n === 0 ? 'aman' : n === 1 ? 'ditagih' : 'telat';
+}
+
+const PERLU_TAGIH = st => st === 'ditagih' || st === 'telat';
+
+/** Bentuk lencana status beserta keterangan lengkapnya untuk tooltip. */
+function labelStatus(b) {
+  const st = statusBaris(b);
+  if (st === 'kosong') {
+    return { st, teks: 'Belum ada data', kelas: 'bg-white/8 text-white/40',
+             judul: 'Daerah ini belum pernah ada di berkas unggahan.' };
+  }
+  if (st === 'aman') {
+    const t = TENGGAT.terakhir;
+    return { st, teks: 'Tepat waktu', kelas: 'bg-emerald-400/15 text-emerald-300',
+             judul: t ? `Datanya bergerak setelah tenggat ${t.label} (${tanggalIndo(t.iso)}).`
+                      : 'Belum ada tenggat yang lewat.' };
+  }
+  const lewat = b.tanggalData
+    ? TENGGAT.semua.filter(x => x.iso > b.tanggalData && x.iso <= TENGGAT.hariIni) : [];
+  if (!lewat.length) {
+    return { st, teks: 'Perlu ditagih', kelas: 'bg-amber-400/15 text-amber-300',
+             judul: 'Tanggal progres terakhirnya tidak diketahui dari berkas.' };
+  }
+  const awal = lewat[0], akhir = lewat[lewat.length - 1];
+  const hari = selisihHari(b.tanggalData, TENGGAT.hariIni);
+  return st === 'ditagih'
+    ? { st, teks: 'Perlu ditagih', kelas: 'bg-amber-400/15 text-amber-300',
+        judul: `Tenggat ${awal.label} (${tanggalIndo(awal.iso)}) lewat, sedangkan datanya berhenti ${tanggalIndo(b.tanggalData)} — ${hari} hari lalu.` }
+    : { st, teks: 'Telat ' + lewat.length + ' tenggat', kelas: 'bg-rose-500/15 text-rose-300',
+        judul: `Melewati tenggat ${awal.label} sampai ${akhir.label}; datanya berhenti ${tanggalIndo(b.tanggalData)} — ${hari} hari lalu.` };
+}
 
 
 /* ═══════════════════════════════════════════════════════════════
@@ -756,29 +848,68 @@ const statusBaris = b =>
    ═══════════════════════════════════════════════════════════════ */
 let SARING = { prov: '', status: '', cari: '' };
 
+/* Angka di atas, barnya di bawah, dan keduanya baru bergerak saat barisnya
+   masuk layar. Lebar bar tidak ditulis langsung di style-nya melainkan
+   disimpan di --em-lebar, lalu dipasang oleh kelas .em-jalan — dengan begitu
+   peralihan CSS-nya punya keadaan awal (nol) yang jelas untuk dianimasikan. */
 const GAYA = `
 <style>
-  .em-bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.09); overflow: hidden; }
-  .em-bar > i { display: block; height: 100%; border-radius: 999px; transition: width .5s ease; }
+  .em-meter { min-width: 104px; }
+  .em-bar { height: 7px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .em-bar > i {
+    display: block; position: relative; height: 100%; width: 0; border-radius: 999px;
+    transition: width 1s cubic-bezier(.22, 1, .36, 1);
+  }
+  .em-fisik    { background: linear-gradient(90deg, rgba(56,189,248,.45), rgb(56,189,248)); }
+  .em-keuangan { background: linear-gradient(90deg, rgba(52,211,153,.45), rgb(52,211,153)); }
+  .em-meter.em-jalan .em-bar > i { width: var(--em-lebar); }
+  /* Kilau sekali jalan mengiringi barnya terisi, lalu berhenti — bukan
+     animasi berulang yang membuat 164 baris berkedip terus. */
+  .em-meter.em-jalan .em-bar > i::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
+    transform: translateX(-100%);
+    animation: em-kilau 1.1s ease-out .25s 1 both;
+  }
+  @keyframes em-kilau { to { transform: translateX(180%); } }
+  .em-kartu-angka { display: inline-block; }
+  @media (prefers-reduced-motion: reduce) {
+    .em-bar > i { transition: none; }
+    .em-meter.em-jalan .em-bar > i::after { animation: none; }
+  }
 </style>`;
 
-function kartu(judul, nilai, ket, warna) {
+function kartu(judul, nilai, ket, warna, angka) {
+  /* `angka` diisi bila nilainya pantas dihitung naik; teks akhirnya tetap
+     dari `nilai`, supaya format Indonesia dan satuannya tidak dikarang ulang
+     oleh penghitungnya. */
+  const isi = angka == null
+    ? aman(nilai)
+    : `<span class="em-kartu-angka" data-em-hitung="${aman(angka)}" data-em-akhir="${aman(nilai)}">0</span>`;
   return `
   <div class="glass rounded-3xl px-5 py-4">
     <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">${aman(judul)}</p>
-    <p class="mt-2 text-[26px] font-semibold tabular-nums ${warna || 'text-white'}">${aman(nilai)}</p>
+    <p class="mt-2 text-[26px] font-semibold tabular-nums ${warna || 'text-white'}">${isi}</p>
     <p class="mt-0.5 text-[12px] text-white/45">${aman(ket)}</p>
   </div>`;
 }
 
-const bar = (v, warna) => `
-  <div class="em-bar w-[86px]"><i style="width:${v == null ? 0 : Math.max(0, Math.min(100, v))}%;background:${warna}"></i></div>`;
+/** Satu angka beserta barnya. `jenis` menentukan warnanya saja. */
+function meter(v, jenis) {
+  const lebar = v == null ? 0 : Math.max(0, Math.min(100, v));
+  return `
+  <div class="em-meter" ${v == null ? '' : `data-em-meter="${v}"`}>
+    <p class="em-angka text-[13px] font-semibold tabular-nums ${jenis === 'fisik' ? 'text-sky-200' : 'text-emerald-200'}">${
+      v == null ? '<span class="text-white/25">—</span>' : '0%'}</p>
+    <div class="em-bar mt-2"><i class="em-${jenis}" style="--em-lebar:${lebar}%"></i></div>
+  </div>`;
+}
 
 /* Kepala kelompok provinsi, sebaris penuh di dalam tabel — bentuk yang sama
    dengan ceklis kesiapan, supaya kedua tab terbaca dengan cara yang sama. */
 function kepalaProvinsi(prov, isi) {
   const ada = isi.filter(b => b.ada);
-  const tagih = isi.filter(b => statusBaris(b) === 'rendah').length;
+  const tagih = isi.filter(b => PERLU_TAGIH(statusBaris(b))).length;
   const rerata = k => {
     const a = ada.map(b => b[k]).filter(v => v != null);
     return a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length * 10) / 10 : null;
@@ -797,8 +928,7 @@ function kepalaProvinsi(prov, isi) {
 }
 
 function barisHtml(b, i) {
-  const st = statusBaris(b);
-  const nilai = v => (v == null ? '<span class="text-white/25">—</span>' : `<span class="tabular-nums">${aman(angkaId(v))}%</span>`);
+  const stat = labelStatus(b);
   return `
   <tr class="border-t border-white/8 align-middle hover:bg-white/[.03]">
     <td class="px-4 py-3 text-[12px] tabular-nums text-white/35">${i}</td>
@@ -806,12 +936,8 @@ function barisHtml(b, i) {
       <p class="text-[13.5px] font-medium text-white/85">${aman(b.label)}</p>
       <p class="mt-0.5 text-[11.5px] text-white/40">${aman(b.prov)}${b.tanggalData ? ' · data ' + aman(tanggalIndo(b.tanggalData)) : ''}</p>
     </td>
-    <td class="px-4 py-3">
-      <div class="flex items-center gap-2.5">${nilai(b.fisik)}${bar(b.fisik, 'rgb(56 189 248)')}</div>
-    </td>
-    <td class="px-4 py-3">
-      <div class="flex items-center gap-2.5">${nilai(b.keuangan)}${bar(b.keuangan, 'rgb(52 211 153)')}</div>
-    </td>
+    <td class="px-4 py-3">${meter(b.fisik, 'fisik')}</td>
+    <td class="px-4 py-3">${meter(b.keuangan, 'keuangan')}</td>
     <td class="px-4 py-3">
       ${b.namaKontak ? `<p class="text-[12.5px] text-white/70">${aman(b.namaKontak)}</p>` : '<p class="text-[12.5px] text-white/25">tanpa nama</p>'}
       <div class="mt-0.5 flex flex-wrap items-center gap-2">
@@ -835,14 +961,79 @@ function barisHtml(b, i) {
              class="rounded-full border border-white/15 px-3.5 py-1.5 text-[12.5px] text-white/50 transition hover:bg-white/10">Salin pesan</button>`}
     </td>
     <td class="px-4 py-3">
-      <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-        st === 'kosong' ? 'bg-white/8 text-white/40'
-        : st === 'rendah' ? 'bg-amber-400/15 text-amber-300'
-        : 'bg-emerald-400/15 text-emerald-300'}">${
-        st === 'kosong' ? 'Belum ada data' : st === 'rendah' ? 'Perlu ditagih' : 'Aman'}</span>
+      <span title="${aman(stat.judul)}"
+        class="cursor-default rounded-full px-2.5 py-1 text-[11px] font-semibold ${stat.kelas}">${aman(stat.teks)}</span>
     </td>
   </tr>`;
 }
+
+/* ── animasi angka dan bar ──────────────────────────────────────
+   Bar diisi lewat kelas .em-jalan supaya peralihan CSS-nya berangkat dari
+   nol, dan angkanya dihitung naik seirama dengan barnya.
+
+   Barisnya baru bergerak saat masuk layar: 164 daerah berarti 328 bar, dan
+   menganimasikan semuanya sekaligus membuat gulirannya tersendat sekaligus
+   sia-sia — yang di luar layar tidak dilihat siapa pun. Admin yang memasang
+   "kurangi gerak" di sistemnya langsung mendapat angka jadi, tanpa animasi.
+   ═══════════════════════════════════════════════════════════════ */
+let PENGAMAT = null;
+
+const kurangGerak = () =>
+  !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+/** Hitung naik 0 → `sampai`, lalu tutup dengan `teksAkhir` supaya format
+    Indonesia dan satuannya persis sama dengan yang dipakai di tempat lain. */
+function hitungNaik(node, sampai, teksAkhir, tunda, akhiran) {
+  if (!node) return;
+  if (!isFinite(sampai) || kurangGerak()) { node.textContent = teksAkhir; return; }
+  const desimal = Math.abs(sampai - Math.round(sampai)) > 0.05 ? 1 : 0;
+  const lama = 900;
+  setTimeout(() => {
+    const mulai = performance.now();
+    const langkah = waktu => {
+      const t = Math.min(1, (waktu - mulai) / lama);
+      if (t < 1) {
+        const luwes = 1 - Math.pow(1 - t, 3);          // seirama easing barnya
+        node.textContent = (sampai * luwes).toFixed(desimal).replace('.', ',') + (akhiran || '');
+        requestAnimationFrame(langkah);
+      } else node.textContent = teksAkhir;
+    };
+    requestAnimationFrame(langkah);
+  }, tunda || 0);
+}
+
+function hidupkanMeter(wadah) {
+  if (PENGAMAT) { PENGAMAT.disconnect(); PENGAMAT = null; }
+
+  /* Kartu ringkasan selalu terlihat begitu tab dibuka, jadi langsung jalan. */
+  wadah.querySelectorAll('[data-em-hitung]').forEach((n, i) =>
+    hitungNaik(n, parseFloat(n.dataset.emHitung), n.dataset.emAkhir, Math.min(i * 70, 350)));
+
+  const daftar = Array.from(wadah.querySelectorAll('[data-em-meter]'));
+  const jalankan = (m, tunda) => {
+    if (m.dataset.emJalan) return;
+    m.dataset.emJalan = '1';
+    const v = parseFloat(m.dataset.emMeter);
+    const angka = m.querySelector('.em-angka');
+    if (kurangGerak()) { m.classList.add('em-jalan'); if (angka) angka.textContent = angkaId(v) + '%'; return; }
+    setTimeout(() => {
+      m.classList.add('em-jalan');                       // barnya berangkat
+      hitungNaik(angka, v, angkaId(v) + '%', 0, '%');    // angkanya menyusul
+    }, tunda);
+  };
+
+  if (!('IntersectionObserver' in window)) { daftar.forEach(m => jalankan(m, 0)); return; }
+  PENGAMAT = new IntersectionObserver(masuk => {
+    let n = 0;
+    masuk.forEach(x => {
+      if (!x.isIntersecting) return;
+      PENGAMAT.unobserve(x.target);
+      jalankan(x.target, Math.min(n++ * 40, 320));       // berurutan, bukan serentak
+    });
+  }, { rootMargin: '90px 0px' });
+  daftar.forEach(m => PENGAMAT.observe(m));
+}
+
 
 /* Angka kecil di samping nama tab. Ditulis dari sini, bukan dari index.html:
    angkanya berubah setiap kali ada unggahan baru, dan yang tahu itu hanya
@@ -856,23 +1047,36 @@ function render() {
   const wadah = el('#adEmon');
   if (!wadah) return;
 
+  /* Tenggat dihitung ulang tiap gambar: halaman admin sering dibiarkan
+     terbuka berhari-hari, dan status "perlu ditagih" berubah sendiri begitu
+     satu tenggat terlewati. */
+  TENGGAT = keadaanTenggat(isoHariIni());
+
   const semua = susunBaris();
   const adaData = semua.filter(b => b.ada);
-  const rendah  = semua.filter(b => statusBaris(b) === 'rendah');
+  const tagih   = semua.filter(b => PERLU_TAGIH(statusBaris(b)));
+  const telat   = semua.filter(b => statusBaris(b) === 'telat');
   const bisaWa  = semua.filter(b => b.wa);
   const rerata = (kunci) => {
     const a = adaData.map(b => b[kunci]).filter(v => v != null);
     return a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length * 10) / 10 : null;
   };
   const tanggal = adaData.map(b => b.tanggalData).filter(Boolean).sort().pop() || '';
-  tandaiTab(rendah.length);
+  tandaiTab(tagih.length);
+
+  const berikut = TENGGAT.berikut;
+  const sisaHari = berikut ? selisihHari(TENGGAT.hariIni, berikut.iso) : null;
 
   const provs = Array.from(new Set(semua.map(b => b.prov))).sort((a, b) => a.localeCompare(b, 'id'));
   const cari = SARING.cari.trim().toLowerCase();
+  const cocokStatus = b => {
+    if (!SARING.status) return true;
+    if (SARING.status === 'tanpaNomor') return !b.wa;
+    if (SARING.status === 'tagih') return PERLU_TAGIH(statusBaris(b));
+    return statusBaris(b) === SARING.status;
+  };
   const tampil = semua.filter(b =>
-    (!SARING.prov || b.prov === SARING.prov) &&
-    (!SARING.status || statusBaris(b) === SARING.status ||
-      (SARING.status === 'tanpaNomor' && !b.wa)) &&
+    (!SARING.prov || b.prov === SARING.prov) && cocokStatus(b) &&
     (!cari || (b.label + ' ' + b.kab + ' ' + b.prov + ' ' + b.namaKontak).toLowerCase().includes(cari)));
 
   /* Daftar dipecah per provinsi. Urutan daerah di dalamnya tidak diubah —
@@ -887,21 +1091,29 @@ function render() {
 
   wadah.innerHTML = `${GAYA}
 
-  <p class="mt-7 max-w-[760px] text-[14px] leading-[1.7] text-white/60">
+  <p class="mt-7 max-w-[820px] text-[14px] leading-[1.7] text-white/60">
     Progres pelaporan tiap pemda di aplikasi eMonitoring — angka yang lebih aktual daripada
     berita acara, karena diambil langsung dari aplikasinya. Datanya diunggah admin secara
     berkala; tombol Kontak membuka WhatsApp dengan pesan penagihan yang sudah terisi sendiri.
     ${tanggal ? 'Data terakhir per <span class="text-white/80">' + aman(tanggalIndo(tanggal)) + '</span>.' : ''}
+    <span class="mt-2 block text-[13px] text-white/45">
+      Perlu ditagih atau tidak dihitung dari tanggal progres terakhir tiap daerah dibanding
+      tenggat pelaporan triwulanan — tanggal ${TANGGAL_TENGGAT} April, Juli, Oktober, dan Januari,
+      bergeser ke Senin bila jatuh di akhir pekan. Bukan dari besar kecilnya persen.
+    </span>
   </p>
 
   ${GALAT ? `<div class="mt-6 rounded-3xl border border-amber-400/40 bg-amber-400/10 p-5 text-[13px] leading-[1.7] text-amber-200/90">${aman(GALAT)}</div>` : ''}
 
-  <div class="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-    ${kartu('Daerah penerima DAK', semua.length, 'kerangka tetap')}
-    ${kartu('Sudah ada datanya', adaData.length, semua.length ? Math.round(adaData.length / semua.length * 100) + '% daerah' : '—', 'text-sky-300')}
-    ${kartu('Rerata fisik', rerata('fisik') == null ? '—' : angkaId(rerata('fisik')) + '%', 'dari daerah yang ada datanya', 'text-sky-300')}
-    ${kartu('Rerata keuangan', rerata('keuangan') == null ? '—' : angkaId(rerata('keuangan')) + '%', 'dari daerah yang ada datanya', 'text-emerald-300')}
-    ${kartu('Perlu ditagih', rendah.length, 'fisik atau keuangan di bawah ' + AMBANG + '%', rendah.length ? 'text-amber-300' : '')}
+  <div class="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+    ${kartu('Daerah penerima DAK', semua.length, 'kerangka tetap', '', semua.length)}
+    ${kartu('Sudah ada datanya', adaData.length, semua.length ? Math.round(adaData.length / semua.length * 100) + '% daerah' : '—', 'text-sky-300', adaData.length)}
+    ${kartu('Rerata fisik', rerata('fisik') == null ? '—' : angkaId(rerata('fisik')) + '%', 'dari daerah yang ada datanya', 'text-sky-300', rerata('fisik'))}
+    ${kartu('Rerata keuangan', rerata('keuangan') == null ? '—' : angkaId(rerata('keuangan')) + '%', 'dari daerah yang ada datanya', 'text-emerald-300', rerata('keuangan'))}
+    ${kartu('Perlu ditagih', tagih.length, telat.length ? telat.length + ' di antaranya telat lebih dari satu tenggat' : 'lewat tenggat pelaporan', tagih.length ? 'text-amber-300' : '', tagih.length)}
+    ${kartu('Tenggat berikutnya', berikut ? tanggalIndo(berikut.iso) : '—',
+            berikut ? berikut.label + ' · ' + (sisaHari === 0 ? 'hari ini' : sisaHari + ' hari lagi') : '',
+            sisaHari != null && sisaHari <= 14 ? 'text-amber-300' : 'text-white')}
   </div>
 
   <div class="mt-8 flex flex-wrap items-center gap-3">
@@ -911,8 +1123,9 @@ function render() {
     </select>
     <select id="emStatus" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink">
       <option value="">Semua status</option>
-      <option value="rendah"${SARING.status === 'rendah' ? ' selected' : ''}>Perlu ditagih (di bawah ${AMBANG}%)</option>
-      <option value="aman"${SARING.status === 'aman' ? ' selected' : ''}>Aman</option>
+      <option value="tagih"${SARING.status === 'tagih' ? ' selected' : ''}>Perlu ditagih (lewat tenggat) — ${tagih.length}</option>
+      <option value="telat"${SARING.status === 'telat' ? ' selected' : ''}>Telat lebih dari satu tenggat — ${telat.length}</option>
+      <option value="aman"${SARING.status === 'aman' ? ' selected' : ''}>Tepat waktu</option>
       <option value="kosong"${SARING.status === 'kosong' ? ' selected' : ''}>Belum ada data</option>
       <option value="tanpaNomor"${SARING.status === 'tanpaNomor' ? ' selected' : ''}>Belum ada nomornya (${semua.length - bisaWa.length})</option>
     </select>
@@ -985,6 +1198,8 @@ function render() {
       toast('Peramban menolak menyalin. Buka Format pesan untuk menyalinnya manual.');
     }
   });
+
+  hidupkanMeter(wadah);
 }
 
 
@@ -1013,7 +1228,12 @@ function bukaFormatPesan() {
             Tersedia: <code class="text-white/75">{waktu}</code> <code class="text-white/75">{nama}</code>
             <code class="text-white/75">{daerah}</code> <code class="text-white/75">{daerahPanjang}</code>
             <code class="text-white/75">{provinsi}</code> <code class="text-white/75">{fisik}</code>
-            <code class="text-white/75">{keuangan}</code> <code class="text-white/75">{tanggal}</code>.
+            <code class="text-white/75">{keuangan}</code> <code class="text-white/75">{tanggal}</code>
+            <code class="text-white/75">{periode}</code> <code class="text-white/75">{tenggat}</code>.
+            <span class="mt-1 block text-white/40">{tanggal} adalah tanggal progres terakhir daerah itu,
+            sedangkan {periode} dan {tenggat} adalah batas pelaporan berikutnya yang harus dikejar —
+            saat ini ${aman((TENGGAT.berikut && TENGGAT.berikut.label) || '—')},
+            ${aman((TENGGAT.berikut && tanggalIndo(TENGGAT.berikut.iso)) || '—')}.</span>
             <span class="mt-1 block text-white/40">{daerah} menghasilkan “Kab. Magelang”, {daerahPanjang}
             menghasilkan “Kabupaten Magelang” — keduanya sengaja tidak pernah menyebut “Magelang” saja.</span>
           </p>
@@ -1458,6 +1678,7 @@ window.EMON = {
   },
 
   reset() {
+    if (PENGAMAT) { PENGAMAT.disconnect(); PENGAMAT = null; }
     DATA = {}; DIMUAT = false; GALAT = '';
     SARING = { prov: '', status: '', cari: '' };
     tandaiTab(0);
