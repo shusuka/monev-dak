@@ -1045,11 +1045,26 @@ function bukaImporWord() {
 
 /* ── rekapitulasi ke Excel ──────────────────────────────────────
    Notulensi menjawab "bagaimana satu daerah"; pimpinan menanyakan "bagaimana
-   seluruh daerah". assets/rekap-ba.js merangkum arsip yang sudah dimuat di
-   layar ini menjadi satu lembar berformat rekapitulasi rakor — tanpa membaca
-   ulang Firestore, jadi yang terekap persis yang sedang terlihat. */
-function bukaRekapExcel() {
+   seluruh daerah". assets/rekap-ba.js merangkum seluruh arsip menjadi satu
+   lembar berformat rekapitulasi rakor.
+
+   Arsipnya dibaca ulang lebih dulu. Layar ini bisa sudah lama terbuka,
+   sementara petugas lain terus menyimpan dan mengimpor berita acara — rekap
+   yang disusun dari daftar lama akan memuat notulensi yang sudah usang tanpa
+   ada yang tahu. Bila pembacaan ulangnya gagal, daftar yang ada tetap dipakai
+   supaya rekapnya masih bisa keluar. */
+async function bukaRekapExcel() {
   if (!window.REKAP_BA) { toast('Modul rekap belum termuat, muat ulang halamannya.'); return; }
+  const t = el('#baArsipRekap');
+  if (t) { t.disabled = true; t.textContent = 'Menyegarkan arsip…'; }
+  try {
+    await muatArsip();
+  } catch (e) {
+    console.warn('[MonevDAK] arsip gagal disegarkan sebelum rekap:', e);
+    ARSIP_DIMUAT = true;
+    toast('Arsip gagal disegarkan, rekap memakai daftar yang sudah termuat.');
+  }
+  renderArsip();               // tombolnya ikut tersusun ulang, kembali normal
   window.REKAP_BA.buka({ rekaman: ARSIP, kunci: kunciDaerah });
 }
 
