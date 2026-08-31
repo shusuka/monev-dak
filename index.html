@@ -684,6 +684,7 @@
     <div id="adNotice" class="mt-6 hidden"></div>
     <div id="adStats" class="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"></div>
     <div id="adGanda" class="mt-6 hidden"></div>
+    <div id="adRekon" class="mt-6"></div>
 
     <div class="mt-10 flex flex-wrap items-center gap-3">
       <select id="adFilter" onchange="renderAdmin()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink">
@@ -699,6 +700,7 @@
         <option value="ganda">Pemda ber-akun ganda</option>
         <option value="berlebih">Akun berlebih (calon hapus)</option>
         <option value="satu">Satu akun per pemda</option>
+        <option value="luar">Daerah di luar daftar DAK</option>
       </select>
       <select id="adUrut" onchange="renderAdmin()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink">
         <option value="post">Urut nilai post tertinggi</option>
@@ -2549,7 +2551,8 @@ async function muatAdmin(paksa) {
 function isiProvinsiAdmin() {
   const sel = $('#adProv');
   const lama = sel.value;
-  const provs = Array.from(new Set(ADATA.gabung.map(g => g.prov).filter(Boolean))).sort();
+  const provs = Array.from(new Set(ADATA.gabung
+    .filter(g => TAMPIL_PFID || !g.pfid).map(g => g.prov).filter(Boolean))).sort();
   sel.innerHTML = '<option value="">Semua provinsi</option>' + provs.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
   if (lama && provs.includes(lama)) sel.value = lama;
 }
@@ -2567,6 +2570,26 @@ const LABEL_STATUS = { lengkap: 'Lengkap', prasaja: 'Baru pre test', possaja: 'B
    Petugas PFID dikecualikan: mereka memang beberapa orang pada satu wilayah
    yang sama (Kementerian PU), bukan pendaftaran ganda. */
 const kunciPemda = g => slug((g.prov || '') + ' ' + (g.kab || ''));
+/* Petugas PFID memakai aplikasi yang sama untuk menyusun berita acara, tetapi
+   mereka bukan pemda pendaftar: barisnya disembunyikan dan angkanya tidak ikut
+   dihitung pada rekapitulasi. Tautan di bawah tabel membukanya bila perlu. */
+const akunPetugas = g => !!(window.BA && window.BA.akunPfid(g));
+let TAMPIL_PFID = false;
+
+/* Daftar 164 daerah penerima DAK, dijadikan kunci yang sama bentuknya dengan
+   kunciPemda(). Akun lama mendaftar sewaktu pilihan wilayahnya masih seluruh
+   Indonesia, sehingga ada pengisi yang daerahnya di luar daftar ini — itulah
+   salah satu sebab jumlah pengisi melebihi jumlah pemda penerima DAK. */
+let DAK_SET = null;
+function kunciDak() {
+  if (DAK_SET) return DAK_SET;
+  DAK_SET = new Set();
+  const W = window.WILAYAH || {};
+  Object.keys(W).forEach(prov => String(W[prov] || '').split(',').filter(Boolean)
+    .forEach(kab => DAK_SET.add(kunciPemda({ prov, kab }))));
+  return DAK_SET;
+}
+const jumlahDak = () => kunciDak().size;
 const msWaktu = v => {
   if (!v) return 0;
   const d = typeof v.toDate === 'function' ? v.toDate() : new Date(v);
@@ -2580,10 +2603,11 @@ const bobotAkun = g => [
 ];
 
 function tandaiAkunGanda(rows) {
-  const pfid = g => !!(window.BA && window.BA.akunPfid(g));
   const grup = {};
   rows.forEach(g => {
-    g.pemda = (g.kab && !pfid(g)) ? kunciPemda(g) : '';
+    g.pfid = akunPetugas(g);
+    g.pemda = (g.kab && !g.pfid) ? kunciPemda(g) : '';
+    g.luar = !!(g.pemda && !kunciDak().has(g.pemda));
     g.nAkun = 1; g.peran = 'tunggal'; g.urutAkun = 1; g.terpecah = false;
     if (g.pemda) (grup[g.pemda] || (grup[g.pemda] = [])).push(g);
   });
@@ -2620,10 +2644,32 @@ function ringkasGanda() {
   };
 }
 
+/** Uraian satu kolom pengisian: pengisi = pemda + akun ganda + daerah luar. */
+function rekonIsi(kind) {
+  const rows = ADATA.gabung.filter(g => !g.pfid && (kind === 'daftar' || g[kind]));
+  const tanpa = rows.filter(g => !g.pemda).length;
+  const luar  = rows.filter(g => g.luar).length;
+  const dalam = rows.filter(g => g.pemda && !g.luar);
+  const pemda = new Set(dalam.map(g => g.pemda)).size;
+  return { total: rows.length, pemda, ganda: dalam.length - pemda, luar, tanpa };
+}
+
 /** Lencana kecil pada kolom Daerah: berapa akun di pemda itu dan perannya. */
 const lencanaAkun = g => g.nAkun > 1
   ? `<br><span class="mt-1 inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold ${g.peran === 'utama' ? 'bg-sky-400/20 text-sky-300' : 'bg-fuchsia-400/25 text-fuchsia-300'}">${g.nAkun} akun &middot; ${g.peran === 'utama' ? 'utama' : 'berlebih'}</span>${g.terpecah ? '<span class="ml-1 inline-block whitespace-nowrap rounded-full bg-red-400/20 px-2 py-0.5 text-[10px] font-semibold text-red-300">nilai terpisah</span>' : ''}`
   : '';
+
+/** Lencana daerah yang tidak ada di daftar 164 penerima DAK. */
+const lencanaLuar = g => g.luar
+  ? '<br><span class="mt-1 inline-block whitespace-nowrap rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">luar daftar DAK</span>'
+  : '';
+
+/** Buka-tutup baris petugas PFID. Angkanya tetap di luar rekapitulasi. */
+function togglePfid() {
+  TAMPIL_PFID = !TAMPIL_PFID;
+  isiProvinsiAdmin();
+  renderAdmin();
+}
 
 /** Tombol pemberitahuan: tampilkan seluruh akun pada pemda yang ganda. */
 function lihatAkunGanda() {
@@ -2636,6 +2682,7 @@ function lihatAkunGanda() {
     sudah ada. Penyaring lain dikosongkan lebih dulu supaya tidak ada yang
     tertinggal di luar tampilan. */
 function pilihAkunBerlebih() {
+  TAMPIL_PFID = false;
   $('#adFilter').value = 'semua'; $('#adProv').value = ''; $('#adQ').value = '';
   $('#adDup').value = 'berlebih';
   renderAdmin();
@@ -2651,10 +2698,11 @@ function pilihAkunBerlebih() {
 function dataTampilAdmin() {
   const f = $('#adFilter').value, prov = $('#adProv').value, urut = $('#adUrut').value, q = norm($('#adQ').value);
   const dup = $('#adDup').value;
-  let rows = ADATA.gabung.slice();
+  let rows = ADATA.gabung.filter(g => TAMPIL_PFID || !g.pfid);
   if (dup === 'ganda')    rows = rows.filter(g => g.nAkun > 1);
   if (dup === 'berlebih') rows = rows.filter(g => g.peran === 'berlebih');
   if (dup === 'satu')     rows = rows.filter(g => g.peran !== 'berlebih');
+  if (dup === 'luar')     rows = rows.filter(g => g.luar || !g.pemda);
   if (f !== 'semua') rows = rows.filter(g => statusPeserta(g) === f);
   if (prov)          rows = rows.filter(g => g.prov === prov);
   if (q)             rows = rows.filter(g => norm(g.nama + ' ' + g.kab + ' ' + g.prov + ' ' + g.email).includes(q));
@@ -2680,7 +2728,8 @@ function dataTampilAdmin() {
 }
 
 function renderAdmin() {
-  const semua = ADATA.gabung;
+  const petugas = ADATA.gabung.filter(g => g.pfid).length;
+  const semua = ADATA.gabung.filter(g => !g.pfid);
   const sudahPre  = semua.filter(g => g.pre).length;
   const sudahPost = semua.filter(g => g.post).length;
   const lengkap   = semua.filter(g => g.pre && g.post).length;
@@ -2738,6 +2787,50 @@ function renderAdmin() {
     </div>`;
   } else gnd.classList.add('hidden');
 
+  /* Uraian selisih: mengapa jumlah pengisi tidak sama dengan jumlah pemda
+     penerima DAK. Tiga sebabnya dihitung terpisah supaya dapat ditelusuri. */
+  const nDak = jumlahDak();
+  const rk = { daftar: rekonIsi('daftar'), pre: rekonIsi('pre'), post: rekonIsi('post') };
+  const barisRekon = (label, ambil, ket, warna) => {
+    if (!['daftar', 'pre', 'post'].some(k => ambil(rk[k]))) return '';
+    return `<tr class="border-b border-white/[.06]">
+      <td class="px-4 py-2.5 text-white/75">${label}<br><span class="text-[11px] text-white/40">${ket}</span></td>
+      ${['daftar', 'pre', 'post'].map(k => `<td class="px-4 py-2.5 text-right tabular-nums ${warna || 'text-white/70'}">${ambil(rk[k]) || '—'}</td>`).join('')}
+    </tr>`;
+  };
+  $('#adRekon').innerHTML = `<div class="glass overflow-hidden rounded-3xl">
+    <div class="border-b border-white/10 px-5 py-4">
+      <p class="text-[13px] font-semibold">Selisih jumlah pengisi dan jumlah pemda</p>
+      <p class="mt-1 text-[12px] leading-[1.6] text-white/50">Daftar DAK Fisik Bidang Jalan memuat ${nDak} daerah. Jumlah pengisi bisa melebihi angka itu karena satu pemda memakai lebih dari satu akun, atau karena akun lama yang daerahnya sudah tidak ada di daftar DAK. Akun petugas PFID tidak ikut dihitung.</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[560px] text-left text-[13px]">
+        <thead class="border-b border-white/10 text-[11px] uppercase tracking-[0.14em] text-white/45">
+          <tr>
+            <th class="px-4 py-3 font-semibold">Asal selisih</th>
+            <th class="px-4 py-3 text-right font-semibold">Pendaftar</th>
+            <th class="px-4 py-3 text-right font-semibold">Pre test</th>
+            <th class="px-4 py-3 text-right font-semibold">Post test</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${barisRekon('Pemda penerima DAK', r => r.pemda, 'dihitung satu kali per daerah, dari ' + nDak + ' daerah', 'text-emerald-300')}
+          ${barisRekon('Akun ganda', r => r.ganda, 'pemda yang sama, akun lebih dari satu', 'text-fuchsia-300')}
+          ${barisRekon('Daerah di luar daftar DAK', r => r.luar, 'akun lama, daerahnya tidak ada di daftar ' + nDak, 'text-amber-300')}
+          ${barisRekon('Tanpa daerah', r => r.tanpa, 'profilnya tidak memuat kabupaten/kota', 'text-red-300')}
+          <tr class="bg-white/[.04]">
+            <td class="px-4 py-3 font-semibold">Jumlah akun</td>
+            ${['daftar', 'pre', 'post'].map(k => `<td class="px-4 py-3 text-right text-[15px] font-semibold tabular-nums">${rk[k].total}</td>`).join('')}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="border-t border-white/10 px-5 py-3.5 text-[12px] leading-[1.7] text-white/45">
+      ${petugas ? petugas + ' akun petugas PFID di luar hitungan ini. ' : ''}Belum mengisi pre test: ${nDak - rk.pre.pemda} pemda dari ${nDak}.
+      Untuk melihat barisnya, pakai penyaring <b>Pemda ber-akun ganda</b> atau <b>Daerah di luar daftar DAK</b> di bawah.
+    </p>
+  </div>`;
+
   const rows = dataTampilAdmin();
   const dupAktif = $('#adDup').value !== 'semua';
   const sel = (g, k, f) => g[k] ? f(g[k]) : '—';
@@ -2775,7 +2868,7 @@ function renderAdmin() {
               </td>
               <td class="px-5 py-4 tabular-nums text-white/50">${i + 1}</td>
               <td class="px-5 py-4"><p class="font-medium">${esc(g.nama)}</p>${g.email ? `<p class="text-[12px] text-white/45">${esc(g.email)}</p>` : ''}</td>
-              <td class="px-5 py-4 text-white/65">${esc(g.kab || '—')}${g.prov ? '<br><span class="text-[12px] text-white/40">' + esc(g.prov) + '</span>' : ''}${lencanaAkun(g)}</td>
+              <td class="px-5 py-4 text-white/65">${esc(g.kab || '—')}${g.prov ? '<br><span class="text-[12px] text-white/40">' + esc(g.prov) + '</span>' : ''}${lencanaAkun(g)}${lencanaLuar(g)}</td>
               <td class="px-5 py-4">${badge(statusPeserta(g))}</td>
               <td class="px-5 py-4 text-right tabular-nums">${sel(g, 'pre', r => `<span class="font-semibold">${r.nilai}</span><br><span class="text-[11px] text-white/45">${r.benar}/${r.total} · ${fmtDur(r.durasiMs)}</span>`)}</td>
               <td class="px-5 py-4 text-right tabular-nums">${sel(g, 'post', r => `<span class="font-semibold">${r.nilai}</span><br><span class="text-[11px] text-white/45">${r.benar}/${r.total} · ${fmtDur(r.durasiMs)}</span>`)}</td>
@@ -2797,6 +2890,7 @@ function renderAdmin() {
     <p class="border-t border-white/10 px-5 py-4 text-[12px] leading-[1.7] text-white/40">
       Menampilkan ${rows.length} dari ${semua.length} peserta. Tombol unduh dan pilih semua mengikuti penyaring yang sedang aktif.<br>
       ${dupAktif ? 'Penyaring akun ganda sedang aktif: baris dikelompokkan per daerah dan akun <b>utama</b> berada di baris pertama tiap pemda, sehingga urutan nilai diabaikan.<br>' : ''}
+      ${petugas ? `${petugas} akun petugas PFID tidak dihitung sebagai pendaftar dan ${TAMPIL_PFID ? 'sedang ikut ditampilkan' : 'disembunyikan dari tabel'}. <button onclick="togglePfid()" class="font-medium text-white/60 underline underline-offset-2 transition hover:text-white">${TAMPIL_PFID ? 'Sembunyikan lagi' : 'Tampilkan'}</button><br>` : ''}
       Menghapus peserta membuang identitas dan seluruh nilainya. Akun masuknya tetap ada di Authentication dan harus dihapus terpisah dari Firebase Console.
     </p>`;
 
