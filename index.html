@@ -683,6 +683,7 @@
     <div id="adPanelTest" style="--tab:56 189 248">
     <div id="adNotice" class="mt-6 hidden"></div>
     <div id="adStats" class="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"></div>
+    <div id="adGanda" class="mt-6 hidden"></div>
 
     <div class="mt-10 flex flex-wrap items-center gap-3">
       <select id="adFilter" onchange="renderAdmin()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink">
@@ -693,6 +694,12 @@
         <option value="belum">Belum mengisi sama sekali</option>
       </select>
       <select id="adProv" onchange="renderAdmin()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink"></select>
+      <select id="adDup" onchange="renderAdmin()" title="Pemda yang membuat akun lebih dari satu" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink">
+        <option value="semua">Semua akun</option>
+        <option value="ganda">Pemda ber-akun ganda</option>
+        <option value="berlebih">Akun berlebih (calon hapus)</option>
+        <option value="satu">Satu akun per pemda</option>
+      </select>
       <select id="adUrut" onchange="renderAdmin()" class="glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink">
         <option value="post">Urut nilai post tertinggi</option>
         <option value="pre">Urut nilai pre tertinggi</option>
@@ -2511,16 +2518,16 @@ async function muatAdmin(paksa) {
      Peserta yang hasilnya ada tapi dokumen pesertanya tak terbaca tetap masuk. */
   const map = {};
   peserta.forEach(p => {
-    map[p.pid] = { pid: p.pid, nama: p.nama || '(tanpa nama)', prov: p.prov || '', kab: p.kab || '', email: p.email || '', pre: null, post: null };
+    map[p.pid] = { pid: p.pid, nama: p.nama || '(tanpa nama)', prov: p.prov || '', kab: p.kab || '', email: p.email || '', updatedAt: p.updatedAt || null, pre: null, post: null };
   });
   hasil.forEach(h => {
     if (h.tw !== TW_AKTIF) return;
-    const g = map[h.pid] || (map[h.pid] = { pid: h.pid, nama: h.nama, prov: h.prov, kab: h.kab, email: '', pre: null, post: null });
+    const g = map[h.pid] || (map[h.pid] = { pid: h.pid, nama: h.nama, prov: h.prov, kab: h.kab, email: '', updatedAt: null, pre: null, post: null });
     g[h.kind] = h;
     if (!g.nama || g.nama === '(tanpa nama)') { g.nama = h.nama; g.prov = h.prov; g.kab = h.kab; }
   });
 
-  ADATA = { peserta, hasil: hasil.filter(h => h.tw === TW_AKTIF), gabung: Object.values(map), galatPeserta };
+  ADATA = { peserta, hasil: hasil.filter(h => h.tw === TW_AKTIF), gabung: tandaiAkunGanda(Object.values(map)), galatPeserta };
   isiProvinsiAdmin();
   renderAdmin();
   /* Ditunggu, bukan dilepas: ceklis kesiapan memerlukan rekap survei untuk
@@ -2550,10 +2557,104 @@ function isiProvinsiAdmin() {
 const statusPeserta = g => g.pre && g.post ? 'lengkap' : g.pre ? 'prasaja' : g.post ? 'possaja' : 'belum';
 const LABEL_STATUS = { lengkap: 'Lengkap', prasaja: 'Baru pre test', possaja: 'Baru post test', belum: 'Belum mengisi' };
 
+/* ── akun ganda: satu pemda yang mendaftar lebih dari sekali ───────
+   Sebagian pemda membuat akun baru ketika sandinya lupa atau petugasnya
+   berganti, sehingga jumlah pendaftar lebih besar daripada jumlah pemda dan
+   pengisiannya terbelah — sebagian di akun lama, sebagian di akun baru.
+   Tiap daerah dipilihkan satu akun `utama`: yang paling lengkap isiannya,
+   lalu yang nilainya paling tinggi, lalu yang paling belakangan diperbarui.
+   Sisanya `berlebih` — itulah yang disaring dan dihapus.
+   Petugas PFID dikecualikan: mereka memang beberapa orang pada satu wilayah
+   yang sama (Kementerian PU), bukan pendaftaran ganda. */
+const kunciPemda = g => slug((g.prov || '') + ' ' + (g.kab || ''));
+const msWaktu = v => {
+  if (!v) return 0;
+  const d = typeof v.toDate === 'function' ? v.toDate() : new Date(v);
+  const t = d instanceof Date ? d.getTime() : NaN;
+  return isNaN(t) ? 0 : t;
+};
+const bobotAkun = g => [
+  (g.pre ? 1 : 0) + (g.post ? 1 : 0),
+  (g.pre ? g.pre.nilai : 0) + (g.post ? g.post.nilai : 0),
+  msWaktu(g.updatedAt)
+];
+
+function tandaiAkunGanda(rows) {
+  const pfid = g => !!(window.BA && window.BA.akunPfid(g));
+  const grup = {};
+  rows.forEach(g => {
+    g.pemda = (g.kab && !pfid(g)) ? kunciPemda(g) : '';
+    g.nAkun = 1; g.peran = 'tunggal'; g.urutAkun = 1; g.terpecah = false;
+    if (g.pemda) (grup[g.pemda] || (grup[g.pemda] = [])).push(g);
+  });
+  Object.values(grup).forEach(daftar => {
+    if (daftar.length < 2) return;
+    daftar.sort((a, b) => {
+      const x = bobotAkun(a), y = bobotAkun(b);
+      return y[0] - x[0] || y[1] - x[1] || y[2] - x[2] || String(a.nama).localeCompare(String(b.nama));
+    });
+    /* Nilai yang terbelah: akun berlebih memegang sesi yang tidak dimiliki
+       akun utama, sehingga menghapusnya membuang nilai yang belum tercatat
+       di mana pun. Baris seperti ini ditandai supaya diperiksa lebih dulu. */
+    const utama = daftar[0];
+    const terpecah = daftar.slice(1).some(g => (g.pre && !utama.pre) || (g.post && !utama.post));
+    daftar.forEach((g, i) => {
+      g.nAkun = daftar.length;
+      g.peran = i === 0 ? 'utama' : 'berlebih';
+      g.urutAkun = i + 1;
+      g.terpecah = terpecah;
+    });
+  });
+  return rows;
+}
+
+/** Ringkasan akun ganda untuk kartu angka dan pemberitahuan. */
+function ringkasGanda() {
+  const rows = ADATA.gabung;
+  const set = f => new Set(rows.filter(f).map(g => g.pemda));
+  return {
+    nPemda:    set(g => g.pemda).size,
+    nGanda:    set(g => g.pemda && g.nAkun > 1).size,
+    nTerpecah: set(g => g.pemda && g.terpecah).size,
+    nBerlebih: rows.filter(g => g.peran === 'berlebih').length
+  };
+}
+
+/** Lencana kecil pada kolom Daerah: berapa akun di pemda itu dan perannya. */
+const lencanaAkun = g => g.nAkun > 1
+  ? `<br><span class="mt-1 inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold ${g.peran === 'utama' ? 'bg-sky-400/20 text-sky-300' : 'bg-fuchsia-400/25 text-fuchsia-300'}">${g.nAkun} akun &middot; ${g.peran === 'utama' ? 'utama' : 'berlebih'}</span>${g.terpecah ? '<span class="ml-1 inline-block whitespace-nowrap rounded-full bg-red-400/20 px-2 py-0.5 text-[10px] font-semibold text-red-300">nilai terpisah</span>' : ''}`
+  : '';
+
+/** Tombol pemberitahuan: tampilkan seluruh akun pada pemda yang ganda. */
+function lihatAkunGanda() {
+  $('#adFilter').value = 'semua'; $('#adQ').value = ''; $('#adDup').value = 'ganda';
+  renderAdmin();
+  $('#adTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/** Centang seluruh akun berlebih sekaligus, siap dihapus lewat tombol yang
+    sudah ada. Penyaring lain dikosongkan lebih dulu supaya tidak ada yang
+    tertinggal di luar tampilan. */
+function pilihAkunBerlebih() {
+  $('#adFilter').value = 'semua'; $('#adProv').value = ''; $('#adQ').value = '';
+  $('#adDup').value = 'berlebih';
+  renderAdmin();
+  pilihSemua(true);
+  $('#adTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const n = pidTerpilih().length, rg = ringkasGanda();
+  toast(n + ' akun berlebih dipilih. ' + (rg.nTerpecah
+    ? 'Periksa dulu baris bertanda \u201Cnilai terpisah\u201D sebelum menghapus.'
+    : 'Periksa daftarnya sebelum menekan Hapus terpilih.'));
+}
+
 /** Baris yang sedang tampil — dipakai bersama oleh tabel dan ekspor. */
 function dataTampilAdmin() {
   const f = $('#adFilter').value, prov = $('#adProv').value, urut = $('#adUrut').value, q = norm($('#adQ').value);
+  const dup = $('#adDup').value;
   let rows = ADATA.gabung.slice();
+  if (dup === 'ganda')    rows = rows.filter(g => g.nAkun > 1);
+  if (dup === 'berlebih') rows = rows.filter(g => g.peran === 'berlebih');
+  if (dup === 'satu')     rows = rows.filter(g => g.peran !== 'berlebih');
   if (f !== 'semua') rows = rows.filter(g => statusPeserta(g) === f);
   if (prov)          rows = rows.filter(g => g.prov === prov);
   if (q)             rows = rows.filter(g => norm(g.nama + ' ' + g.kab + ' ' + g.prov + ' ' + g.email).includes(q));
@@ -2567,6 +2668,14 @@ function dataTampilAdmin() {
     nama:    (a, b) => a.nama.localeCompare(b.nama),
     wilayah: (a, b) => (a.prov || '').localeCompare(b.prov || '') || (a.kab || '').localeCompare(b.kab || '') || a.nama.localeCompare(b.nama)
   }[urut];
+  /* Sewaktu penyaring akun ganda aktif, urutan pilihan pengguna diabaikan:
+     akun satu pemda harus berdekatan supaya mudah dibandingkan, dengan akun
+     utama selalu di baris pertama daerahnya. */
+  if (dup !== 'semua') return rows.sort((a, b) =>
+    (a.prov || '').localeCompare(b.prov || '') ||
+    (a.kab  || '').localeCompare(b.kab  || '') ||
+    (a.urutAkun || 1) - (b.urutAkun || 1) ||
+    String(a.nama).localeCompare(String(b.nama)));
   return rows.sort(cmp);
 }
 
@@ -2576,6 +2685,7 @@ function renderAdmin() {
   const sudahPost = semua.filter(g => g.post).length;
   const lengkap   = semua.filter(g => g.pre && g.post).length;
   const belum     = semua.filter(g => !g.pre && !g.post).length;
+  const rg = ringkasGanda();
   const rata = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
   const rPre  = rata(semua.filter(g => g.pre).map(g => g.pre.nilai));
   const rPost = rata(semua.filter(g => g.post).map(g => g.post.nilai));
@@ -2601,7 +2711,10 @@ function renderAdmin() {
   </div>`;
 
   $('#adStats').innerHTML =
-    kartu('Peserta terdaftar', semua.length, ADATA.galatPeserta ? 'yang sudah mengisi' : 'termasuk yang belum mengisi') +
+    kartu('Peserta terdaftar', semua.length,
+          ADATA.galatPeserta ? 'yang sudah mengisi'
+          : rg.nBerlebih ? 'dari ' + rg.nPemda + ' pemda &middot; ' + rg.nBerlebih + ' akun berlebih'
+          : 'dari ' + rg.nPemda + ' pemda') +
     kartu('Sudah pre test', sudahPre, semua.length ? Math.round(sudahPre / semua.length * 100) + '% dari peserta' : '—', 'text-emerald-400') +
     kartu('Sudah post test', sudahPost, semua.length ? Math.round(sudahPost / semua.length * 100) + '% dari peserta' : '—', 'text-emerald-400') +
     kartu('Belum mengisi', ADATA.galatPeserta ? '—' : belum, 'belum ada sesi', belum ? 'text-red-400' : '') +
@@ -2609,7 +2722,24 @@ function renderAdmin() {
     kartu('Rata-rata peningkatan', rDelta === null ? '—' : (rDelta > 0 ? '+' : '') + rDelta, 'dari ' + lengkap + ' peserta lengkap',
           rDelta === null ? '' : rDelta > 0 ? 'text-emerald-400' : 'text-red-400');
 
+  /* Pemberitahuan akun ganda: muncul hanya bila memang ada pemda yang
+     mendaftar lebih dari sekali, lengkap dengan dua tombol pintas. */
+  const gnd = $('#adGanda');
+  if (rg.nGanda) {
+    gnd.classList.remove('hidden');
+    gnd.innerHTML = `<div class="rounded-3xl border border-fuchsia-400/40 bg-fuchsia-400/10 p-5 text-[14px] leading-[1.7] text-fuchsia-100/85">
+      <p class="font-semibold text-fuchsia-200">${rg.nGanda} pemda membuat lebih dari satu akun</p>
+      <p class="mt-1.5">Tercatat <b>${semua.length} pendaftar</b> untuk <b>${rg.nPemda} pemda</b>. Di tiap pemda, akun yang paling lengkap isiannya ditandai <b>utama</b> dan sisanya <b>berlebih</b> — menghapus ${rg.nBerlebih} akun berlebih membuat jumlah pendaftar sama dengan jumlah pemda.</p>
+      ${rg.nTerpecah ? `<p class="mt-1.5 font-medium text-red-300">Periksa dulu: pada ${rg.nTerpecah} pemda nilainya terbelah antar-akun (mis. pre test di akun satu, post test di akun lain). Barisnya ditandai “nilai terpisah”; menghapusnya membuang nilai yang tidak tersimpan di akun utama.</p>` : ''}
+      <div class="mt-3.5 flex flex-wrap gap-2">
+        <button onclick="lihatAkunGanda()" class="rounded-full border border-white/25 px-4 py-2 text-[13px] font-medium text-white/85 transition hover:bg-white/10">Lihat ${rg.nGanda} pemda ber-akun ganda</button>
+        <button onclick="pilihAkunBerlebih()" class="rounded-full border border-fuchsia-300/50 bg-fuchsia-400/20 px-4 py-2 text-[13px] font-medium text-fuchsia-100 transition hover:bg-fuchsia-400/30">Pilih ${rg.nBerlebih} akun berlebih</button>
+      </div>
+    </div>`;
+  } else gnd.classList.add('hidden');
+
   const rows = dataTampilAdmin();
+  const dupAktif = $('#adDup').value !== 'semua';
   const sel = (g, k, f) => g[k] ? f(g[k]) : '—';
   const badge = s => {
     const w = { lengkap: 'bg-emerald-400/20 text-emerald-300', prasaja: 'bg-amber-400/20 text-amber-300', possaja: 'bg-amber-400/20 text-amber-300', belum: 'bg-red-400/20 text-red-300' }[s];
@@ -2645,7 +2775,7 @@ function renderAdmin() {
               </td>
               <td class="px-5 py-4 tabular-nums text-white/50">${i + 1}</td>
               <td class="px-5 py-4"><p class="font-medium">${esc(g.nama)}</p>${g.email ? `<p class="text-[12px] text-white/45">${esc(g.email)}</p>` : ''}</td>
-              <td class="px-5 py-4 text-white/65">${esc(g.kab || '—')}${g.prov ? '<br><span class="text-[12px] text-white/40">' + esc(g.prov) + '</span>' : ''}</td>
+              <td class="px-5 py-4 text-white/65">${esc(g.kab || '—')}${g.prov ? '<br><span class="text-[12px] text-white/40">' + esc(g.prov) + '</span>' : ''}${lencanaAkun(g)}</td>
               <td class="px-5 py-4">${badge(statusPeserta(g))}</td>
               <td class="px-5 py-4 text-right tabular-nums">${sel(g, 'pre', r => `<span class="font-semibold">${r.nilai}</span><br><span class="text-[11px] text-white/45">${r.benar}/${r.total} · ${fmtDur(r.durasiMs)}</span>`)}</td>
               <td class="px-5 py-4 text-right tabular-nums">${sel(g, 'post', r => `<span class="font-semibold">${r.nilai}</span><br><span class="text-[11px] text-white/45">${r.benar}/${r.total} · ${fmtDur(r.durasiMs)}</span>`)}</td>
@@ -2666,6 +2796,7 @@ function renderAdmin() {
     </div>
     <p class="border-t border-white/10 px-5 py-4 text-[12px] leading-[1.7] text-white/40">
       Menampilkan ${rows.length} dari ${semua.length} peserta. Tombol unduh dan pilih semua mengikuti penyaring yang sedang aktif.<br>
+      ${dupAktif ? 'Penyaring akun ganda sedang aktif: baris dikelompokkan per daerah dan akun <b>utama</b> berada di baris pertama tiap pemda, sehingga urutan nilai diabaikan.<br>' : ''}
       Menghapus peserta membuang identitas dan seluruh nilainya. Akun masuknya tetap ada di Authentication dan harus dihapus terpisah dari Firebase Console.
     </p>`;
 
@@ -2836,6 +2967,9 @@ function barisEkspor() {
     'Provinsi': g.prov,
     'Kabupaten/Kota': g.kab,
     'Email': g.email,
+    'Akun di Daerah': g.nAkun || 1,
+    'Peran Akun': g.nAkun > 1 ? (g.peran === 'utama' ? 'Utama' : 'Berlebih') : 'Tunggal',
+    'Nilai Terpisah': g.terpecah ? 'Ya' : '',
     'Status': LABEL_STATUS[statusPeserta(g)],
     'Pre Benar': g.pre ? g.pre.benar : '',
     'Pre Total': g.pre ? g.pre.total : '',
