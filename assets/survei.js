@@ -489,7 +489,7 @@ let REKAP_GALAT = '';
 
 /* Penyaring rekap. Provinsi yang utama — rapat koordinasi ditindaklanjuti
    per provinsi, jadi seluruh angka dan grafik ikut menyempit bersamanya. */
-let SARING = { prov: '', mutu: '', cari: '' };
+let SARING = { prov: '', mutu: '', cari: '', ganda: '' };
 
 /* Landasan rekap. Jumlah penilaian yang masuk lebih besar daripada jumlah
    pemda penerima DAK, karena survei boleh diisi tanpa akun dan jawaban
@@ -582,6 +582,57 @@ function rekapDasar() {
   });
 }
 
+/* ── pemda yang mengisi survei lebih dari sekali ───────────────────────────
+   Satu pemda dapat menilai dua kali: petugasnya berganti, atau jawabannya
+   sudah masuk lewat Google Formulir lalu diisi ulang di aplikasi. Di tiap
+   daerah dipilih satu penilaian `utama` — yang penilainya peserta terdaftar,
+   lalu yang jawabannya paling lengkap, lalu yang paling belakangan dikirim —
+   dan sisanya `berlebih`, siap disaring lalu dihapus. */
+const msKirim = v => (v && typeof v.toMillis === 'function') ? v.toMillis() : Number(v || 0);
+
+const bobotSurvei = r => [
+  sebabLuar(r) ? 0 : 1,
+  Object.keys(r.jawaban || {}).filter(k => {
+    const v = (r.jawaban || {})[k];
+    return v !== '' && v != null;
+  }).length,
+  msKirim(r.dikirimAt)
+];
+
+let GANDA = null;
+/** Peta id penilaian → { n, peran, urut } untuk daerah yang mengisi >1 kali. */
+function petaGanda() {
+  if (GANDA) return GANDA;
+  GANDA = new Map();
+  const grup = {};
+  rekapDasar().forEach(r => {
+    if (!r.kab) return;
+    const k = kunciWil(r.prov, r.kab);
+    (grup[k] || (grup[k] = [])).push(r);
+  });
+  Object.keys(grup).forEach(k => {
+    const daftar = grup[k];
+    if (daftar.length < 2) return;
+    daftar.sort((a, b) => {
+      const x = bobotSurvei(a), y = bobotSurvei(b);
+      return y[0] - x[0] || y[1] - x[1] || y[2] - x[2] || seragam(a.nama).localeCompare(seragam(b.nama));
+    });
+    daftar.forEach((r, i) => GANDA.set(r.id, {
+      n: daftar.length, peran: i === 0 ? 'utama' : 'berlebih', urut: i + 1
+    }));
+  });
+  return GANDA;
+}
+const lupakanGanda = () => { GANDA = null; };
+
+/** Ringkasan untuk keterangan: berapa pemda ganda dan berapa yang berlebih. */
+function ringkasGandaSurvei() {
+  const peta = petaGanda();
+  let berlebih = 0, pemda = 0;
+  peta.forEach(v => { if (v.peran === 'berlebih') berlebih++; else pemda++; });
+  return { pemda, berlebih };
+}
+
 /** Cacah tiap sebab, untuk keterangan selisih di atas bilah penyaring. */
 function cacahLuar() {
   const c = { pfid: 0, luar: 0, nontest: 0, lepas: 0, sesuai: 0 };
@@ -591,7 +642,13 @@ function cacahLuar() {
 
 /** Baris yang sedang tampil — dipakai bersama oleh kartu, grafik, tabel, dan ekspor. */
 function rekapTampil() {
-  return rekapDasar().filter(r => {
+  const rows = rekapDasar().filter(r => {
+    if (SARING.ganda) {
+      const g = petaGanda().get(r.id);
+      if (SARING.ganda === 'ganda'    && !g) return false;
+      if (SARING.ganda === 'berlebih' && !(g && g.peran === 'berlebih')) return false;
+      if (SARING.ganda === 'satu'     && g && g.peran === 'berlebih') return false;
+    }
     if (SARING.prov && (r.prov || '') !== SARING.prov) return false;
     if (SARING.mutu && HURUF_MUTU(nilaiIndeks(r)) !== SARING.mutu) return false;
     if (SARING.cari) {
@@ -600,9 +657,16 @@ function rekapTampil() {
     }
     return true;
   });
+  /* Sewaktu penyaring pemda ganda aktif, penilaian satu daerah dirapatkan
+     supaya mudah dibandingkan — yang utama selalu di baris pertama. */
+  if (!SARING.ganda) return rows;
+  return rows.sort((a, b) =>
+    seragam(a.prov).localeCompare(seragam(b.prov)) ||
+    seragam(a.kab).localeCompare(seragam(b.kab)) ||
+    ((petaGanda().get(a.id) || {}).urut || 1) - ((petaGanda().get(b.id) || {}).urut || 1));
 }
 
-const adaSaringan = () => !!(SARING.prov || SARING.mutu || SARING.cari);
+const adaSaringan = () => !!(SARING.prov || SARING.mutu || SARING.cari || SARING.ganda);
 
 /** Rata-rata satu unsur (skala 1–4) pada sekumpulan baris. */
 function rataUnsur(rows, k) {
@@ -1126,6 +1190,7 @@ function bilahSaring() {
   const tampil = rekapTampil();
   const dasar = rekapDasar().length;
   const c = cacahLuar();
+  const rgd = ringkasGandaSurvei();
   const tersaring = REKAP.length - dasar;
 
   /* Uraian selisih: berapa penilaian yang masuk, berapa yang dipakai, dan
@@ -1139,6 +1204,7 @@ function bilahSaring() {
     <div class="mt-6 rounded-3xl border border-white/12 bg-white/[0.04] px-5 py-4 text-[13px] leading-[1.7] text-white/65">
       <b class="text-white/85">${REKAP.length} penilaian masuk</b>, ${dasar} dipakai pada rekap ini.
       ${tersaring ? 'Disisihkan: ' + uraian + '.' : 'Seluruhnya sejalan dengan data pre/post test.'}
+      ${rgd.berlebih ? `<span class="block">${rgd.pemda} pemda mengisi lebih dari sekali — <b class="text-white/85">${rgd.berlebih} penilaian berlebih</b>. Penilaian yang paling utuh ditandai <b>utama</b>; pakai penyaring <b>Penilaian berlebih</b> lalu centang “Pilih semua” untuk menghapusnya sekaligus.</span>` : ''}
       <span class="block text-[12px] text-white/40">Landasannya disamakan dengan rekap pre &amp; post test: ${wilayahDak().size} daerah penerima DAK, dan pemdanya memang mengerjakan tesnya. Yang disisihkan hanya disembunyikan — pilih “Semua penilaian” untuk memeriksa lalu menghapusnya.</span>
     </div>
 
@@ -1147,6 +1213,12 @@ function bilahSaring() {
         <option value="pemda"${LANDASAN === 'pemda' ? ' selected' : ''}>Sesuai data pre/post test (${REKAP.length - c.pfid - c.luar - c.nontest})</option>
         <option value="ketat"${LANDASAN === 'ketat' ? ' selected' : ''}>Ketat: penilai peserta terdaftar (${c.sesuai})</option>
         <option value="semua"${LANDASAN === 'semua' ? ' selected' : ''}>Semua penilaian (${REKAP.length})</option>
+      </select>
+      <select id="svGanda" class="${gaya}" title="Pemda yang mengisi survei lebih dari sekali">
+        <option value="">Semua penilai</option>
+        <option value="ganda"${SARING.ganda === 'ganda' ? ' selected' : ''}>Pemda yang mengisi &gt;1 kali${rgd.pemda ? ' (' + (rgd.pemda + rgd.berlebih) + ')' : ''}</option>
+        <option value="berlebih"${SARING.ganda === 'berlebih' ? ' selected' : ''}>Penilaian berlebih${rgd.berlebih ? ' (' + rgd.berlebih + ')' : ''}</option>
+        <option value="satu"${SARING.ganda === 'satu' ? ' selected' : ''}>Satu penilaian per pemda (${dasar - rgd.berlebih})</option>
       </select>
       <select id="svProv" class="${gaya}" title="Saring menurut provinsi">
         <option value="">Semua provinsi${dasar ? ' (' + dasar + ')' : ''}</option>
@@ -1215,6 +1287,14 @@ function bagianInfografis(rows) {
     </div>`;
 }
 
+/** Lencana penilaian ganda: berapa penilaian di pemda itu dan perannya. */
+function lencanaGanda(r) {
+  const g = petaGanda().get(r.id);
+  if (!g) return '';
+  const warna = g.peran === 'utama' ? 'bg-sky-400/20 text-sky-300' : 'bg-fuchsia-400/25 text-fuchsia-300';
+  return `<span class="mr-1 mt-1 inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold ${warna}">${g.n} penilaian &middot; ${g.peran}</span>`;
+}
+
 /** Lencana sebab satu penilaian berada di luar landasan rekap. */
 function lencanaLuar(r) {
   const sebab = sebabLuar(r);
@@ -1226,6 +1306,7 @@ function renderAdminSurvei() {
   const wadah = el('#adSurvei');
   if (!wadah) return;
   lupakanPadanan();
+  lupakanGanda();
 
   /* Jumlah responden ikut tercetak di tabnya, supaya admin tahu ada isinya
      tanpa perlu membuka tab itu dulu. Yang dihitung selalu keseluruhan. */
@@ -1282,7 +1363,7 @@ function renderAdminSurvei() {
             ${rows.length ? rows.map(r => `
               <tr class="transition hover:bg-white/[0.04]">
                 <td class="px-4 py-3"><input type="checkbox" class="svPilih h-4 w-4 cursor-pointer accent-white/90" value="${aman(r.id)}" /></td>
-                <td class="px-4 py-3 font-medium">${aman(r.kab || '—')}<span class="block text-[11px] text-white/40">${aman(r.prov || '')}</span>${lencanaLuar(r)}</td>
+                <td class="px-4 py-3 font-medium">${aman(r.kab || '—')}<span class="block text-[11px] text-white/40">${aman(r.prov || '')}</span>${lencanaGanda(r)}${lencanaLuar(r)}</td>
                 <td class="px-4 py-3 text-white/75">${aman(r.nama || '—')}<span class="block text-[11px] text-white/40">${aman((r.jawaban || {}).hp || r.email || '')}</span></td>
                 <td class="px-4 py-3 tabular-nums">${nilaiIndeks(r) == null ? '—' : aman(nilaiIndeks(r))}</td>
                 <td class="px-4 py-3 text-white/70">${aman(MUTU(nilaiIndeks(r)))}</td>
@@ -1322,6 +1403,7 @@ function pasangAdminSurvei() {
     if (SARING.prov && !pilihanProvinsi().some(p => p.prov === SARING.prov)) SARING.prov = '';
     gambarUlang();
   };
+  el('#svGanda').onchange = e => { SARING.ganda = e.target.value; gambarUlang(); };
   el('#svProv').onchange = e => { SARING.prov = e.target.value; gambarUlang(); };
   el('#svMutu').onchange = e => { SARING.mutu = e.target.value; gambarUlang(); };
   /* Pencarian diberi jeda: tanpa itu seluruh grafik digambar ulang — beserta
@@ -1332,7 +1414,7 @@ function pasangAdminSurvei() {
     JEDA_CARI = setTimeout(() => { SARING.cari = isi; gambarUlang(); }, 220);
   };
   const reset = el('#svReset');
-  if (reset) reset.onclick = () => { SARING = { prov: '', mutu: '', cari: '' }; gambarUlang(); };
+  if (reset) reset.onclick = () => { SARING = { prov: '', mutu: '', cari: '', ganda: '' }; gambarUlang(); };
 
   /* Grafik yang bisa diketuk: provinsi, mutu, dan unsur. */
   els('#adSurvei [data-prov]').forEach(t => t.onclick = () => {
