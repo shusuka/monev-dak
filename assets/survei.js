@@ -491,6 +491,18 @@ let REKAP_GALAT = '';
    per provinsi, jadi seluruh angka dan grafik ikut menyempit bersamanya. */
 let SARING = { prov: '', mutu: '', cari: '' };
 
+/* Landasan rekap. Jumlah penilaian yang masuk lebih besar daripada jumlah
+   pemda penerima DAK, karena survei boleh diisi tanpa akun dan jawaban
+   Google Formulir putaran pertama ikut diimpor. Supaya angkanya sebanding
+   dengan rekap pre/post test, rekap disandarkan pada daftar yang sama:
+     'pemda'  — hanya daerah penerima DAK yang pemdanya ada di data pre/post
+                test (bawaan);
+     'ketat'  — penilainya sendiri harus ada di daftar peserta terdaftar;
+     'semua'  — apa adanya, seperti sebelumnya.
+   Yang tersaring hanya disembunyikan dari rekap, bukan dihapus dari Firestore:
+   pilih 'semua' untuk memeriksanya, lalu buang lewat tombol Hapus terpilih. */
+let LANDASAN = 'pemda';
+
 /* Unsur yang sedang dibedah di panel bawah grafik; null = tidak ada. */
 let UNSUR_PILIH = null;
 
@@ -504,9 +516,82 @@ const nilaiIndeks = r => (typeof r.indeks === 'number' ? r.indeks : indeksKepuas
 
 const seragam = s => String(s == null ? '' : s).toLowerCase().replace(/\s+/g, ' ').trim();
 
+/* ── penyelarasan dengan data pre/post test ────────────────────────────── */
+
+/** Kunci daerah yang bentuknya sama untuk survei, peserta, dan daftar DAK. */
+const kunciWil = (prov, kab) => seragam(prov).replace(/[^a-z0-9]+/g, '')
+                              + '|' + seragam(kab).replace(/[^a-z0-9]+/g, '');
+
+let DAK_WIL = null;
+/** Daftar daerah penerima DAK, dari assets/wilayah.js. */
+function wilayahDak() {
+  if (DAK_WIL) return DAK_WIL;
+  DAK_WIL = new Set();
+  const W = window.WILAYAH || {};
+  Object.keys(W).forEach(prov => String(W[prov] || '').split(',').filter(Boolean)
+    .forEach(kab => DAK_WIL.add(kunciWil(prov, kab))));
+  return DAK_WIL;
+}
+
+const petugasPfid = x => !!(window.BA && window.BA.akunPfid(x));
+
+/* Daftar peserta disusun sekali tiap penggambaran, bukan tiap baris: rekap
+   survei dan daftar peserta sama-sama ratusan baris, dan pencocokannya
+   dipanggil berkali-kali oleh kartu, grafik, tabel, dan unduhan. */
+let PADANAN = null;
+function padananPeserta() {
+  if (PADANAN) return PADANAN;
+  const daerah = new Set(), email = new Set(), nama = new Set();
+  ((typeof ADATA !== 'undefined' && ADATA.gabung) || []).forEach(g => {
+    if (petugasPfid(g)) return;
+    if (g.email) email.add(seragam(g.email));
+    if (g.nama)  nama.add(seragam(g.nama));
+    /* Hanya pemda yang benar-benar mengerjakan tesnya yang jadi landasan. */
+    if (g.kab && (g.pre || g.post)) daerah.add(kunciWil(g.prov, g.kab));
+  });
+  return (PADANAN = { daerah, email, nama });
+}
+/** Dipanggil tiap rekap digambar ulang: daftar pesertanya bisa sudah berubah. */
+const lupakanPadanan = () => { PADANAN = null; };
+
+/** Sebab satu penilaian berada di luar landasan; '' berarti ikut dihitung.
+    Diperiksa berurutan supaya tiap penilaian hanya punya satu sebab. */
+function sebabLuar(r) {
+  if (petugasPfid(r)) return 'pfid';
+  const wil = kunciWil(r.prov, r.kab);
+  if (!r.kab || !wilayahDak().has(wil)) return 'luar';
+  const p = padananPeserta();
+  if (!p.daerah.has(wil)) return 'nontest';
+  if (!p.email.has(seragam(r.email)) && !p.nama.has(seragam(r.nama))) return 'lepas';
+  return '';
+}
+
+const SEBAB_LUAR = {
+  pfid:    'petugas PFID',
+  luar:    'daerah di luar daftar DAK',
+  nontest: 'pemdanya tidak mengisi pre/post test',
+  lepas:   'penilainya bukan peserta terdaftar'
+};
+
+/** Penilaian yang dipakai rekap, sebelum penyaring provinsi/mutu/pencarian. */
+function rekapDasar() {
+  if (LANDASAN === 'semua') return REKAP.slice();
+  return REKAP.filter(r => {
+    const sebab = sebabLuar(r);
+    return !sebab || (LANDASAN === 'pemda' && sebab === 'lepas');
+  });
+}
+
+/** Cacah tiap sebab, untuk keterangan selisih di atas bilah penyaring. */
+function cacahLuar() {
+  const c = { pfid: 0, luar: 0, nontest: 0, lepas: 0, sesuai: 0 };
+  REKAP.forEach(r => { const x = sebabLuar(r); c[x || 'sesuai']++; });
+  return c;
+}
+
 /** Baris yang sedang tampil — dipakai bersama oleh kartu, grafik, tabel, dan ekspor. */
 function rekapTampil() {
-  return REKAP.filter(r => {
+  return rekapDasar().filter(r => {
     if (SARING.prov && (r.prov || '') !== SARING.prov) return false;
     if (SARING.mutu && HURUF_MUTU(nilaiIndeks(r)) !== SARING.mutu) return false;
     if (SARING.cari) {
@@ -1031,7 +1116,7 @@ function pasangTip(akar) {
 /** Daftar provinsi yang benar-benar ada isinya, beserta jumlah penilaiannya. */
 function pilihanProvinsi() {
   const c = {};
-  REKAP.forEach(r => { const p = r.prov || ''; if (p) c[p] = (c[p] || 0) + 1; });
+  rekapDasar().forEach(r => { const p = r.prov || ''; if (p) c[p] = (c[p] || 0) + 1; });
   return Object.keys(c).sort((a, b) => a.localeCompare(b)).map(p => ({ prov: p, n: c[p] }));
 }
 
@@ -1039,11 +1124,32 @@ function bilahSaring() {
   const gaya = 'glass rounded-full px-5 py-2.5 text-[13px] font-medium text-white outline-none [&>option]:bg-ink';
   const provs = pilihanProvinsi();
   const tampil = rekapTampil();
+  const dasar = rekapDasar().length;
+  const c = cacahLuar();
+  const tersaring = REKAP.length - dasar;
+
+  /* Uraian selisih: berapa penilaian yang masuk, berapa yang dipakai, dan
+     apa sebab sisanya tidak ikut dihitung. Tanpa ini angka rekap survei
+     tampak tidak sejalan dengan rekap pre/post test tanpa keterangan. */
+  const uraian = ['luar', 'nontest', 'lepas', 'pfid']
+    .filter(k => c[k] && !(k === 'lepas' && LANDASAN === 'pemda'))
+    .map(k => c[k] + ' ' + SEBAB_LUAR[k]).join(' &middot; ');
 
   return `
-    <div class="mt-6 flex flex-wrap items-center gap-3">
+    <div class="mt-6 rounded-3xl border border-white/12 bg-white/[0.04] px-5 py-4 text-[13px] leading-[1.7] text-white/65">
+      <b class="text-white/85">${REKAP.length} penilaian masuk</b>, ${dasar} dipakai pada rekap ini.
+      ${tersaring ? 'Disisihkan: ' + uraian + '.' : 'Seluruhnya sejalan dengan data pre/post test.'}
+      <span class="block text-[12px] text-white/40">Landasannya disamakan dengan rekap pre &amp; post test: ${wilayahDak().size} daerah penerima DAK, dan pemdanya memang mengerjakan tesnya. Yang disisihkan hanya disembunyikan — pilih “Semua penilaian” untuk memeriksa lalu menghapusnya.</span>
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <select id="svLandasan" class="${gaya}" title="Dasar penghitungan rekap survei">
+        <option value="pemda"${LANDASAN === 'pemda' ? ' selected' : ''}>Sesuai data pre/post test (${REKAP.length - c.pfid - c.luar - c.nontest})</option>
+        <option value="ketat"${LANDASAN === 'ketat' ? ' selected' : ''}>Ketat: penilai peserta terdaftar (${c.sesuai})</option>
+        <option value="semua"${LANDASAN === 'semua' ? ' selected' : ''}>Semua penilaian (${REKAP.length})</option>
+      </select>
       <select id="svProv" class="${gaya}" title="Saring menurut provinsi">
-        <option value="">Semua provinsi${REKAP.length ? ' (' + REKAP.length + ')' : ''}</option>
+        <option value="">Semua provinsi${dasar ? ' (' + dasar + ')' : ''}</option>
         ${provs.map(p => `<option value="${aman(p.prov)}"${SARING.prov === p.prov ? ' selected' : ''}>${aman(p.prov)} (${p.n})</option>`).join('')}
       </select>
       <select id="svMutu" class="${gaya}" title="Saring menurut mutu pelayanan">
@@ -1055,7 +1161,7 @@ function bilahSaring() {
         <input id="svCari" value="${aman(SARING.cari)}" placeholder="Cari pemda atau penilai" class="w-48 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
       </div>
       ${adaSaringan() ? `<button id="svReset" class="rounded-full border border-fuchsia-400/40 bg-fuchsia-400/10 px-4 py-2.5 text-[13px] font-medium text-fuchsia-200 transition hover:bg-fuchsia-400/20">
-        ${tampil.length} dari ${REKAP.length} · hapus penyaring</button>` : ''}
+        ${tampil.length} dari ${dasar} · hapus penyaring</button>` : ''}
       <div class="ml-auto flex flex-wrap gap-2">
         <button id="svAdmMuat" class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 transition hover:bg-white/10">Muat ulang</button>
         <!-- jawaban yang terlanjur masuk lewat Google Formulir putaran pertama -->
@@ -1109,14 +1215,22 @@ function bagianInfografis(rows) {
     </div>`;
 }
 
+/** Lencana sebab satu penilaian berada di luar landasan rekap. */
+function lencanaLuar(r) {
+  const sebab = sebabLuar(r);
+  if (!sebab) return '';
+  return `<span class="mt-1 inline-block whitespace-nowrap rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">${aman(SEBAB_LUAR[sebab])}</span>`;
+}
+
 function renderAdminSurvei() {
   const wadah = el('#adSurvei');
   if (!wadah) return;
+  lupakanPadanan();
 
   /* Jumlah responden ikut tercetak di tabnya, supaya admin tahu ada isinya
      tanpa perlu membuka tab itu dulu. Yang dihitung selalu keseluruhan. */
   const jml = el('#adTabSurveiJml');
-  if (jml) jml.textContent = REKAP.length ? ' · ' + REKAP.length : '';
+  if (jml) jml.textContent = rekapDasar().length ? ' · ' + rekapDasar().length : '';
 
   const rows = rekapTampil();
   const rata = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length * 10) / 10 : null;
@@ -1130,7 +1244,9 @@ function renderAdminSurvei() {
 
   wadah.innerHTML = GAYA_ADM + `
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      ${kartuAngka('Responden', rows.length, SARING.prov ? 'pemda di ' + SARING.prov : provAda + ' provinsi terwakili')}
+      ${kartuAngka('Responden', rows.length, SARING.prov ? 'pemda di ' + SARING.prov
+        : LANDASAN === 'semua' ? provAda + ' provinsi · seluruh penilaian'
+        : provAda + ' provinsi · sesuai data tes')}
       ${kartuAngka('Indeks kepuasan', ikm == null ? '—' : ikm, MUTU(ikm),
         ikm == null ? '' : 'text-' + ({ A: 'emerald', B: 'sky', C: 'amber', D: 'rose' }[HURUF_MUTU(ikm)]) + '-300')}
       ${kartuAngka('Skor petugas', skorPetugas == null ? '—' : skorPetugas, 'rata-rata dari 5')}
@@ -1166,7 +1282,7 @@ function renderAdminSurvei() {
             ${rows.length ? rows.map(r => `
               <tr class="transition hover:bg-white/[0.04]">
                 <td class="px-4 py-3"><input type="checkbox" class="svPilih h-4 w-4 cursor-pointer accent-white/90" value="${aman(r.id)}" /></td>
-                <td class="px-4 py-3 font-medium">${aman(r.kab || '—')}<span class="block text-[11px] text-white/40">${aman(r.prov || '')}</span></td>
+                <td class="px-4 py-3 font-medium">${aman(r.kab || '—')}<span class="block text-[11px] text-white/40">${aman(r.prov || '')}</span>${lencanaLuar(r)}</td>
                 <td class="px-4 py-3 text-white/75">${aman(r.nama || '—')}<span class="block text-[11px] text-white/40">${aman((r.jawaban || {}).hp || r.email || '')}</span></td>
                 <td class="px-4 py-3 tabular-nums">${nilaiIndeks(r) == null ? '—' : aman(nilaiIndeks(r))}</td>
                 <td class="px-4 py-3 text-white/70">${aman(MUTU(nilaiIndeks(r)))}</td>
@@ -1200,6 +1316,12 @@ function pasangAdminSurvei() {
 
   const gambarUlang = () => renderAdminSurvei();
 
+  el('#svLandasan').onchange = e => {
+    LANDASAN = e.target.value;
+    /* Provinsi yang sedang disaring bisa saja lenyap bersama landasannya. */
+    if (SARING.prov && !pilihanProvinsi().some(p => p.prov === SARING.prov)) SARING.prov = '';
+    gambarUlang();
+  };
   el('#svProv').onchange = e => { SARING.prov = e.target.value; gambarUlang(); };
   el('#svMutu').onchange = e => { SARING.mutu = e.target.value; gambarUlang(); };
   /* Pencarian diberi jeda: tanpa itu seluruh grafik digambar ulang — beserta
