@@ -33,10 +33,18 @@ service cloud.firestore {
       ];
     }
 
+    // Email akun yang sedang masuk, atau '' untuk sesi tanpa email. Sesi
+    // anonim (pemda yang masuk dengan memilih nama) TIDAK punya kunci `email`
+    // di token-nya; membaca request.auth.token.email langsung membuat aturan
+    // galat, dan `!isPfid()` yang galat menolak seluruh penulisan pemda.
+    function emailSaya() {
+      return request.auth != null ? request.auth.token.get('email', '') : '';
+    }
+
     function isAdmin() {
       return request.auth != null
-        && request.auth.token.email != null
-        && request.auth.token.email in adminEmail();
+        && emailSaya() != ''
+        && emailSaya() in adminEmail();
     }
 
     // Petugas PFID: user id-nya (bagian email sebelum @) memuat kata "jalan",
@@ -44,8 +52,8 @@ service cloud.firestore {
     // eMonitoring, bukan peserta yang dinilai.
     function idPfid() {
       return request.auth != null
-        && request.auth.token.email != null
-        && request.auth.token.email.lower().matches('^[^@]*jalan[^@]*@.*');
+        && emailSaya() != ''
+        && emailSaya().lower().matches('^[^@]*jalan[^@]*@.*');
     }
 
     // Sebagian petugas mendaftar dengan alamat kantor yang tidak memuat
