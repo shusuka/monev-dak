@@ -911,6 +911,10 @@
         <input id="adQ" oninput="renderAdmin()" placeholder="Cari nama atau daerah" class="w-48 bg-transparent text-[13px] outline-none placeholder:text-white/40" />
       </div>
       <div class="ml-auto flex flex-wrap gap-2">
+        <button id="adResetBtn" onclick="resetTerpilih()" disabled
+                class="rounded-full border border-amber-300/50 bg-amber-400/10 px-5 py-2.5 text-[13px] font-medium text-amber-100 transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-40">
+          Reset terpilih <span id="adResetJml"></span>
+        </button>
         <button id="adHapusBtn" onclick="hapusTerpilih()" disabled
                 class="rounded-full border border-red-400/50 bg-red-500/15 px-5 py-2.5 text-[13px] font-medium text-red-200 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40">
           Hapus terpilih <span id="adHapusJml"></span>
@@ -1541,6 +1545,22 @@ const store = {
       ['pre', 'post'].forEach(k => delete this.lokal.hasil[hasilId(pid, TW_AKTIF, k)]);
       delete this.lokal.peserta[pid];
       Object.keys(this.lokal.akun || {}).forEach(k => { if (this.lokal.akun[k].uid === pid) delete this.lokal.akun[k]; });
+      this.simpanLokal();
+    }
+    this.cacheHasil = null;
+  },
+
+  /** Reset pengisian TW III satu peserta: nilai pre & post test dihapus,
+      akun dan profilnya tetap. Dipakai admin untuk uji coba yang diulang. */
+  async resetTesPeserta(pid) {
+    if (this.mode === 'firebase') {
+      const { doc, deleteDoc } = this.fs;
+      for (const kind of ['pre', 'post']) {
+        try { await deleteDoc(doc(this.db, 'hasil', hasilId(pid, TW_AKTIF, kind))); }
+        catch (e) { if (!/not-found/.test(String(e.code))) throw e; }
+      }
+    } else {
+      ['pre', 'post'].forEach(k => delete this.lokal.hasil[hasilId(pid, TW_AKTIF, k)]);
       this.simpanLokal();
     }
     this.cacheHasil = null;
@@ -3451,6 +3471,8 @@ function renderAdmin() {
                   ${(g.pre || g.post)
                     ? `<button onclick="bukaDetail('${esc(g.pid)}')" class="rounded-full border border-white/20 px-3.5 py-1.5 text-[12px] font-medium text-white/80 transition hover:bg-white/10">Detail</button>`
                     : ''}
+                  <button onclick="resetSatu('${esc(g.pid)}')" title="Hapus nilai & isian TW III supaya bisa diulang dari awal"
+                          class="rounded-full border border-amber-300/40 px-3 py-1.5 text-[12px] font-medium text-amber-200 transition hover:bg-amber-400/15">Reset</button>
                   <button onclick="hapusSatu('${esc(g.pid)}')" title="Hapus peserta ini"
                           class="rounded-full border border-red-400/40 px-3 py-1.5 text-[12px] font-medium text-red-300 transition hover:bg-red-500/20">Hapus</button>
                 </span>
@@ -3521,6 +3543,8 @@ function perbaruiPilihan() {
   const btn = $('#adHapusBtn');
   btn.disabled = n === 0;
   $('#adHapusJml').textContent = n ? '(' + n + ')' : '';
+  $('#adResetBtn').disabled = n === 0;
+  $('#adResetJml').textContent = n ? '(' + n + ')' : '';
   const semua = $('#adPilihSemua');
   semua.checked = total > 0 && n === total;
   semua.indeterminate = n > 0 && n < total;
@@ -3575,6 +3599,79 @@ async function jalankanHapus(daftar) {
       (izin ? '\n\nFirestore menolak penghapusan. Security rules yang aktif belum mengizinkan admin menghapus — publikasikan ulang firestore.rules versi terbaru dari repositori.' : '')
     );
   }
+}
+
+/* ── reset pengisian TW III (uji coba diulang dari awal) ──
+   Akun tetap ada; yang dihapus nilai pre/post test TW III dan, bila
+   dicentang, data konfirmasi daerahnya (jawaban pemda + verifikasi pusat).
+   Panduan/tutorial di perangkat pemda ikut terulang dengan sendirinya
+   karena pre test-nya kembali kosong (lihat assets/tutor.js). */
+async function resetSatu(pid) {
+  const g = ADATA.gabung.find(x => x.pid === pid);
+  if (g) await jalankanReset([g]);
+}
+async function resetTerpilih() {
+  const pids = pidTerpilih();
+  const daftar = ADATA.gabung.filter(g => pids.includes(g.pid));
+  if (daftar.length) await jalankanReset(daftar);
+}
+
+function dialogReset(daftar) {
+  const daerah = [...new Set(daftar.map(g => g.kab).filter(Boolean))];
+  return new Promise(selesai => {
+    const lapis = document.createElement('div');
+    lapis.className = 'konf-dialog';
+    lapis.innerHTML = `<div class="konf-dialog__kotak" role="alertdialog" aria-modal="true">
+      <h2 class="text-[18px] font-semibold">Reset pengisian TW III?</h2>
+      <p class="mt-2 text-[13.5px] leading-[1.7] text-white/65">${daftar.length === 1
+        ? '<strong class="text-white">' + esc(daftar[0].nama) + '</strong> — ' + esc(daftar[0].kab || '?')
+        : daftar.length + ' peserta dari ' + daerah.length + ' daerah'}. Akun tetap ada; pemda bisa masuk lagi dan mengulang dari awal, termasuk panduannya.</p>
+      <label class="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/[.05] px-4 py-3">
+        <input type="checkbox" data-r="tes" checked class="mt-1 h-4 w-4 accent-amber-400" />
+        <span><span class="block text-[13.5px] font-medium">Nilai pre test &amp; post test TW III</span>
+          <span class="text-[12px] text-white/50">Hilang dari rekap dan peringkat.</span></span>
+      </label>
+      <label class="mt-2 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/[.05] px-4 py-3">
+        <input type="checkbox" data-r="konf" checked class="mt-1 h-4 w-4 accent-amber-400" />
+        <span><span class="block text-[13.5px] font-medium">Konfirmasi data ruas daerahnya</span>
+          <span class="text-[12px] text-white/50">${esc(daerah.join(', ') || '—')} — berlaku untuk semua akun di daerah itu, termasuk hasil verifikasi pusat.</span></span>
+      </label>
+      <div class="mt-6 flex flex-wrap justify-end gap-3">
+        <button type="button" data-j="0" class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 hover:bg-white/10">Batal</button>
+        <button type="button" data-j="1" class="rounded-full bg-amber-400 px-5 py-2.5 text-[13px] font-semibold text-black hover:bg-amber-300">Reset sekarang</button>
+      </div>
+    </div>`;
+    const tutup = v => { lapis.remove(); selesai(v); };
+    lapis.addEventListener('click', e => {
+      if (e.target === lapis) return tutup(null);
+      const b = e.target.closest('[data-j]');
+      if (!b) return;
+      if (b.dataset.j === '0') return tutup(null);
+      const pilih = { tes: lapis.querySelector('[data-r="tes"]').checked, konf: lapis.querySelector('[data-r="konf"]').checked };
+      tutup(pilih.tes || pilih.konf ? pilih : null);
+    });
+    document.body.appendChild(lapis);
+  });
+}
+
+async function jalankanReset(daftar) {
+  const pilih = await dialogReset(daftar);
+  if (!pilih) return;
+  const gagal = [];
+  if (pilih.tes) for (const g of daftar) {
+    try { await store.resetTesPeserta(g.pid); }
+    catch (e) { console.error('reset nilai gagal', g.pid, e); gagal.push(g.nama + ' (' + ((e && e.code) || e.message) + ')'); }
+  }
+  if (pilih.konf && window.KONF) {
+    for (const kunci of new Set(daftar.map(g => slug(g.kab || '')).filter(Boolean))) {
+      try { await window.KONF.hapusDaerahAdmin(kunci); }
+      catch (e) { console.error('reset konfirmasi gagal', kunci, e); gagal.push('konfirmasi ' + kunci + ' (' + ((e && e.code) || e.message) + ')'); }
+    }
+  }
+  await muatAdmin(true);
+  if (!gagal.length) toast(daftar.length + ' peserta di-reset. Silakan masuk lagi untuk mengulang dari awal.');
+  else alert('Sebagian gagal di-reset:\n\n' + gagal.slice(0, 6).map(x => '• ' + x).join('\n')
+    + (gagal.some(x => /permission/.test(x)) ? '\n\nFirestore menolak — pastikan firestore.rules terbaru sudah di-Publish.' : ''));
 }
 
 /* ── detail jawaban satu peserta ── */

@@ -33,6 +33,10 @@ function bendera() {
   const m = akun(); if (!m) return {};
   try { return JSON.parse(localStorage.getItem(LS(m.pid))) || {}; } catch (e) { return {}; }
 }
+function setel() {
+  const m = akun(); if (!m) return;
+  try { localStorage.removeItem(LS(m.pid)); } catch (e) {}
+}
 function tandai(k) {
   const m = akun(); if (!m) return;
   const b = bendera(); b[k] = Date.now();
@@ -534,7 +538,10 @@ window.TUTOR = {
     NKONF = n;
     renderMisi();
     if (!pemda() || T || !diDashboard()) return;
-    const b = bendera();
+    let b = bendera();
+    /* Pre test kosong padahal misinya pernah dirayakan: akun ini di-reset
+       admin. Panduan dan notifikasinya diulang dari awal. */
+    if (!sudah('pre') && (b.preOk || b.konfOk || b.postOk)) { setel(); b = {}; }
     if (!b.tur) return setTimeout(() => { if (!T && diDashboard()) mulaiTur(); }, 600);
     const pre = sudah('pre'), post = sudah('post');
     if (pre && !konfBeres() && !b.preOk) return ajakKonfirmasi();

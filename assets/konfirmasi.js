@@ -1472,7 +1472,15 @@ window.KONF = {
     return this.render();
   },
   unduh,
-  susunAkun
+  susunAkun,
+
+  /** Panel admin: kosongkan data konfirmasi satu daerah (reset uji coba). */
+  async hapusDaerahAdmin(kunci) {
+    await hapusDaerah(kunci);
+    delete DIMUAT[kunci];
+    ((DATA[kunci] || {}).ruas || []).forEach(r => { delete EDIT[r.id]; });
+    try { const c = cadangan(); delete c[kunci]; localStorage.setItem(LS_CADANGAN, JSON.stringify(c)); } catch (e) {}
+  }
 };
 
 })();
