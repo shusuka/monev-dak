@@ -1785,7 +1785,7 @@ function makeAC({ input, panel, source, pick, ketik }) {
    8. LOGIN
    ═══════════════════════════════════════════════════════════════ */
 /* ── Masuk dengan memilih nama (khusus pemda) ───────────────── */
-const MK = { mode: 'nama', prov: '', kab: '', akun: [], pilih: -1, muat: 0 };
+const MK = { mode: 'nama', prov: '', kab: '', akun: [], pilih: -1, muat: 0, galat: '' };
 
 function setModeMasuk(mode) {
   MK.mode = mode;
@@ -1817,10 +1817,13 @@ async function muatAkunMasuk() {
     const akun = await store.akunDaerah(slug(MK.kab));
     if (nomor !== MK.muat) return;            // daerah sudah diganti selagi menunggu
     MK.akun = akun.sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+    MK.galat = '';
   } catch (e) {
     if (nomor !== MK.muat) return;
     console.warn('[MonevDAK] daftar akun daerah tak terbaca:', e);
     MK.akun = [];
+    /* Gagal membaca tidak sama dengan "belum ada akun" — jangan disamakan. */
+    MK.galat = /permission/i.test(String(e && (e.code || e.message))) ? 'izin' : 'jaringan';
   }
   tampilAkun();
 }
@@ -1829,6 +1832,14 @@ function tampilAkun() {
   const wadah = $('#mkAkunWadah'), daftar = $('#mkAkun');
   if (!MK.kab) { wadah.classList.add('hidden'); MK.akun = []; MK.pilih = -1; bukaSandi(MK.mode === 'email'); return; }
   wadah.classList.remove('hidden');
+  if (!MK.akun.length && MK.galat) {
+    $('#mkAkunJudul').textContent = 'Daftar nama belum dapat dibuka';
+    daftar.innerHTML = `<div class="rounded-[1.1rem] border border-dashed border-amber-300 bg-amber-50 px-4 py-4 text-[13px] leading-relaxed text-amber-800">
+      ${MK.galat === 'izin' ? 'Daftar nama sedang disiapkan pengelola aplikasi.' : 'Gagal menghubungi server. Periksa koneksi internet.'}
+      Sementara itu, <button type="button" onclick="setModeMasuk('email')" class="font-semibold underline underline-offset-2">masuk dengan email</button> akun Anda.
+    </div>`;
+    return;
+  }
   if (!MK.akun.length) {
     $('#mkAkunJudul').textContent = 'Belum ada akun untuk ' + MK.kab;
     daftar.innerHTML = `<div class="rounded-[1.1rem] border border-dashed border-gray-300 px-4 py-4 text-[13px] leading-relaxed text-gray-500">
