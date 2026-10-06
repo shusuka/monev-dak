@@ -622,6 +622,14 @@
           </div>
         </div>
 
+        <!-- Pemda: begitu nama dipilih, langsung masuk tanpa kata sandi. -->
+        <div id="mkNamaWadah" class="akun-sandi"><div>
+          <button id="mkNamaBtn" type="submit" class="cta-glow flex w-full items-center justify-center gap-2 rounded-[1.25rem] bg-black px-6 py-4 text-[15px] font-semibold text-white transition hover:bg-gray-900 disabled:opacity-50">
+            <span id="mkNamaTeks">Masuk</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px]"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div></div>
+
         <div id="mkSandiWadah" class="akun-sandi"><div>
         <div class="field flex items-center gap-3">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
@@ -642,7 +650,7 @@
         <p id="okMasuk" class="hidden pl-2 pt-1 text-[13px] font-medium text-emerald-600"></p>
 
         <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pl-2 pt-2 text-[13px]">
-          <button type="button" onclick="lupaSandi()" class="font-medium text-gray-500 transition hover:text-gray-800">Lupa kata sandi?</button>
+          <button id="mkLupa" type="button" onclick="lupaSandi()" class="hidden font-medium text-gray-500 transition hover:text-gray-800">Lupa kata sandi?</button>
           <button id="mkGanti" type="button" onclick="setModeMasuk(MK.mode === 'nama' ? 'email' : 'nama')" class="font-medium text-gray-500 underline decoration-gray-300 underline-offset-4 transition hover:text-gray-800">Masuk dengan email / user id PFID</button>
           <button type="button" onclick="setTabLogin('daftar')" class="sunset-text font-semibold">Belum punya akun? Daftar</button>
         </div>
@@ -1293,6 +1301,26 @@ const store = {
     return p;
   },
 
+  /** Masuk pemda cukup dengan memilih nama, tanpa kata sandi (permintaan
+      pengelola). Firebase tetap butuh sesi, jadi dibuka sesi anonim lalu
+      ditautkan ke akun yang dipilih lewat `akunAsal` pada dokumen pesertanya.
+      Nilai dan konfirmasi tetap tercatat atas `pid` akun asli, sehingga satu
+      orang tetap hanya sekali mengerjakan tiap sesi dari perangkat mana pun. */
+  async masukNama(akun) {
+    if (this.mode !== 'firebase') return this.masukLokal(akun.email);
+    const cred = await this.authMod.signInAnonymously(this.auth);
+    this.user = cred.user; this.uid = cred.user.uid; this.cacheHasil = null;
+    const prov = akun.prov || (ALL_KAB.find(x => x.kab === akun.kab) || {}).prov || '';
+    const { doc, setDoc, serverTimestamp } = this.fs;
+    await setDoc(doc(this.db, 'peserta', this.uid), {
+      nama: akun.nama, prov, kab: akun.kab, email: akun.email || '',
+      kunciKab: slug(akun.kab || ''), akunAsal: akun.uid,
+      uid: this.uid, updatedAt: serverTimestamp()
+    });
+    return { pid: akun.uid, uid: this.uid, nama: akun.nama, prov, kab: akun.kab,
+             kunciKab: slug(akun.kab || ''), email: akun.email || '', akunAsal: akun.uid };
+  },
+
   async masukAkun(email, pass) {
     if (this.mode !== 'firebase') return this.masukLokal(email);
     const cred = await this.authMod.signInWithEmailAndPassword(this.auth, email, pass);
@@ -1330,7 +1358,8 @@ const store = {
     if (!d.exists()) return null;
     const x = d.data();
     const p = {
-      pid: this.uid, uid: this.uid,
+      /* Sesi masuk-dengan-nama: identitasnya milik akun asal yang dipilih. */
+      pid: x.akunAsal || this.uid, uid: this.uid, akunAsal: x.akunAsal || '',
       nama: x.nama, prov: x.prov, kab: x.kab, kunciKab: x.kunciKab || '',
       email: x.email || (this.user && this.user.email) || ''
     };
@@ -1430,7 +1459,8 @@ const store = {
     if (this.mode === 'firebase') {
       const { collection, query, limit, getDocs } = this.fs;
       const snap = await getDocs(query(collection(this.db, 'peserta'), limit(2000)));
-      return snap.docs.map(d => ({ pid: d.id, ...d.data() }));
+      /* Dokumen sesi masuk-dengan-nama hanya penaut ke akun asli, bukan peserta baru. */
+      return snap.docs.map(d => ({ pid: d.id, ...d.data() })).filter(p => !p.akunAsal);
     }
     return Object.values(this.lokal.peserta);
   },
@@ -1794,10 +1824,19 @@ function setModeMasuk(mode) {
   $('#mkModeEmail').classList.toggle('hidden', !email);
   $('#mkModeEmail').classList.toggle('flex', email);
   $('#mkGanti').textContent = email ? 'Masuk dengan memilih nama' : 'Masuk dengan email / user id PFID';
-  $('#loginSub').textContent = email ? 'Gunakan email atau user id dan kata sandi' : 'Pilih daerah dan nama Anda, lalu ketik kata sandi';
+  $('#loginSub').textContent = email ? 'Gunakan email atau user id dan kata sandi' : 'Pilih daerah dan nama Anda';
+  $('#mkLupa').classList.toggle('hidden', !email);
   ['#errMasuk', '#okMasuk'].forEach(s => $(s).classList.add('hidden'));
-  bukaSandi(email || MK.pilih >= 0);
+  bukaSandi(email);
+  bukaNama(!email && MK.pilih >= 0);
   if (email) setTimeout(() => $('#mkEmail').focus(), 50);
+}
+
+function bukaNama(buka) {
+  $('#mkNamaWadah').classList.toggle('buka', buka);
+  $('#mkNamaBtn').tabIndex = buka ? 0 : -1;
+  const a = MK.akun[MK.pilih];
+  if (a) $('#mkNamaTeks').textContent = 'Masuk sebagai ' + a.nama.split(/[ ,]/)[0];
 }
 
 function bukaSandi(buka) {
@@ -1808,7 +1847,7 @@ function bukaSandi(buka) {
 
 async function muatAkunMasuk() {
   const nomor = ++MK.muat;
-  MK.akun = []; MK.pilih = -1; bukaSandi(false);
+  MK.akun = []; MK.pilih = -1; bukaNama(false);
   const wadah = $('#mkAkunWadah'), daftar = $('#mkAkun');
   wadah.classList.remove('hidden');
   $('#mkAkunJudul').textContent = 'Memuat nama akun ' + MK.kab + '…';
@@ -1830,7 +1869,7 @@ async function muatAkunMasuk() {
 
 function tampilAkun() {
   const wadah = $('#mkAkunWadah'), daftar = $('#mkAkun');
-  if (!MK.kab) { wadah.classList.add('hidden'); MK.akun = []; MK.pilih = -1; bukaSandi(MK.mode === 'email'); return; }
+  if (!MK.kab) { wadah.classList.add('hidden'); MK.akun = []; MK.pilih = -1; bukaNama(false); return; }
   wadah.classList.remove('hidden');
   if (!MK.akun.length && MK.galat) {
     $('#mkAkunJudul').textContent = 'Daftar nama belum dapat dibuka';
@@ -1872,8 +1911,8 @@ function pilihAkun(i) {
   MK.pilih = i;
   $$('#mkAkun .akun-kartu').forEach((b, j) => b.setAttribute('aria-checked', String(j === i)));
   ['#errMasuk', '#okMasuk'].forEach(s => $(s).classList.add('hidden'));
-  bukaSandi(true);
-  setTimeout(() => $('#mkSandi').focus({ preventScroll: true }), 120);
+  bukaNama(true);
+  setTimeout(() => $('#mkNamaBtn').focus({ preventScroll: true }), 120);
 }
 
 /** Ubah menu antara Masuk dan Daftar. */
@@ -1884,7 +1923,7 @@ function setTabLogin(tab) {
   $('#loginTitle').textContent = daftar ? 'Daftar Pemda' : 'Masuk Pemda';
   $('#loginSub').textContent = daftar
     ? 'Sekali daftar, akun tersimpan untuk pengisian berikutnya'
-    : (MK.mode === 'email' ? 'Gunakan email atau user id dan kata sandi' : 'Pilih daerah dan nama Anda, lalu ketik kata sandi');
+    : (MK.mode === 'email' ? 'Gunakan email atau user id dan kata sandi' : 'Pilih daerah dan nama Anda');
   const aktif   = 'flex-1 rounded-xl px-4 py-2.5 text-[14px] font-semibold transition bg-white text-gray-900 shadow-sm';
   const nonaktif = 'flex-1 rounded-xl px-4 py-2.5 text-[14px] font-semibold transition text-gray-500 hover:text-gray-800';
   $('#tabMasuk').className  = daftar ? nonaktif : aktif;
@@ -1901,6 +1940,8 @@ function pesanAuth(ex) {
   if (/user-not-found/.test(c))             return 'Akun belum terdaftar. Silakan daftar lebih dahulu.';
   if (/invalid-email/.test(c))              return 'Format email tidak valid.';
   if (/weak-password/.test(c))              return 'Kata sandi terlalu lemah, minimal 6 karakter.';
+  if (/admin-restricted-operation/.test(c) || (/operation-not-allowed/.test(c) && MK.mode === 'nama'))
+    return 'Masuk dengan nama belum diaktifkan: provider Anonymous pada Firebase Authentication masih mati. Hubungi pengelola aplikasi.';
   if (/operation-not-allowed|configuration-not-found/.test(c))
     return 'Metode Email/Password belum diaktifkan pada Firebase Authentication. Hubungi pengelola aplikasi.';
   if (/too-many-requests/.test(c))          return 'Terlalu banyak percobaan. Coba lagi beberapa saat lagi.';
@@ -1956,7 +1997,7 @@ function sesuaikanFormDaftar() {
 async function mulaiSesiPeserta(profil, sapaan) {
   ME = profil;
   /* Tiap pemda yang masuk menyegarkan barisnya di daftar nama daerahnya. */
-  if (!pfid()) store.catatAkun(profil).catch(e => console.warn('[MonevDAK] daftar akun daerah tak diperbarui:', e));
+  if (!pfid() && !profil.akunAsal) store.catatAkun(profil).catch(e => console.warn('[MonevDAK] daftar akun daerah tak diperbarui:', e));
   await muatHasilSaya();
   syncChip();
   if (sapaan) toast(sapaan + ', ' + String(profil.nama).split(' ')[0] + '.');
@@ -2012,15 +2053,27 @@ async function doMasuk(e) {
   const fail  = m => { err.textContent = m; err.classList.remove('hidden'); };
   err.classList.add('hidden'); $('#okMasuk').classList.add('hidden');
 
-  let email;
   if (MK.mode === 'nama') {
     if (!MK.kab) return fail('Pilih provinsi dan kabupaten/kota lebih dahulu.');
-    if (MK.pilih < 0 || !MK.akun[MK.pilih]) return fail('Pilih nama Anda dari daftar.');
-    email = MK.akun[MK.pilih].email;
-  } else {
-    /* Tanpa tanda @ berarti user id petugas PFID, bukan alamat email. */
-    email = masukan.includes('@') ? masukan : emailPfid(masukan);
+    const akun = MK.akun[MK.pilih];
+    if (!akun) return fail('Pilih nama Anda dari daftar.');
+    const tombol = $('#mkNamaBtn');
+    tombol.disabled = true;
+    try {
+      const profil = await store.masukNama(akun);
+      await mulaiSesiPeserta(profil, 'Selamat datang');
+    } catch (ex) {
+      console.error(ex);
+      ME = null;
+      fail(pesanAuth(ex));
+    } finally {
+      tombol.disabled = false;
+    }
+    return;
   }
+
+  /* Tanpa tanda @ berarti user id petugas PFID, bukan alamat email. */
+  const email = masukan.includes('@') ? masukan : emailPfid(masukan);
 
   if (!/^\S+@\S+\.\S+$/.test(email)) return fail('Masukkan email atau user id yang terdaftar.');
   if (!sandi)                        return fail('Kata sandi wajib diisi.');

@@ -112,9 +112,13 @@ service cloud.firestore {
         // hanya boleh menulis hasil milik sendiri, dan hanya pada id yang benar.
         // Hanya triwulan yang sedang dibuka (TW III); TW II sudah ditutup,
         // nilainya tetap terbaca tetapi tidak bisa dikirim lagi.
+        // Sesi masuk-dengan-nama (anonim) menulis atas pid akun asal yang
+        // ditautkan di dokumen pesertanya (`akunAsal`).
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.pid == request.auth.uid
-        && (hid == request.auth.uid + '__tw3__pre' || hid == request.auth.uid + '__tw3__post')
+        && request.resource.data.pid != ''
+        && (request.resource.data.pid == request.auth.uid
+            || (punyaProfil() && request.resource.data.pid == profilSaya().get('akunAsal', '')))
+        && (hid == request.resource.data.pid + '__tw3__pre' || hid == request.resource.data.pid + '__tw3__post')
         && request.resource.data.tw == 3
         && (request.resource.data.kind == 'pre' || request.resource.data.kind == 'post')
         && request.resource.data.total == 20
