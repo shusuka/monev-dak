@@ -810,6 +810,7 @@ async function simpan(id, kirim, senyap) {
       const berikut = d.ruas.find(x => x.id !== id && ['belum', 'draf', 'kembali'].includes(statusRuas(kunci, x.id)));
       if (berikut) BUKA.add(berikut.id);
       toast(berikut ? 'Terkirim ke pusat. Lanjut ke ruas berikutnya.' : 'Terkirim. Semua ruas sudah Anda periksa.');
+      if (!berikut && window.TUTOR) window.TUTOR.setelahKonfirmasi(hitungDaerah(kunci));
       renderPemda();
       if (berikut) setTimeout(() => {
         const k = el('#konf-' + CSS.escape(berikut.id));
@@ -1399,6 +1400,8 @@ window.KONF = {
     gambarMemuat();
     try {
       if (iniPusat()) { await muatSemua(); renderPusat(); }
+      /* Pemda baru boleh mengonfirmasi setelah pre test TW III dikerjakan. */
+      else if (typeof hasilSaya === 'function' && !hasilSaya('pre') && window.TUTOR) WADAH.innerHTML = window.TUTOR.layarTerkunci();
       else { await muatDaerah(kunciSaya()); renderPemda(); }
       tandaiNav();
     } catch (e) { console.error(e); gambarGalat(e); }

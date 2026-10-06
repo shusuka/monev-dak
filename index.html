@@ -1057,6 +1057,9 @@
          ajakannya ditaruh di sini, bukan hanya mengandalkan menu. -->
     <div id="dashSurvei" class="mt-7 hidden"></div>
 
+    <!-- Papan misi TW III pemda (assets/tutor.js): pre test → konfirmasi → post test. -->
+    <div id="dashMisi" class="hidden"></div>
+
     <!-- Tugas utama pemda di TW III: memastikan angka eMon tiap ruasnya. -->
     <div id="dashKonf" class="mt-7 hidden"></div>
 
@@ -2270,6 +2273,7 @@ async function logout() {
   if (window.BA) window.BA.reset();
   if (window.SURVEI) window.SURVEI.reset();
   if (window.KONF) window.KONF.reset();
+  if (window.TUTOR) window.TUTOR.tutup();
   try { await store.keluarAkun(); } catch (e) { console.warn(e); }
   ['inNama', 'inProv', 'inKab', 'inEmail', 'inSandi', 'mkEmail', 'mkSandi', 'mkProv', 'mkKab'].forEach(id => { const el = $('#' + id); if (el) el.value = ''; });
   Object.assign(MK, { prov: '', kab: '', akun: [], pilih: -1 });
@@ -2338,7 +2342,7 @@ async function renderDashboard() {
     const judul = kind === 'pre' ? 'Pre test' : 'Post test';
 
     if (terkunci) {
-      return `<div class="rounded-2xl border border-red-400/45 bg-red-500/[.14] px-4 py-3">
+      return `<div data-tutor="${kind}" class="rounded-2xl border border-red-400/45 bg-red-500/[.14] px-4 py-3">
         <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-red-200/90">${IKON.kunci}${judul}</p>
         <p class="mt-1.5 text-[15px] font-semibold text-red-50">Terkunci</p>
         <p class="mt-0.5 text-[11px] leading-[1.5] text-red-200/75">Selesaikan pre test lebih dahulu</p>
@@ -2346,14 +2350,14 @@ async function renderDashboard() {
     }
 
     if (r) {
-      return `<button onclick="showResult('${kind}')" class="rounded-2xl border border-emerald-400/45 bg-emerald-500/[.15] px-4 py-3 text-left transition hover:bg-emerald-500/[.24]">
+      return `<button data-tutor="${kind}" onclick="showResult('${kind}')" class="rounded-2xl border border-emerald-400/45 bg-emerald-500/[.15] px-4 py-3 text-left transition hover:bg-emerald-500/[.24]">
         <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-emerald-200/90">${IKON.selesai}${judul}</p>
         <p class="mt-1.5 text-[22px] font-semibold tabular-nums text-emerald-50">${r.nilai}<span class="text-[13px] font-medium text-emerald-200/70"> / ${NILAI_MAX}</span></p>
         <p class="mt-0.5 text-[11px] leading-[1.5] text-emerald-200/75">${r.benar}/${r.total} benar · ${fmtDur(r.durasiMs)} · pembahasan</p>
       </button>`;
     }
 
-    return `<button onclick="startQuiz('${kind}')" class="rounded-2xl border border-emerald-400/45 bg-emerald-500/[.09] px-4 py-3 text-left transition hover:bg-emerald-500/[.20]">
+    return `<button data-tutor="${kind}" onclick="startQuiz('${kind}')" class="rounded-2xl border border-emerald-400/45 bg-emerald-500/[.09] px-4 py-3 text-left transition hover:bg-emerald-500/[.20]">
       <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-emerald-200/90">${IKON.mulai}${judul}</p>
       <p class="mt-1.5 text-[15px] font-semibold text-emerald-50">Mulai sekarang</p>
       <p class="mt-0.5 text-[11px] leading-[1.5] text-emerald-200/75">${ATURAN.jumlahSoal} soal acak · ${ATURAN.durasiMenit} menit</p>
@@ -2423,10 +2427,26 @@ async function renderDashboard() {
 async function renderKartuKonfirmasi() {
   const kotak = $('#dashKonf');
   kotak.classList.add('hidden');
-  if (!ME || pfid() || !window.KONF) return;
+  if (!ME || pfid() || !window.KONF) { if (window.TUTOR) window.TUTOR.diDashboard(null); return; }
   let n = null;
   try { n = await window.KONF.ringkasSaya(); } catch (e) { console.warn('[MonevDAK] status konfirmasi tak terbaca:', e); }
-  if (!n || !ME || pfid()) return;
+  if (!n || !ME || pfid()) { if (window.TUTOR) window.TUTOR.diDashboard(n); return; }
+
+  /* Konfirmasi data baru terbuka setelah pre test TW III dikerjakan. */
+  if (!hasilSaya('pre')) {
+    kotak.className = 'konf-muncul mt-7 overflow-hidden rounded-3xl border border-white/15 bg-white/[.04]';
+    kotak.innerHTML = `
+      <div class="flex flex-wrap items-center gap-5 px-5 py-5 md:px-6">
+        <div class="min-w-[240px] flex-1">
+          <p class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/50">🔒 Konfirmasi data · Triwulan III</p>
+          <h3 class="mt-2 text-[18px] font-semibold leading-snug text-white/80">Terbuka setelah pre test selesai</h3>
+          <p class="mt-1.5 max-w-[560px] text-[13px] leading-[1.6] text-white/50">${n.total} ruas ${esc(ME.kab)} menunggu diperiksa. Kerjakan pre test lebih dahulu untuk membuka misi ini.</p>
+        </div>
+        <button onclick="startQuiz('pre')" class="cta-glow shrink-0 rounded-full bg-white px-5 py-2.5 text-[13px] font-semibold text-black">Kerjakan pre test</button>
+      </div>`;
+    if (window.TUTOR) window.TUTOR.diDashboard(n);
+    return;
+  }
 
   const terkirim = n.dikirim + n.verif;
   const selesai = terkirim === n.total && !n.kembali;
@@ -2455,6 +2475,7 @@ async function renderKartuKonfirmasi() {
       </div>
     </div>
     <div class="h-1 bg-white/10"><div class="bar-anim h-full bg-teal-300" style="width:${p}%"></div></div>`;
+  if (window.TUTOR) window.TUTOR.diDashboard(n);
 }
 
 
@@ -2613,6 +2634,7 @@ async function submitQuiz(auto) {
     Q = null;
     if (auto) toast('Waktu habis — jawaban dikirim otomatis.');
     showResult(kind);
+    if (window.TUTOR) window.TUTOR.setelahTest(kind);
   } catch (ex) {
     console.error(ex);
     Q.kirim = false;
@@ -3683,5 +3705,6 @@ function exportXLS() {
 <script src="assets/ceklis.js"></script>
 <script src="assets/emonitoring.js"></script>
 <script src="assets/konfirmasi.js"></script>
+<script src="assets/tutor.js"></script>
 </body>
 </html>
