@@ -16,9 +16,9 @@ dicoba pada 13 Agustus 2026 lalu dikembalikan — hasilnya terlalu terang.
 
 | Ketentuan | Nilai |
 |---|---|
-| Periode yang dinilai | **Triwulan II** saja (TW I, III, IV menyusul) |
-| Bank soal | 25 soal |
-| Dikerjakan tiap sesi | **20 soal**, diambil acak dari 25 |
+| Periode yang dinilai | **Triwulan III** (TW II sudah ditutup; nilainya tetap tampil) |
+| Bank soal | 20 soal TW III (`Soal Rakor TW III.docx`) |
+| Dikerjakan tiap sesi | **20 soal**, seluruh bank, urutannya diacak |
 | Bobot | 5 poin per soal → **nilai maksimal 100** |
 | Batas waktu | 20 menit, sesi dikirim otomatis saat habis |
 | Pengacakan | Urutan soal **dan** urutan opsi A–D diacak ulang setiap kali peserta masuk |
@@ -28,8 +28,20 @@ dicoba pada 13 Agustus 2026 lalu dikembalikan — hasilnya terlalu terang.
 
 Kartu sesi di dashboard peserta berwarna **hijau** bila sesi siap dikerjakan atau sudah selesai, dan **merah** bila masih terkunci.
 
-Mengubah aturan: `assets/soal-tw2.js` → objek `window.ATURAN`.
-Mengubah/menambah soal: `assets/soal-tw2.js` → array `window.SOAL_TW2`.
+Mengubah aturan: `assets/soal-tw3.js` → objek `window.ATURAN` (`twAktif`, `twTutup`).
+Mengubah/menambah soal: `assets/soal-tw3.js` → array `window.SOAL_TW3`. Bank TW II
+(`assets/soal-tw2.js`) tetap dimuat supaya pembahasan nilai TW II masih bisa dibuka.
+
+Membuka triwulan berikutnya: buat `soal-twN.js`, ganti `twAktif`, tambahkan triwulan
+lama ke `twTutup`, lalu ubah id `__twN__` dan `tw == N` pada aturan `hasil` di
+`firestore.rules`.
+
+### Yang ditutup sejak TW III
+
+Pemda hanya melihat **Dashboard** (pre/post test TW III, kartu TW II baca-saja) dan
+**Konfirmasi Data**. Survei kepuasan, arsip berita acara, peringkat, dan perbandingan
+disembunyikan dari pemda; rules menolak kiriman nilai TW II dan isian survei baru.
+Petugas PFID tetap melihat semua menunya.
 
 > Jangan mengubah nilai `id` soal setelah ada nilai yang masuk — `id` dipakai untuk menyusun ulang pembahasan dari data yang tersimpan.
 
@@ -74,6 +86,44 @@ Selama `assets/firebase-config.js` masih kosong — atau berkas dibuka lewat `fi
 Untuk mencoba jalur Firebase, isi konfigurasi lalu jalankan lewat `npx serve .` (bukan `file://`, karena modul Firebase memerlukan http/https).
 
 ---
+
+## Masuk dengan memilih nama (pemda)
+
+Tab **Masuk** bawaannya: pilih provinsi → kabupaten/kota → muncul daftar nama akun
+yang pernah dibuat di daerah itu → pilih nama → ketik kata sandi. Email tetap dipakai
+Authentication di belakang layar, hanya tidak perlu diketik. Tautan "Masuk dengan
+email / user id PFID" membuka cara lama untuk petugas PFID dan cadangan.
+
+Daftar namanya ada di `akunDaerah/{kunciKab}/akun/{uid}` — terbuka untuk dibaca
+tanpa masuk (berisi nama dan email saja). Tiap pemda yang masuk atau mendaftar
+memperbarui barisnya sendiri. **Setelah pembaruan ini, admin wajib menekan
+"Susun daftar nama masuk" sekali** di tab *Konfirmasi Data TW III* panel admin,
+supaya akun yang sudah ada sebelumnya ikut muncul.
+
+## Konfirmasi data ruas (TW III)
+
+`assets/konfirmasi.js`, data awal di `assets/data-tw3.js` (332 ruas, 164 daerah),
+dibangkitkan dari *Kertas Kerja Rakor TW III TA 2026 - terisi.xlsx* — angka eMon per
+6 Oktober 2026 dan kesesuaian item hasil rakor TW II.
+
+1. **Pemda** memeriksa tiap ruas: progres fisik, keuangan, nilai kontrak, realisasi
+   (Sesuai / Perbarui + angka baru) dan PHO (belum / sudah + tanggal), menulis kendala,
+   lalu **Kirim ke pusat**. Kiriman bisa diubah selama belum terverifikasi.
+2. **Pusat** (petugas PFID di menu Konfirmasi Data, atau admin di tabnya) melihat
+   angka eMon berdampingan dengan jawaban pemda (yang berbeda disorot), mengisi
+   kesesuaian item (terisi dari TW II) dan tindak lanjut, lalu **Verifikasi** atau
+   **Kembalikan ke pemda** dengan catatan.
+3. **Unduh kertas kerja (.xlsx)** menyusun seluruh ruas dalam kolom kertas kerja
+   rakor dengan angka akhir (angka pemda bila diperbarui, selain itu angka eMon).
+
+| Koleksi | ID dokumen | Ditulis oleh |
+|---|---|---|
+| `konfirmasiTw3` | kunci daerah | pemda daerah itu |
+| `verifikasiTw3` | kunci daerah | petugas PFID / admin |
+| `akunDaerah/{kunci}/akun` | uid | pemilik akun / admin |
+
+Kab. Kepulauan Yapen tidak ada di kertas kerja; satu ruasnya (181059 Kamanap–Ansus)
+diambil langsung dari eMon dan ditandai `luarKertasKerja`.
 
 ## 2. Menyiapkan Firebase
 

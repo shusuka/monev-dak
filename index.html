@@ -289,6 +289,77 @@
   @keyframes adminPilAlir { to { background-position: 0 0, 250% 50%; } }
 
   /* ---------- misc ---------- */
+  /* ---------- konfirmasi data ruas (assets/konfirmasi.js) ----------
+     Kartu masuk berurutan sekali saja saat menu dibuka; setelah itu yang
+     bergerak hanya bagian yang berubah — isian yang terbuka dan status. */
+  @keyframes konfMasuk { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+  @keyframes konfKilau { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+  @keyframes konfDenyut { 0%, 100% { box-shadow: 0 0 0 0 rgb(var(--st) / .55); } 60% { box-shadow: 0 0 0 6px rgb(var(--st) / 0); } }
+  @keyframes konfPutar { to { transform: rotate(360deg); } }
+  .konf-muncul { opacity: 0; animation: konfMasuk .55s cubic-bezier(.22,.61,.36,1) forwards; }
+  .konf-kartu { position: relative; transition: border-color .3s ease, background .3s ease; }
+  .konf-kartu::before { content: ''; position: absolute; left: 0; top: 18px; bottom: 18px; width: 3px; border-radius: 0 3px 3px 0;
+    background: rgb(var(--st)); opacity: .85; transition: background .3s ease; }
+  .konf-kartu:hover { border-color: rgba(255,255,255,.2); }
+  .konf-panah { transition: transform .3s cubic-bezier(.22,.61,.36,1); }
+  .konf-isi { animation: konfMasuk .35s cubic-bezier(.22,.61,.36,1); }
+  .konf-diam .konf-isi, .konf-diam .bar-anim, .konf-diam .ring-anim { animation: none; }
+  .konf-chip { display: inline-flex; align-items: center; gap: .45rem; white-space: nowrap; border-radius: 9999px;
+    padding: .3rem .75rem; font-size: 12px; font-weight: 600; color: rgb(var(--st));
+    background: rgb(var(--st) / .12); border: 1px solid rgb(var(--st) / .35); }
+  .konf-chip--kecil { padding: .2rem .6rem; font-size: 11px; }
+  .konf-chip__titik { height: .45rem; width: .45rem; border-radius: 9999px; background: rgb(var(--st)); }
+  .konf-denyut { animation: konfDenyut 1.8s ease-out infinite; }
+  .konf-segmen { display: inline-flex; gap: 2px; padding: 3px; border-radius: 9999px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); }
+  .konf-segmen__opsi { min-height: 36px; padding: 0 .95rem; border-radius: 9999px; font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.6);
+    transition: background .2s ease, color .2s ease, transform .15s ease; }
+  .konf-segmen--kecil .konf-segmen__opsi { min-height: 30px; padding: 0 .7rem; font-size: 11.5px; }
+  .konf-segmen__opsi:hover { color: #fff; background: rgba(255,255,255,.08); }
+  .konf-segmen__opsi:active { transform: scale(.96); }
+  .konf-segmen__opsi.on { background: rgb(251 191 36); color: #1c1300; }
+  .konf-segmen__opsi--ok.on { background: rgb(45 212 191); color: #042f2a; }
+  .konf-segmen__opsi:focus-visible, .konf-input:focus-visible { outline: 2px solid rgb(45 212 191); outline-offset: 2px; }
+  /* Kotak isian membuka dengan grid-rows, bukan height — tidak ada lompatan tata letak. */
+  .konf-input-wadah { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .3s cubic-bezier(.22,.61,.36,1), opacity .25s ease; }
+  .konf-input-wadah > div { overflow: hidden; }
+  .konf-input-wadah.buka { grid-template-rows: 1fr; opacity: 1; }
+  .konf-input { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); border-radius: .9rem; padding: .6rem .85rem;
+    font-size: 14px; color: #fff; outline: none; transition: border-color .2s ease, background .2s ease; color-scheme: dark; }
+  .konf-input::placeholder { color: rgba(255,255,255,.35); }
+  .konf-input:focus { border-color: rgb(45 212 191 / .7); background: rgba(255,255,255,.09); }
+  .konf-beda td { background: rgb(251 191 36 / .06); }
+  .konf-segbar { display: block; height: 100%; animation: growBar .9s cubic-bezier(.22,.61,.36,1); }
+  .konf-daerah { transition: background .2s ease; }
+  .konf-daerah:hover { background: rgba(255,255,255,.045); }
+  .konf-daerah .konf-maju { transition: transform .2s ease; }
+  .konf-daerah:hover .konf-maju { transform: translateX(3px); }
+  .konf-putar { height: 14px; width: 14px; border-radius: 9999px; border: 2px solid rgba(0,0,0,.2); border-top-color: #000; animation: konfPutar .7s linear infinite; }
+  .konf-kerangka { background: linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.09) 50%, rgba(255,255,255,.04) 75%);
+    background-size: 200% 100%; animation: konfKilau 1.4s ease-in-out infinite; }
+
+  /* ---------- masuk dengan memilih nama ---------- */
+  @keyframes akunMasuk { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .akun-kartu { opacity: 0; animation: akunMasuk .4s cubic-bezier(.22,.61,.36,1) forwards; display: flex; width: 100%; align-items: center; gap: .85rem;
+    min-height: 56px; border-radius: 1.1rem; border: 1px solid #e5e7eb; background: #fff; padding: .6rem .85rem; text-align: left;
+    transition: border-color .2s ease, box-shadow .25s ease, transform .2s ease, background .2s ease; }
+  .akun-kartu:hover { border-color: #d1d5db; transform: translateY(-1px); }
+  .akun-kartu:focus-visible { outline: 2px solid #F09819; outline-offset: 2px; }
+  .akun-kartu[aria-checked="true"] { border-color: #F09819; background: #fff8ef; box-shadow: 0 10px 26px -14px rgba(240,152,25,.75); }
+  .akun-avatar { display: flex; height: 38px; width: 38px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9999px;
+    font-size: 13px; font-weight: 600; color: #fff; background: linear-gradient(135deg, #FF512F, #F09819); }
+  .akun-centang { margin-left: auto; height: 22px; width: 22px; border-radius: 9999px; border: 1.5px solid #d1d5db; display: flex; align-items: center; justify-content: center;
+    transition: background .2s ease, border-color .2s ease; }
+  .akun-kartu[aria-checked="true"] .akun-centang { background: #F09819; border-color: #F09819; color: #fff; }
+  .akun-sandi { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .35s cubic-bezier(.22,.61,.36,1), opacity .3s ease; }
+  .akun-sandi > div { overflow: hidden; }
+  .akun-sandi.buka { grid-template-rows: 1fr; opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .konf-muncul, .konf-isi, .akun-kartu { animation: none; opacity: 1; }
+    .konf-denyut, .konf-kerangka, .konf-segbar { animation: none; }
+    .konf-input-wadah, .akun-sandi, .konf-panah { transition: none; }
+  }
+
   .sunset-text { background: linear-gradient(90deg, #FF512F, #F09819); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .ring-anim { animation: ringDraw 1.1s cubic-bezier(.22,.61,.36,1) forwards; }
   .bar-anim { animation: growBar .9s cubic-bezier(.22,.61,.36,1) forwards; }
@@ -376,7 +447,7 @@
       </h1>
 
       <p id="heroSub" class="mt-6 max-w-[480px] text-[16px] font-medium leading-[1.6] text-white/95 md:text-[17px]">
-        Pre test dan post test pelaksanaan monitoring dan evaluasi<br class="hidden md:block"/>DAK Fisik Bidang Jalan — periode penilaian Triwulan II.
+        Pre test dan post test pelaksanaan monitoring dan evaluasi<br class="hidden md:block"/>DAK Fisik Bidang Jalan — periode penilaian Triwulan III.
       </p>
 
       <div class="mt-10 flex flex-col items-center gap-4 sm:flex-row">
@@ -430,7 +501,7 @@
       <div class="mx-auto max-w-7xl px-6 py-24 md:px-16 md:py-28">
         <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Periode</p>
         <h2 class="mt-3 text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[42px]">Triwulan I – IV</h2>
-        <p class="mt-4 max-w-[540px] text-[15px] leading-[1.7] text-white/70">Untuk saat ini hanya <strong class="font-semibold text-white">Triwulan II</strong> yang dinilai. Triwulan lain menyusul pada periode berikutnya.</p>
+        <p class="mt-4 max-w-[540px] text-[15px] leading-[1.7] text-white/70">Untuk saat ini <strong class="font-semibold text-white">Triwulan III</strong> yang dinilai. Pengisian Triwulan II sudah ditutup; nilainya tetap tersimpan.</p>
         <div id="twGrid" class="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"></div>
       </div>
     </section>
@@ -509,7 +580,41 @@
 
       <!-- ══ MASUK ══ -->
       <form id="formMasuk" class="relative z-20 mb-auto mt-4 space-y-3" autocomplete="on" novalidate>
-        <div class="field flex items-center gap-3">
+        <!-- Pemda: pilih daerah, lalu pilih nama dari akun yang pernah dibuat
+             di daerah itu. Email tidak perlu diingat; yang diketik cuma sandi. -->
+        <div id="mkModeNama" class="space-y-3">
+          <div class="relative">
+            <div class="field flex items-center gap-3">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.6"/></svg>
+              <div class="min-w-0 flex-1 py-1">
+                <label for="mkProv" class="block text-[11px] font-medium text-gray-500">Provinsi</label>
+                <input id="mkProv" type="text" placeholder="Pilih provinsi" autocomplete="off" class="text-[15px] text-gray-900" role="combobox" aria-expanded="false" aria-autocomplete="list" />
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="mr-2 h-4 w-4 shrink-0 text-gray-400"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+            <div id="acMkProv" class="ac-panel hidden" role="listbox"></div>
+          </div>
+
+          <div class="relative">
+            <div class="field flex items-center gap-3">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M2 22h20"/><path d="M10 7h4M10 11h4M10 15h4"/></svg>
+              <div class="min-w-0 flex-1 py-1">
+                <label for="mkKab" class="block text-[11px] font-medium text-gray-500">Kabupaten / Kota</label>
+                <input id="mkKab" type="text" placeholder="Pilih kabupaten/kota" autocomplete="off" class="text-[15px] text-gray-900" role="combobox" aria-expanded="false" aria-autocomplete="list" />
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="mr-2 h-4 w-4 shrink-0 text-gray-400"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+            <div id="acMkKab" class="ac-panel hidden" role="listbox"></div>
+          </div>
+
+          <div id="mkAkunWadah" class="hidden">
+            <p id="mkAkunJudul" class="pl-2 text-[12px] font-medium text-gray-500">Pilih nama Anda</p>
+            <div id="mkAkun" role="radiogroup" aria-labelledby="mkAkunJudul" class="mt-2 max-h-[236px] space-y-2 overflow-y-auto p-1"></div>
+          </div>
+        </div>
+
+        <!-- Email atau user id: untuk petugas PFID, dan cadangan bila nama tidak ada di daftar. -->
+        <div id="mkModeEmail" class="field hidden items-center gap-3">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m3 6 9 7 9-7"/></svg>
           <div class="min-w-0 flex-1 py-1">
             <label for="mkEmail" class="block text-[11px] font-medium text-gray-500">Email <span class="text-gray-400">— petugas PFID cukup user id</span></label>
@@ -517,6 +622,7 @@
           </div>
         </div>
 
+        <div id="mkSandiWadah" class="akun-sandi"><div>
         <div class="field flex items-center gap-3">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="h-[18px] w-[18px] shrink-0 text-gray-400"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
           <div class="min-w-0 flex-1 py-1">
@@ -530,12 +636,14 @@
             </span>
           </button>
         </div>
+        </div></div><!-- /mkSandiWadah -->
 
         <p id="errMasuk" class="hidden pl-2 pt-1 text-[13px] font-medium text-red-500"></p>
         <p id="okMasuk" class="hidden pl-2 pt-1 text-[13px] font-medium text-emerald-600"></p>
 
-        <div class="flex items-center justify-between pl-2 pt-2 text-[13px]">
+        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pl-2 pt-2 text-[13px]">
           <button type="button" onclick="lupaSandi()" class="font-medium text-gray-500 transition hover:text-gray-800">Lupa kata sandi?</button>
+          <button id="mkGanti" type="button" onclick="setModeMasuk(MK.mode === 'nama' ? 'email' : 'nama')" class="font-medium text-gray-500 underline decoration-gray-300 underline-offset-4 transition hover:text-gray-800">Masuk dengan email / user id PFID</button>
           <button type="button" onclick="setTabLogin('daftar')" class="sunset-text font-semibold">Belum punya akun? Daftar</button>
         </div>
 
@@ -666,7 +774,7 @@
   </header>
 
   <section id="view-admin" data-view class="mx-auto max-w-[1400px] px-5 py-10 md:px-10 md:py-12">
-    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Rekapitulasi · Triwulan II</p>
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Rekapitulasi · Triwulan III</p>
     <h1 id="adJudul" class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[38px]">Progres pengisian seluruh pemda</h1>
 
     <!-- empat kelompok hasil, dipilih dari tab di atas. Urutannya mengikuti
@@ -674,6 +782,7 @@
          pelayanan, baru rekap kesiapan daerah, terakhir notulensinya. -->
     <div class="mt-7 flex flex-wrap gap-2">
       <button data-atab="test"   onclick="setTabAdmin('test')"   style="--tab:56 189 248"  class="tabnav on text-[13px]"><span class="tabdot"></span>Hasil Pre &amp; Post Test</button>
+      <button data-atab="konf"   onclick="setTabAdmin('konf')"   style="--tab:45 212 191"  class="tabnav text-[13px]"><span class="tabdot"></span>Konfirmasi Data TW III</button>
       <button data-atab="survei" onclick="setTabAdmin('survei')" style="--tab:232 121 249" class="tabnav text-[13px]"><span class="tabdot"></span>Survei Kepuasan Pemda<span id="adTabSurveiJml" class="opacity-70"></span></button>
       <button data-atab="ceklis" onclick="setTabAdmin('ceklis')" style="--tab:250 204 21"  class="tabnav text-[13px]"><span class="tabdot"></span>Ceklis Kesiapan Pemda<span id="adTabCeklisJml" class="opacity-70"></span></button>
       <button data-atab="berita" onclick="setTabAdmin('berita')" style="--tab:52 211 153" class="tabnav text-[13px]"><span class="tabdot"></span>Berita Acara<span id="adTabBaJml" class="opacity-70"></span></button>
@@ -729,6 +838,19 @@
     <p class="mt-2 max-w-[640px] text-[14px] leading-[1.7] text-white/60">Persentase jawaban benar tiap butir, dihitung dari seluruh sesi yang tersimpan. Butir dengan persentase rendah menandakan materi yang perlu diperkuat saat pendampingan.</p>
     <div id="adSoal" class="glass mt-6 overflow-hidden rounded-3xl"></div>
     </div><!-- /adPanelTest -->
+
+    <!-- konfirmasi data ruas TW III: ringkasan, verifikasi, unduh kertas kerja; diisi assets/konfirmasi.js -->
+    <div id="adPanelKonf" class="hidden" style="--tab:45 212 191">
+      <div class="mt-7 flex flex-wrap items-center gap-4 rounded-3xl border border-teal-300/25 bg-teal-400/[.06] px-5 py-4">
+        <p class="min-w-[260px] flex-1 text-[13px] leading-[1.65] text-white/70">
+          <span class="font-semibold text-white">Daftar nama di halaman masuk.</span>
+          Pemda masuk dengan memilih namanya; daftarnya disusun dari akun yang sudah terdaftar.
+          Jalankan sekali setelah pembaruan ini, dan lagi bila ada pemda yang namanya belum muncul.
+        </p>
+        <button id="konfSusunAkun" type="button" onclick="KONF.susunAkun()" class="rounded-full border border-teal-300/50 px-5 py-2.5 text-[13px] font-semibold text-teal-100 transition hover:bg-teal-400/15 disabled:opacity-50">Susun daftar nama masuk</button>
+      </div>
+      <div id="adKonf" class="mt-6"></div>
+    </div>
 
     <div id="adPanelSurvei" class="hidden" style="--tab:232 121 249">
       <p class="mt-7 max-w-[720px] text-[14px] leading-[1.7] text-white/60">Penilaian pemda atas pelayanan Rapat Koordinasi TW II, diisi langsung di aplikasi. Indeks kepuasan dihitung dari tujuh unsur pelayanan (nilai rata-rata × 25) mengikuti cara hitung IKM.</p>
@@ -795,8 +917,9 @@
            #navBawah supaya tidak ada menu yang tersembunyi di luar layar. -->
       <nav class="no-scrollbar ml-2 hidden flex-1 items-center gap-1 overflow-x-auto text-[13px] font-medium md:flex">
         <button data-nav="dashboard" onclick="go('dashboard')" style="--tab:56 189 248"  class="tabnav"><span class="tabdot"></span>Dashboard</button>
-        <button data-nav="rank"      onclick="go('rank')"      style="--tab:251 191 36"  class="tabnav"><span class="tabdot"></span>Peringkat</button>
-        <button data-nav="compare"   onclick="go('compare')"   style="--tab:167 139 250" class="tabnav"><span class="tabdot"></span>Perbandingan</button>
+        <button data-nav="konfirmasi" onclick="go('konfirmasi')" style="--tab:45 212 191" class="tabnav hidden"><span class="tabdot"></span>Konfirmasi Data</button>
+        <button data-nav="rank"      onclick="go('rank')"      style="--tab:251 191 36"  class="tabnav hidden"><span class="tabdot"></span>Peringkat</button>
+        <button data-nav="compare"   onclick="go('compare')"   style="--tab:167 139 250" class="tabnav hidden"><span class="tabdot"></span>Perbandingan</button>
         <button data-nav="berita"    onclick="go('berita')"    style="--tab:251 113 133" class="tabnav hidden"><span class="tabdot"></span>Berita Acara eMonitoring</button>
         <button data-nav="arsip"     onclick="go('arsip')"     style="--tab:52 211 153"  class="tabnav hidden"><span class="tabdot"></span>Arsip Berita Acara</button>
         <button data-nav="survei"    onclick="go('survei')"    style="--tab:232 121 249" class="tabnav hidden"><span class="tabdot"></span>Survei Kepuasan</button>
@@ -835,6 +958,9 @@
          yang benar-benar dilihat pemda saat masuk adalah dashboard ini — jadi
          ajakannya ditaruh di sini, bukan hanya mengandalkan menu. -->
     <div id="dashSurvei" class="mt-7 hidden"></div>
+
+    <!-- Tugas utama pemda di TW III: memastikan angka eMon tiap ruasnya. -->
+    <div id="dashKonf" class="mt-7 hidden"></div>
 
     <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div class="glass rounded-3xl p-6"><p class="text-[12px] uppercase tracking-[0.16em] text-white/50">Nilai pre test</p><p id="kpiPre" class="mt-3 text-[32px] font-semibold tabular-nums">—</p></div>
@@ -882,7 +1008,7 @@
 
   <!-- ─── RANK ─── -->
   <section id="view-rank" data-view class="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-14">
-    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Peringkat nasional · Triwulan II</p>
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Peringkat nasional · Triwulan III</p>
     <h1 class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[40px]">Papan peringkat peserta</h1>
     <p class="mt-3 max-w-[600px] text-[15px] text-white/65">Diurutkan dari jumlah jawaban benar terbanyak; bila jumlah benar sama, waktu penyelesaian tercepat lebih unggul.</p>
 
@@ -907,7 +1033,7 @@
   <section id="view-compare" data-view class="mx-auto max-w-5xl px-5 py-10 md:px-10 md:py-14">
     <p class="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">Analisis</p>
     <h1 class="mt-3 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[40px]">Sebelum dan sesudah</h1>
-    <p class="mt-3 max-w-[560px] text-[15px] text-white/65">Perbandingan nilai pre test dan post test Anda pada Triwulan II.</p>
+    <p class="mt-3 max-w-[560px] text-[15px] text-white/65">Perbandingan nilai pre test dan post test Anda pada Triwulan III.</p>
     <div id="compareBody" class="mt-10 space-y-5"></div>
   </section>
 
@@ -917,13 +1043,16 @@
   <!-- ─── ARSIP BERITA ACARA — daftar milik semua petugas PFID ─── -->
   <section id="view-arsip" data-view class="mx-auto max-w-6xl px-5 py-10 md:px-10 md:py-14"></section>
 
+  <!-- ─── KONFIRMASI DATA RUAS TW III — pemda memeriksa, pusat memverifikasi; assets/konfirmasi.js ─── -->
+  <section id="view-konfirmasi" data-view class="mx-auto max-w-6xl px-5 py-10 md:px-10 md:py-14"></section>
+
   <!-- ─── SURVEI KEPUASAN — akun pemda, isinya dibangun assets/survei.js ─── -->
   <section id="view-survei" data-view class="mx-auto max-w-4xl px-5 py-10 md:px-10 md:py-14"></section>
 
   <footer class="border-t border-white/10 bg-black/50 pb-[76px] backdrop-blur-xl md:pb-0">
     <div class="mx-auto flex max-w-7xl flex-col gap-2 px-5 py-8 text-[12px] text-white/45 md:flex-row md:items-center md:justify-between md:px-10">
       <p>MonevDAK · Pre test &amp; post test DAK Fisik Bidang Jalan</p>
-      <p>Bank soal: SE Menteri PU No. 5/SE/Mn/2026 (Lampiran I &amp; II)</p>
+      <p>Bank soal TW III: PMK 25/2026, Perpres 57/2024 jo. 71/2025, Permen PU 13/PRT/M/2011</p>
     </div>
   </footer>
 
@@ -935,11 +1064,15 @@
       <span class="navbtm-ikon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10V20h13V10"/></svg></span>
       <span class="navbtm-teks">Beranda</span>
     </button>
-    <button data-nav="rank" data-navbawah onclick="go('rank')" style="--tab:251 191 36" class="navbtm">
+    <button data-nav="konfirmasi" data-navbawah onclick="go('konfirmasi')" style="--tab:45 212 191" class="navbtm hidden">
+      <span class="navbtm-ikon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19 9 5h6l5 14"/><path d="M12 8v2M12 13v2"/><path d="M8 19h8"/></svg></span>
+      <span class="navbtm-teks">Konfirmasi</span>
+    </button>
+    <button data-nav="rank" data-navbawah onclick="go('rank')" style="--tab:251 191 36" class="navbtm hidden">
       <span class="navbtm-ikon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V12"/><path d="M10 20V5"/><path d="M16 20v-6"/><path d="M2 20h20"/></svg></span>
       <span class="navbtm-teks">Peringkat</span>
     </button>
-    <button data-nav="compare" data-navbawah onclick="go('compare')" style="--tab:167 139 250" class="navbtm">
+    <button data-nav="compare" data-navbawah onclick="go('compare')" style="--tab:167 139 250" class="navbtm hidden">
       <span class="navbtm-ikon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 3 4-6 5 5"/><path d="M3 21h18"/></svg></span>
       <span class="navbtm-teks">Grafik</span>
     </button>
@@ -972,6 +1105,8 @@
 
 <script src="assets/wilayah.js"></script>
 <script src="assets/soal-tw2.js"></script>
+<script src="assets/soal-tw3.js"></script>
+<script src="assets/data-tw3.js"></script>
 <script src="assets/firebase-config.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════
@@ -984,9 +1119,12 @@ const PROVINSI = Object.keys(window.WILAYAH).sort((a, b) => a.localeCompare(b, '
 const KAB_OF = p => (window.WILAYAH[p] || "").split(",").filter(Boolean);
 const ALL_KAB = PROVINSI.flatMap(p => KAB_OF(p).map(k => ({ kab: k, prov: p })));
 
-const BANK    = window.SOAL_TW2;
+/* Bank yang dikerjakan adalah milik triwulan aktif. Bank TW II tetap dimuat
+   supaya pembahasan nilai yang sudah tersimpan masih bisa disusun ulang. */
+const BANK    = window.SOAL_TW3;
 const ATURAN  = window.ATURAN;
-const SOAL_BY_ID = Object.fromEntries(BANK.map(s => [s.id, s]));
+const SOAL_BY_ID = Object.fromEntries([...(window.SOAL_TW2 || []), ...BANK].map(s => [s.id, s]));
+const TW_TUTUP = ATURAN.twTutup || [];
 const TW_AKTIF = ATURAN.twAktif;
 const NILAI_MAX = ATURAN.jumlahSoal * ATURAN.nilaiPerSoal;
 
@@ -1205,6 +1343,29 @@ const store = {
     return p;
   },
 
+  /** Nama-nama akun pemda di satu daerah, untuk dipilih di halaman masuk.
+      Koleksi ini sengaja terbuka untuk dibaca tanpa masuk — isinya nama dan
+      alamat email yang dipakai Authentication, bukan nilai atau jawaban. */
+  async akunDaerah(kunci) {
+    if (this.mode !== 'firebase') {
+      return Object.values(this.lokal.akun || {})
+        .filter(a => slug(a.kab || '') === kunci && !namaPfid(a.nama))
+        .map(a => ({ uid: a.uid, nama: a.nama, email: a.email }));
+    }
+    const { collection, getDocs } = this.fs;
+    const snap = await getDocs(collection(this.db, 'akunDaerah', kunci, 'akun'));
+    return snap.docs.map(d => d.data()).filter(a => a.email && a.nama);
+  },
+
+  /** Catat akun yang baru masuk atau mendaftar ke daftar nama daerahnya. */
+  async catatAkun(p) {
+    if (this.mode !== 'firebase' || !p || !p.kab || !p.email || namaPfid(p.nama)) return;
+    const { doc, setDoc, serverTimestamp } = this.fs;
+    await setDoc(doc(this.db, 'akunDaerah', slug(p.kab), 'akun', this.uid), {
+      uid: this.uid, nama: p.nama, email: p.email, kab: p.kab, prov: p.prov || '', diperbaruiAt: serverTimestamp()
+    }, { merge: true });
+  },
+
   async keluarAkun() {
     if (this.mode === 'firebase') await this.authMod.signOut(this.auth);
     this.user = null; this.uid = null; this.cacheHasil = null;
@@ -1358,7 +1519,7 @@ async function muatHasilSaya() {
 /* ═══════════════════════════════════════════════════════════════
    5. ROUTER
    ═══════════════════════════════════════════════════════════════ */
-const APP_VIEWS   = ['dashboard', 'quiz', 'result', 'rank', 'compare', 'berita', 'arsip', 'survei'];
+const APP_VIEWS   = ['dashboard', 'quiz', 'result', 'rank', 'compare', 'berita', 'arsip', 'survei', 'konfirmasi'];
 const ADMIN_VIEWS = ['admin'];
 
 /** Akun PFID — user id-nya memuat kata "jalan". Lihat assets/berita-acara.js. */
@@ -1369,7 +1530,11 @@ async function go(view) {
   /* Menu arsip terbuka untuk semua akun; isinya yang dibatasi per daerah.
      Survei kepuasan sebaliknya: respondennya pemda, bukan petugas PFID. */
   if (view === 'berita' && !pfid()) view = 'dashboard';
-  if (view === 'survei' && pfid())  view = 'berita';
+  /* Input TW II sudah ditutup: survei kepuasannya tidak dibuka lagi. Pemda
+     hanya melihat dashboard pre/post test dan menu konfirmasi data; arsip,
+     peringkat, dan perbandingan tetap untuk petugas PFID. */
+  if (view === 'survei') view = 'dashboard';
+  if (['arsip', 'rank', 'compare'].includes(view) && ME && !pfid()) view = 'dashboard';
   if (ADMIN_VIEWS.includes(view) && !ADMIN) view = 'adminlogin';
 
   $$('[data-view]').forEach(v => v.classList.add('hidden'));
@@ -1401,6 +1566,7 @@ async function go(view) {
   if (view === 'berita')    await window.BA.render();
   if (view === 'arsip')     await window.BA.renderArsip();
   if (view === 'survei')    await window.SURVEI.render();
+  if (view === 'konfirmasi') await window.KONF.render();
   if (view === 'admin')     await muatAdmin();
 }
 
@@ -1451,6 +1617,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderTwGrid();
   bindAutocomplete();
   setTabLogin('masuk');
+  setModeMasuk('nama');
   $('#inNama').addEventListener('input', sesuaikanFormDaftar);
   $('#formDaftar').addEventListener('submit', doDaftar);
   $('#formMasuk').addEventListener('submit', doMasuk);
@@ -1486,12 +1653,12 @@ function renderTwGrid() {
     return `<div class="glass glass-hover rounded-3xl p-7 ${aktif ? 'ring-1 ring-white/40' : ''}">
       <div class="flex items-start justify-between">
         <span class="text-[30px] font-semibold tracking-[-0.02em] ${aktif ? '' : 'text-white/45'}">TW ${m.rom}</span>
-        <span class="rounded-full px-3 py-1 text-[11px] font-semibold ${aktif ? 'bg-white text-black' : 'border border-white/25 text-white/60'}">${aktif ? 'Dinilai' : 'Belum dinilai'}</span>
+        <span class="rounded-full px-3 py-1 text-[11px] font-semibold ${aktif ? 'bg-white text-black' : 'border border-white/25 text-white/60'}">${aktif ? 'Dinilai' : TW_TUTUP.includes(tw) ? 'Ditutup' : 'Belum dinilai'}</span>
       </div>
       <p class="mt-4 text-[14px] leading-[1.65] ${aktif ? 'text-white/65' : 'text-white/40'}">${esc(m.focus)}</p>
       ${aktif
         ? `<button onclick="go('login')" class="mt-6 text-[13px] font-semibold text-white">Ikuti pre test →</button>`
-        : `<p class="mt-6 text-[13px] font-semibold text-white/35">Menyusul periode berikutnya</p>`}
+        : `<p class="mt-6 text-[13px] font-semibold text-white/35">${TW_TUTUP.includes(tw) ? 'Pengisian sudah ditutup' : 'Menyusul periode berikutnya'}</p>`}
     </div>`;
   }).join('');
 }
@@ -1533,9 +1700,41 @@ function bindAutocomplete() {
       $('#inEmail').focus();
     }
   });
+
+  /* Form masuk: provinsi → kabupaten → daftar nama akun daerah itu. */
+  makeAC({
+    input: $('#mkProv'), panel: $('#acMkProv'),
+    source: q => {
+      const nq = norm(q);
+      const arr = PROVINSI.map(p => ({ label: p, note: KAB_OF(p).length + ' kab/kota' }));
+      return nq ? arr.filter(x => norm(x.label).includes(nq)) : arr;
+    },
+    ketik: () => { MK.prov = PROVINSI.find(p => norm(p) === norm($('#mkProv').value)) || ''; },
+    pick: it => {
+      MK.prov = it.label; $('#mkProv').value = it.label;
+      if (!KAB_OF(it.label).includes(MK.kab)) { MK.kab = ''; $('#mkKab').value = ''; tampilAkun(); }
+      $('#mkKab').focus();
+    }
+  });
+  makeAC({
+    input: $('#mkKab'), panel: $('#acMkKab'),
+    source: q => {
+      const nq = norm(q);
+      const arr = MK.prov
+        ? KAB_OF(MK.prov).map(k => ({ label: k, note: MK.prov, prov: MK.prov }))
+        : ALL_KAB.map(x => ({ label: x.kab, note: x.prov, prov: x.prov }));
+      return (nq ? arr.filter(x => norm(x.label).includes(nq)) : arr).slice(0, 60);
+    },
+    ketik: () => { if (MK.kab) { MK.kab = ''; tampilAkun(); } },
+    pick: it => {
+      $('#mkKab').value = it.label;
+      if (it.prov && it.prov !== MK.prov) { MK.prov = it.prov; $('#mkProv').value = it.prov; }
+      if (MK.kab !== it.label) { MK.kab = it.label; muatAkunMasuk(); }
+    }
+  });
 }
 
-function makeAC({ input, panel, source, pick }) {
+function makeAC({ input, panel, source, pick, ketik }) {
   let items = [], cur = -1;
 
   const render = () => {
@@ -1568,6 +1767,7 @@ function makeAC({ input, panel, source, pick }) {
   input.addEventListener('input', () => {
     if (input === $('#inProv')) SEL.prov = PROVINSI.find(p => norm(p) === norm(input.value)) || '';
     if (input === $('#inKab'))  SEL.kab = '';
+    if (ketik) ketik();
     open();
   });
   input.addEventListener('keydown', e => {
@@ -1584,6 +1784,87 @@ function makeAC({ input, panel, source, pick }) {
 /* ═══════════════════════════════════════════════════════════════
    8. LOGIN
    ═══════════════════════════════════════════════════════════════ */
+/* ── Masuk dengan memilih nama (khusus pemda) ───────────────── */
+const MK = { mode: 'nama', prov: '', kab: '', akun: [], pilih: -1, muat: 0 };
+
+function setModeMasuk(mode) {
+  MK.mode = mode;
+  const email = mode === 'email';
+  $('#mkModeNama').classList.toggle('hidden', email);
+  $('#mkModeEmail').classList.toggle('hidden', !email);
+  $('#mkModeEmail').classList.toggle('flex', email);
+  $('#mkGanti').textContent = email ? 'Masuk dengan memilih nama' : 'Masuk dengan email / user id PFID';
+  $('#loginSub').textContent = email ? 'Gunakan email atau user id dan kata sandi' : 'Pilih daerah dan nama Anda, lalu ketik kata sandi';
+  ['#errMasuk', '#okMasuk'].forEach(s => $(s).classList.add('hidden'));
+  bukaSandi(email || MK.pilih >= 0);
+  if (email) setTimeout(() => $('#mkEmail').focus(), 50);
+}
+
+function bukaSandi(buka) {
+  $('#mkSandiWadah').classList.toggle('buka', buka);
+  $('#mkSandi').tabIndex = buka ? 0 : -1;
+  $('#mkBtn').tabIndex = buka ? 0 : -1;
+}
+
+async function muatAkunMasuk() {
+  const nomor = ++MK.muat;
+  MK.akun = []; MK.pilih = -1; bukaSandi(false);
+  const wadah = $('#mkAkunWadah'), daftar = $('#mkAkun');
+  wadah.classList.remove('hidden');
+  $('#mkAkunJudul').textContent = 'Memuat nama akun ' + MK.kab + '…';
+  daftar.innerHTML = [0, 1].map(() => '<div class="h-14 animate-pulse rounded-[1.1rem] bg-gray-100"></div>').join('');
+  try {
+    const akun = await store.akunDaerah(slug(MK.kab));
+    if (nomor !== MK.muat) return;            // daerah sudah diganti selagi menunggu
+    MK.akun = akun.sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+  } catch (e) {
+    if (nomor !== MK.muat) return;
+    console.warn('[MonevDAK] daftar akun daerah tak terbaca:', e);
+    MK.akun = [];
+  }
+  tampilAkun();
+}
+
+function tampilAkun() {
+  const wadah = $('#mkAkunWadah'), daftar = $('#mkAkun');
+  if (!MK.kab) { wadah.classList.add('hidden'); MK.akun = []; MK.pilih = -1; bukaSandi(MK.mode === 'email'); return; }
+  wadah.classList.remove('hidden');
+  if (!MK.akun.length) {
+    $('#mkAkunJudul').textContent = 'Belum ada akun untuk ' + MK.kab;
+    daftar.innerHTML = `<div class="rounded-[1.1rem] border border-dashed border-gray-300 px-4 py-4 text-[13px] leading-relaxed text-gray-500">
+      Belum ada yang mendaftar dari daerah ini, atau nama Anda belum masuk daftar.
+      <button type="button" onclick="setTabLogin('daftar')" class="sunset-text font-semibold">Daftar akun baru</button> atau
+      <button type="button" onclick="setModeMasuk('email')" class="font-semibold text-gray-700 underline underline-offset-2">masuk dengan email</button>.
+    </div>`;
+    return;
+  }
+  $('#mkAkunJudul').textContent = MK.akun.length > 1 ? 'Pilih nama Anda (' + MK.akun.length + ' akun di ' + MK.kab + ')' : 'Pilih nama Anda';
+  daftar.innerHTML = MK.akun.map((a, i) => `
+    <button type="button" role="radio" aria-checked="${i === MK.pilih}" onclick="pilihAkun(${i})" class="akun-kartu" style="animation-delay:${(i * 0.05).toFixed(2)}s">
+      <span class="akun-avatar">${esc(initials(a.nama))}</span>
+      <span class="min-w-0">
+        <span class="block truncate text-[14.5px] font-semibold text-gray-900">${esc(a.nama)}</span>
+        <span class="block truncate text-[12px] text-gray-500">${esc(samarkanEmail(a.email))}</span>
+      </span>
+      <span class="akun-centang"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3"><path d="M20 6 9 17l-5-5"/></svg></span>
+    </button>`).join('');
+}
+
+/** Cukup untuk mengenali akunnya sendiri tanpa memajang alamat lengkap. */
+function samarkanEmail(e) {
+  const [u, d] = String(e || '').split('@');
+  if (!d) return '';
+  return (u.length <= 2 ? u[0] + '•' : u.slice(0, 2) + '•'.repeat(Math.min(6, u.length - 2))) + '@' + d;
+}
+
+function pilihAkun(i) {
+  MK.pilih = i;
+  $$('#mkAkun .akun-kartu').forEach((b, j) => b.setAttribute('aria-checked', String(j === i)));
+  ['#errMasuk', '#okMasuk'].forEach(s => $(s).classList.add('hidden'));
+  bukaSandi(true);
+  setTimeout(() => $('#mkSandi').focus({ preventScroll: true }), 120);
+}
+
 /** Ubah menu antara Masuk dan Daftar. */
 function setTabLogin(tab) {
   const daftar = tab === 'daftar';
@@ -1592,7 +1873,7 @@ function setTabLogin(tab) {
   $('#loginTitle').textContent = daftar ? 'Daftar Pemda' : 'Masuk Pemda';
   $('#loginSub').textContent = daftar
     ? 'Sekali daftar, akun tersimpan untuk pengisian berikutnya'
-    : 'Gunakan email dan kata sandi akun Anda';
+    : (MK.mode === 'email' ? 'Gunakan email atau user id dan kata sandi' : 'Pilih daerah dan nama Anda, lalu ketik kata sandi');
   const aktif   = 'flex-1 rounded-xl px-4 py-2.5 text-[14px] font-semibold transition bg-white text-gray-900 shadow-sm';
   const nonaktif = 'flex-1 rounded-xl px-4 py-2.5 text-[14px] font-semibold transition text-gray-500 hover:text-gray-800';
   $('#tabMasuk').className  = daftar ? nonaktif : aktif;
@@ -1663,6 +1944,8 @@ function sesuaikanFormDaftar() {
 /** Lanjutan setelah identitas peserta didapat. */
 async function mulaiSesiPeserta(profil, sapaan) {
   ME = profil;
+  /* Tiap pemda yang masuk menyegarkan barisnya di daftar nama daerahnya. */
+  if (!pfid()) store.catatAkun(profil).catch(e => console.warn('[MonevDAK] daftar akun daerah tak diperbarui:', e));
   await muatHasilSaya();
   syncChip();
   if (sapaan) toast(sapaan + ', ' + String(profil.nama).split(' ')[0] + '.');
@@ -1718,8 +2001,15 @@ async function doMasuk(e) {
   const fail  = m => { err.textContent = m; err.classList.remove('hidden'); };
   err.classList.add('hidden'); $('#okMasuk').classList.add('hidden');
 
-  /* Tanpa tanda @ berarti user id petugas PFID, bukan alamat email. */
-  const email = masukan.includes('@') ? masukan : emailPfid(masukan);
+  let email;
+  if (MK.mode === 'nama') {
+    if (!MK.kab) return fail('Pilih provinsi dan kabupaten/kota lebih dahulu.');
+    if (MK.pilih < 0 || !MK.akun[MK.pilih]) return fail('Pilih nama Anda dari daftar.');
+    email = MK.akun[MK.pilih].email;
+  } else {
+    /* Tanpa tanda @ berarti user id petugas PFID, bukan alamat email. */
+    email = masukan.includes('@') ? masukan : emailPfid(masukan);
+  }
 
   if (!/^\S+@\S+\.\S+$/.test(email)) return fail('Masukkan email atau user id yang terdaftar.');
   if (!sandi)                        return fail('Kata sandi wajib diisi.');
@@ -1760,7 +2050,14 @@ async function doMasuk(e) {
 }
 
 async function lupaSandi() {
-  const masukan = $('#mkEmail').value.trim();
+  const dipilih = MK.mode === 'nama' && MK.akun[MK.pilih];
+  if (MK.mode === 'nama' && !dipilih) {
+    $('#okMasuk').classList.add('hidden');
+    $('#errMasuk').textContent = 'Pilih nama Anda lebih dahulu, tautan pengaturan ulang dikirim ke email akun itu.';
+    $('#errMasuk').classList.remove('hidden');
+    return;
+  }
+  const masukan = dipilih ? dipilih.email : $('#mkEmail').value.trim();
   const email = masukan.includes('@') ? masukan : emailPfid(masukan);
   const err = $('#errMasuk'), ok = $('#okMasuk');
   err.classList.add('hidden'); ok.classList.add('hidden');
@@ -1792,8 +2089,12 @@ async function logout() {
   SEL = { prov: '', kab: '' };
   if (window.BA) window.BA.reset();
   if (window.SURVEI) window.SURVEI.reset();
+  if (window.KONF) window.KONF.reset();
   try { await store.keluarAkun(); } catch (e) { console.warn(e); }
-  ['inNama', 'inProv', 'inKab', 'inEmail', 'inSandi', 'mkEmail', 'mkSandi'].forEach(id => { const el = $('#' + id); if (el) el.value = ''; });
+  ['inNama', 'inProv', 'inKab', 'inEmail', 'inSandi', 'mkEmail', 'mkSandi', 'mkProv', 'mkKab'].forEach(id => { const el = $('#' + id); if (el) el.value = ''; });
+  Object.assign(MK, { prov: '', kab: '', akun: [], pilih: -1 });
+  tampilAkun();
+  setModeMasuk('nama');
   sesuaikanFormDaftar();
   setTabLogin('masuk');
   go('landing');
@@ -1806,6 +2107,11 @@ function syncChip() {
   $('#chipAvatar').textContent = initials(ME.nama);
   if (window.BA) window.BA.syncNav();
   if (window.SURVEI) window.SURVEI.syncNav();
+  if (window.KONF) window.KONF.syncNav();
+  /* Menu yang hanya untuk petugas PFID; pemda cukup dashboard dan konfirmasi. */
+  $$('[data-nav="rank"],[data-nav="compare"]').forEach(b => b.classList.toggle('hidden', !pfid()));
+  if (!pfid()) $$('[data-nav="arsip"],[data-nav="survei"]').forEach(b => b.classList.add('hidden'));
+  if (pfid()) $$('[data-nav="survei"]').forEach(b => b.classList.add('hidden'));
 }
 
 
@@ -1890,8 +2196,30 @@ async function renderDashboard() {
       </div>` : ''}
     </div>`;
 
-  const lain = [1, 2, 3, 4].filter(t => t !== TW_AKTIF).map(tw => {
+  /* Triwulan yang sudah ditutup ditaruh tepat setelah yang aktif — nilainya
+     masih relevan, sedangkan triwulan yang belum dibuka cukup di belakang. */
+  const lain = [1, 2, 3, 4].filter(t => t !== TW_AKTIF)
+    .sort((a, b) => (TW_TUTUP.includes(b) - TW_TUTUP.includes(a)) || a - b).map(tw => {
     const m = TW_META[tw];
+    if (TW_TUTUP.includes(tw)) {
+      /* Triwulan yang sudah lewat: nilainya tetap terlihat, pengisiannya tidak. */
+      const nilaiTw = k => { const h = HASIL_SAYA.find(x => x.tw === tw && x.kind === k); return h ? h.nilai : '—'; };
+      return `<div class="glass rounded-3xl p-6 md:p-7">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/45">${m.label}</p>
+            <h3 class="mt-2 text-[17px] font-semibold leading-snug text-white/70">${esc(m.focus)}</h3>
+          </div>
+          <span class="flex shrink-0 items-center gap-1.5 rounded-full border border-white/20 px-3 py-1 text-[11px] font-semibold text-white/60">${IKON.kunci}Ditutup</span>
+        </div>
+        <div class="mt-5 grid grid-cols-2 gap-3">
+          ${['pre', 'post'].map(k => `<div class="rounded-2xl border border-white/10 bg-white/[.04] px-4 py-3">
+            <p class="text-[11px] uppercase tracking-[0.14em] text-white/45">${k === 'pre' ? 'Pre test' : 'Post test'}</p>
+            <p class="mt-1.5 text-[22px] font-semibold tabular-nums text-white/80">${nilaiTw(k)}</p></div>`).join('')}
+        </div>
+        <p class="mt-4 text-[12.5px] text-white/45">Pengisian triwulan ini sudah ditutup.</p>
+      </div>`;
+    }
     return `<div class="glass rounded-3xl p-6 opacity-60 md:p-7">
       <div class="flex items-start justify-between gap-4">
         <div>
@@ -1906,7 +2234,47 @@ async function renderDashboard() {
 
   $('#dashTw').innerHTML = aktifCard + lain;
 
-  renderAjakanSurvei();
+  renderKartuKonfirmasi();
+}
+
+
+/** Kartu ajakan konfirmasi data ruas di dashboard pemda. Digambar setelah
+    status daerahnya terbaca, jadi dashboard tidak tertahan menunggu Firestore. */
+async function renderKartuKonfirmasi() {
+  const kotak = $('#dashKonf');
+  kotak.classList.add('hidden');
+  if (!ME || pfid() || !window.KONF) return;
+  let n = null;
+  try { n = await window.KONF.ringkasSaya(); } catch (e) { console.warn('[MonevDAK] status konfirmasi tak terbaca:', e); }
+  if (!n || !ME || pfid()) return;
+
+  const terkirim = n.dikirim + n.verif;
+  const selesai = terkirim === n.total && !n.kembali;
+  const judul = n.kembali ? n.kembali + ' ruas dikembalikan pusat untuk diperbaiki'
+              : selesai ? (n.verif === n.total ? 'Semua ruas sudah terverifikasi pusat' : 'Semua ruas sudah Anda kirim')
+              : 'Pastikan data ' + n.total + ' ruas ' + esc(ME.kab) + ' sudah benar';
+  const p = n.total ? Math.round(terkirim / n.total * 100) : 0;
+  kotak.className = 'konf-muncul mt-7 overflow-hidden rounded-3xl border border-teal-300/35 bg-teal-400/[.09]';
+  kotak.innerHTML = `
+    <div class="flex flex-wrap items-center gap-5 px-5 py-5 md:px-6">
+      <div class="min-w-[240px] flex-1">
+        <p class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-teal-200">
+          <span class="flex h-1.5 w-1.5 rounded-full ${selesai ? 'bg-emerald-400' : n.kembali ? 'bg-rose-400' : 'bg-amber-400'}"></span>Konfirmasi data · Triwulan III
+        </p>
+        <h3 class="mt-2 text-[18px] font-semibold leading-snug text-white">${judul}</h3>
+        <p class="mt-1.5 max-w-[560px] text-[13px] leading-[1.6] text-teal-50/70">
+          Angka progres fisik, keuangan, kontrak, dan PHO tiap ruas diambil dari eMonitoring. Tandai yang sesuai, perbarui yang sudah berubah, lalu kirim ke pusat.
+        </p>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="text-right">
+          <p class="text-[26px] font-semibold tabular-nums leading-none">${terkirim}<span class="text-[15px] text-white/45">/${n.total}</span></p>
+          <p class="mt-1 text-[11px] text-white/55">ruas terkirim</p>
+        </div>
+        <button onclick="go('konfirmasi')" class="cta-glow shrink-0 rounded-full bg-white px-5 py-2.5 text-[13px] font-semibold text-black">${selesai ? 'Lihat data' : 'Periksa sekarang'}</button>
+      </div>
+    </div>
+    <div class="h-1 bg-white/10"><div class="bar-anim h-full bg-teal-300" style="width:${p}%"></div></div>`;
 }
 
 
@@ -2481,7 +2849,9 @@ function setTabAdmin(tab) {
   $('#adPanelCeklis').classList.toggle('hidden', tab !== 'ceklis');
   $('#adPanelBa').classList.toggle('hidden', tab !== 'berita');
   $('#adPanelEmon').classList.toggle('hidden', tab !== 'emon');
-  $('#adJudul').textContent = { survei: 'Hasil survei kepuasan pemda',
+  $('#adPanelKonf').classList.toggle('hidden', tab !== 'konf');
+  $('#adJudul').textContent = { konf:   'Konfirmasi data ruas pemda',
+                                survei: 'Hasil survei kepuasan pemda',
                                 ceklis: 'Ceklis kesiapan pemda',
                                 berita: 'Berita acara eMonitoring',
                                 emon:   'Progres pelaporan eMonitoring' }[tab]
@@ -2494,6 +2864,7 @@ function setTabAdmin(tab) {
   if (tab === 'berita' && window.BA) window.BA.renderAdmin().then(tandaiJumlahBa);
   /* Sama seperti berita acara: koleksinya baru dibaca saat tabnya dibuka. */
   if (tab === 'emon' && window.EMON) window.EMON.render();
+  if (tab === 'konf' && window.KONF) window.KONF.renderAdmin();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -3131,5 +3502,6 @@ function exportXLS() {
 <script src="assets/survei.js"></script>
 <script src="assets/ceklis.js"></script>
 <script src="assets/emonitoring.js"></script>
+<script src="assets/konfirmasi.js"></script>
 </body>
 </html>

@@ -109,11 +109,13 @@ service cloud.firestore {
       allow read: if true;
 
       allow create: if request.auth != null
-        // hanya boleh menulis hasil milik sendiri, dan hanya pada id yang benar
+        // hanya boleh menulis hasil milik sendiri, dan hanya pada id yang benar.
+        // Hanya triwulan yang sedang dibuka (TW III); TW II sudah ditutup,
+        // nilainya tetap terbaca tetapi tidak bisa dikirim lagi.
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.pid == request.auth.uid
-        && (hid == request.auth.uid + '__tw2__pre' || hid == request.auth.uid + '__tw2__post')
-        && request.resource.data.tw == 2
+        && (hid == request.auth.uid + '__tw3__pre' || hid == request.auth.uid + '__tw3__post')
+        && request.resource.data.tw == 3
         && (request.resource.data.kind == 'pre' || request.resource.data.kind == 'post')
         && request.resource.data.total == 20
         && request.resource.data.benar is int
@@ -182,12 +184,11 @@ service cloud.firestore {
     // dokumennya dinamai `gform-…`, bukan uid Authentication. Kelonggaran ini
     // hanya di koleksi survei: `hasil` tetap tidak bisa ditulis siapa pun
     // selain pemiliknya, supaya nilai test tidak bisa dititipkan.
+    // Survei ini milik Rakor TW II yang sudah ditutup: pemda masih boleh
+    // membaca penilaiannya sendiri, tetapi hanya admin yang boleh menulis.
     match /survei/{uid} {
       allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
-      allow create, update: if isAdmin()
-        || (request.auth != null
-            && request.auth.uid == uid
-            && request.resource.data.uid == uid);
+      allow create, update: if isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -202,6 +203,36 @@ service cloud.firestore {
     // memuat nomor daerah lain. Hanya admin dan petugas PFID yang membacanya.
     match /emonitoring/{kunci} {
       allow read, write: if isAdmin() || isPfid();
+    }
+
+    // Daftar nama akun pemda per daerah, untuk halaman masuk: pemda memilih
+    // provinsi, kabupaten, lalu namanya, dan cukup mengetik kata sandi.
+    // Halaman masuk dibuka sebelum ada sesi, jadi koleksi ini harus terbuka
+    // untuk dibaca. Isinya nama dan email akun saja — tanpa nilai, jawaban,
+    // atau nomor telepon. Tiap akun hanya boleh menulis barisnya sendiri;
+    // admin menyusun ulang seluruhnya dari koleksi `peserta`.
+    match /akunDaerah/{kunci}/akun/{uid} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        || (request.auth != null
+            && request.auth.uid == uid
+            && request.resource.data.uid == uid
+            && kunci == kunciPeserta());
+      allow delete: if isAdmin() || (request.auth != null && request.auth.uid == uid);
+    }
+
+    // Konfirmasi data ruas Triwulan III. Satu dokumen per daerah, dinamai
+    // kunci daerahnya. Pemda menulis jawabannya sendiri di konfirmasiTw3;
+    // petugas PFID dan admin menulis putusannya di verifikasiTw3. Dipisah
+    // supaya pemda tidak bisa mengubah hasil verifikasi, dan pusat tidak
+    // menimpa jawaban pemda. Pemda hanya membaca dokumen daerahnya sendiri.
+    match /konfirmasiTw3/{kunci} {
+      allow read: if isPfid() || isAdmin() || (kunci != '' && kunci == kunciPeserta());
+      allow write: if isAdmin() || (kunci != '' && kunci == kunciPeserta() && !isPfid());
+    }
+    match /verifikasiTw3/{kunci} {
+      allow read: if isPfid() || isAdmin() || (kunci != '' && kunci == kunciPeserta());
+      allow write: if isPfid() || isAdmin();
     }
 
     // tutup koleksi lain

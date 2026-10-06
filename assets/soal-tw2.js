@@ -198,10 +198,4 @@ window.SOAL_TW2 = [
     ref:"Batang Tubuh Huruf G Angka 10 & 11." }
 ];
 
-/* Aturan penilaian */
-window.ATURAN = {
-  twAktif: 2,          // hanya Triwulan II yang dinilai untuk saat ini
-  jumlahSoal: 20,      // soal yang dikerjakan, diambil acak dari bank di atas
-  nilaiPerSoal: 5,     // 20 x 5 = nilai maksimal 100
-  durasiMenit: 20      // batas waktu; sesi dikirim otomatis saat habis
-};
+/* Aturan penilaian ada di soal-tw3.js — triwulan yang sedang dibuka. */
