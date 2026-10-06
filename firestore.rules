@@ -233,6 +233,8 @@ service cloud.firestore {
     match /konfirmasiTw3/{kunci} {
       allow read: if isPfid() || isAdmin() || (kunci != '' && kunci == kunciPeserta());
       allow write: if isAdmin() || (kunci != '' && kunci == kunciPeserta() && !isPfid());
+      // Petugas PFID boleh mengosongkan data daerah supaya pemda input ulang.
+      allow delete: if isPfid();
     }
     match /verifikasiTw3/{kunci} {
       allow read: if isPfid() || isAdmin() || (kunci != '' && kunci == kunciPeserta());

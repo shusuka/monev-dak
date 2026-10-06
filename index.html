@@ -65,6 +65,21 @@
   }
   .tabnav.on .tabdot { background: #07080a; opacity: .85; transform: scale(1.15); }
 
+  /* Panah geser deretan menu atas. Sisi tempat panah berada diberi pudar
+     supaya menu yang terpotong terlihat masih berlanjut. */
+  .navpanah { position: absolute; top: 50%; z-index: 2; display: flex; height: 2rem; width: 2rem; transform: translateY(-50%);
+    align-items: center; justify-content: center; border-radius: 9999px; color: #fff;
+    background: rgba(20,22,26,.92); border: 1px solid rgba(255,255,255,.18); box-shadow: 0 0 0 10px rgba(10,11,13,.0), 0 6px 18px rgba(0,0,0,.5);
+    transition: background .2s ease, transform .15s ease; }
+  .navpanah[hidden] { display: none; }
+  .navpanah:hover { background: rgba(255,255,255,.16); }
+  .navpanah:active { transform: translateY(-50%) scale(.92); }
+  .navpanah--kiri { left: 0; }
+  .navpanah--kanan { right: 0; }
+  .navpanah--kiri::after, .navpanah--kanan::after { content: ''; position: absolute; top: -6px; bottom: -6px; width: 28px; pointer-events: none; }
+  .navpanah--kiri::after { left: 100%; background: linear-gradient(90deg, rgba(10,11,13,.85), transparent); }
+  .navpanah--kanan::after { right: 100%; background: linear-gradient(270deg, rgba(10,11,13,.85), transparent); }
+
   /* ---------- deretan menu bawah untuk layar sempit ----------
      Di ponsel deretan menu atas harus digulir ke samping, sehingga menu yang
      berada di ujung kanan — survei kepuasan salah satunya — praktis tidak
@@ -106,6 +121,27 @@
   .tabnav.nav-belum::after { top: .28rem; right: .5rem; box-shadow: 0 0 0 2px rgba(7,8,10,.9); }
   @keyframes denyut { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.35); opacity: .55; } }
   @media (prefers-reduced-motion: reduce) { .nav-belum::after { animation: none; } }
+
+  /* Label "NEW" pada menu Konfirmasi Data, warnanya mengikuti progres pemda:
+     merah berkedip cepat = belum ada ruas yang dikirim, kuning berkedip
+     pelan = sebagian, hijau diam = semua ruas sudah dikirim. */
+  .nav-new::after {
+    content: 'NEW'; display: inline-flex; align-items: center; border-radius: 9999px;
+    padding: .1rem .4rem; font-size: 9.5px; font-weight: 800; letter-spacing: .06em; line-height: 1.2;
+    color: #fff; background: rgb(var(--new)); box-shadow: 0 0 10px rgb(var(--new) / .6);
+  }
+  .tabnav.on.nav-new::after { box-shadow: 0 0 0 1.5px rgba(7,8,10,.85); }
+  .navbtm.nav-new { position: relative; }
+  .navbtm.nav-new::after { position: absolute; top: .1rem; left: 50%; margin-left: .45rem; font-size: 8.5px; padding: .05rem .3rem; }
+  .nav-new--merah  { --new: 239 68 68; }
+  .nav-new--kuning { --new: 234 179 8; }
+  .nav-new--hijau  { --new: 22 163 74; }
+  .nav-new--kuning::after { color: #1c1300; }
+  .nav-new--merah::after  { animation: kedipNew .8s steps(1, end) infinite; }
+  .nav-new--kuning::after { animation: kedipNewPelan 2.2s ease-in-out infinite; }
+  @keyframes kedipNew { 0%, 100% { opacity: 1; } 50% { opacity: .15; } }
+  @keyframes kedipNewPelan { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+  @media (prefers-reduced-motion: reduce) { .nav-new::after { animation: none !important; } }
 
   /* ---------- CTA glow ---------- */
   .cta-glow { transition: box-shadow .35s ease, transform .35s ease; }
@@ -327,6 +363,50 @@
     font-size: 14px; color: #fff; outline: none; transition: border-color .2s ease, background .2s ease; color-scheme: dark; }
   .konf-input::placeholder { color: rgba(255,255,255,.35); }
   .konf-input:focus { border-color: rgb(45 212 191 / .7); background: rgba(255,255,255,.09); }
+  /* Daerah dengan beberapa ruas: tiap kartu punya warna sendiri (--aksen). */
+  .konf-kartu--aksen { border-color: rgb(var(--aksen) / .3);
+    background-image: linear-gradient(135deg, rgb(var(--aksen) / .13), rgb(var(--aksen) / .03) 38%, transparent 70%); }
+  .konf-kartu--aksen::before { background: rgb(var(--aksen)); width: 4px; opacity: 1; }
+  .konf-kartu--aksen:hover { border-color: rgb(var(--aksen) / .5); }
+  .konf-nomor { display: inline-flex; align-items: center; border-radius: 9999px; padding: .15rem .55rem; letter-spacing: .08em;
+    color: rgb(var(--aksen)); background: rgb(var(--aksen) / .14); border: 1px solid rgb(var(--aksen) / .4); }
+  /* Panel angka perbaikan: kotak isian berawalan Rp / berakhiran %, tombol Submit. */
+  .konf-perbaikan { margin-top: .85rem; border-radius: 1.1rem; padding: .85rem 1rem; background: rgb(251 191 36 / .06); border: 1px dashed rgb(251 191 36 / .35); }
+  .konf-perbaikan--ok { display: flex; align-items: center; gap: .85rem; background: rgb(52 211 153 / .08); border: 1px solid rgb(52 211 153 / .35); }
+  .konf-perbaikan__ikon { display: flex; height: 1.9rem; width: 1.9rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9999px;
+    background: rgb(52 211 153); color: #042f2a; }
+  .konf-perbaikan__ikon svg { height: .9rem; width: .9rem; }
+  .konf-angka { display: flex; flex: 1 1 220px; max-width: 360px; align-items: center; min-height: 44px; border-radius: .9rem; overflow: hidden;
+    background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.18); transition: border-color .2s ease, box-shadow .2s ease; }
+  .konf-angka:focus-within { border-color: rgb(45 212 191 / .8); box-shadow: 0 0 0 3px rgb(45 212 191 / .18); }
+  .konf-angka--galat { border-color: rgb(251 113 133 / .8); box-shadow: 0 0 0 3px rgb(251 113 133 / .15); }
+  .konf-angka__imbuh { align-self: stretch; display: flex; align-items: center; padding: 0 .8rem; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.6);
+    background: rgba(255,255,255,.06); }
+  .konf-angka__isian { flex: 1; min-width: 0; background: transparent; padding: .6rem .85rem; font-size: 15px; font-weight: 600; color: #fff; outline: none; color-scheme: dark; }
+  .konf-angka__isian::placeholder { color: rgba(255,255,255,.3); font-weight: 500; }
+  .konf-submit { min-height: 44px; border-radius: .9rem; padding: 0 1.25rem; font-size: 13px; font-weight: 700; color: #042f2a; background: rgb(45 212 191);
+    transition: background .2s ease, transform .15s ease; }
+  .konf-submit:hover { background: rgb(94 234 212); }
+  .konf-submit:active { transform: scale(.96); }
+  .konf-submit:disabled { opacity: .45; }
+  /* Kelengkapan eMon yang dipilih pemda: hijau lengkap, merah belum. */
+  .konf-lk { display: inline-flex; align-items: center; gap: .45rem; border-radius: 9999px; padding: .4rem .8rem .4rem .45rem; font-size: 12px; font-weight: 600;
+    transition: background .2s ease, color .2s ease, box-shadow .2s ease, transform .15s ease; }
+  button.konf-lk:active { transform: scale(.96); }
+  .konf-lk--diam { padding: .25rem .7rem .25rem .35rem; font-size: 11.5px; }
+  .konf-lk__ikon { display: flex; height: 1.25rem; width: 1.25rem; align-items: center; justify-content: center; border-radius: 9999px; }
+  .konf-lk__ket { margin-left: .15rem; border-left: 1px solid currentColor; padding-left: .5rem; font-weight: 500; opacity: .75; }
+  .konf-lk--ok { color: rgb(167 243 208); background: rgb(52 211 153 / .12); box-shadow: inset 0 0 0 1px rgb(52 211 153 / .45); }
+  .konf-lk--ok .konf-lk__ikon { background: rgb(52 211 153); color: #042f2a; }
+  .konf-lk--kurang { color: rgb(254 205 211); background: rgb(251 113 133 / .12); box-shadow: inset 0 0 0 1px rgb(251 113 133 / .45); }
+  .konf-lk--kurang .konf-lk__ikon { background: rgb(251 113 133); color: #3b0711; }
+  button.konf-lk:hover { box-shadow: inset 0 0 0 1px currentColor; }
+  /* Dialog konfirmasi hapus isian. */
+  @keyframes konfDialog { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }
+  .konf-dialog { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 1rem;
+    background: rgba(0,0,0,.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .konf-dialog__kotak { width: 100%; max-width: 460px; border-radius: 1.5rem; padding: 1.6rem; color: #fff; background: rgb(22 24 28);
+    border: 1px solid rgba(255,255,255,.14); box-shadow: 0 30px 80px rgba(0,0,0,.6); animation: konfDialog .3s cubic-bezier(.22,.61,.36,1); }
   .konf-beda td { background: rgb(251 191 36 / .06); }
   .konf-segbar { display: block; height: 100%; animation: growBar .9s cubic-bezier(.22,.61,.36,1); }
   .konf-daerah { transition: background .2s ease; }
@@ -923,7 +1003,13 @@
 
       <!-- Di bawah lebar md deretan ini disembunyikan; menunya pindah ke
            #navBawah supaya tidak ada menu yang tersembunyi di luar layar. -->
-      <nav class="no-scrollbar ml-2 hidden flex-1 items-center gap-1 overflow-x-auto text-[13px] font-medium md:flex">
+      <!-- Panah kiri/kanan muncul hanya bila deretan menu lebih lebar dari
+           ruangnya; lihat geserNav() dan perbaruiPanahNav(). -->
+      <div class="relative ml-2 hidden min-w-0 flex-1 items-center md:flex">
+      <button id="navKiri" type="button" onclick="geserNav(-1)" aria-label="Geser menu ke kiri" class="navpanah navpanah--kiri" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <nav id="navAtas" class="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scroll-smooth text-[13px] font-medium">
         <button data-nav="dashboard" onclick="go('dashboard')" style="--tab:56 189 248"  class="tabnav"><span class="tabdot"></span>Dashboard</button>
         <button data-nav="konfirmasi" onclick="go('konfirmasi')" style="--tab:45 212 191" class="tabnav hidden"><span class="tabdot"></span>Konfirmasi Data</button>
         <button data-nav="rank"      onclick="go('rank')"      style="--tab:251 191 36"  class="tabnav hidden"><span class="tabdot"></span>Peringkat</button>
@@ -932,6 +1018,10 @@
         <button data-nav="arsip"     onclick="go('arsip')"     style="--tab:52 211 153"  class="tabnav hidden"><span class="tabdot"></span>Arsip Berita Acara</button>
         <button data-nav="survei"    onclick="go('survei')"    style="--tab:232 121 249" class="tabnav hidden"><span class="tabdot"></span>Survei Kepuasan</button>
       </nav>
+      <button id="navKanan" type="button" onclick="geserNav(1)" aria-label="Geser menu ke kanan" class="navpanah navpanah--kanan" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      </div>
 
       <div class="ml-auto flex items-center gap-3">
         <div class="hidden text-right sm:block">
@@ -1554,6 +1644,32 @@ const ADMIN_VIEWS = ['admin'];
 
 /** Akun PFID — user id-nya memuat kata "jalan". Lihat assets/berita-acara.js. */
 const pfid = () => !!(window.BA && window.BA.akunPfid(ME));
+
+/* Deretan menu atas: panah kiri/kanan untuk menggesernya bila tidak muat. */
+function geserNav(arah) {
+  const n = $('#navAtas');
+  if (n) n.scrollBy({ left: arah * Math.max(200, n.clientWidth * 0.6), behavior: 'smooth' });
+}
+function perbaruiPanahNav() {
+  const n = $('#navAtas');
+  if (!n) return;
+  const sisa = n.scrollWidth - n.clientWidth;
+  $('#navKiri').hidden = !(sisa > 2 && n.scrollLeft > 2);
+  $('#navKanan').hidden = !(sisa > 2 && n.scrollLeft < sisa - 2);
+}
+(() => {
+  const n = $('#navAtas');
+  if (!n) return;
+  n.addEventListener('scroll', perbaruiPanahNav, { passive: true });
+  /* Roda tetikus biasa (vertikal) ikut menggeser deretan ke samping. */
+  n.addEventListener('wheel', e => {
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && n.scrollWidth > n.clientWidth) { n.scrollLeft += e.deltaY; e.preventDefault(); }
+  }, { passive: false });
+  window.addEventListener('resize', perbaruiPanahNav);
+  if (window.ResizeObserver) new ResizeObserver(perbaruiPanahNav).observe(n);
+  /* Menu muncul/hilang menurut peran akun lewat kelas `hidden`. */
+  new MutationObserver(() => requestAnimationFrame(perbaruiPanahNav)).observe(n, { subtree: true, attributes: true, attributeFilter: ['class'] });
+})();
 
 async function go(view) {
   if (APP_VIEWS.includes(view) && !ME) view = 'login';

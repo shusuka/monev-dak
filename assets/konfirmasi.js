@@ -29,6 +29,7 @@ const slugK = s => String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').trim
 
 const DATA = window.DATA_TW3 || {};
 const LS = 'monevdak_konfirmasi_tw3';
+const LS_CADANGAN = 'monevdak_konfirmasi_tw3_cadangan';   // isian yang gagal tersimpan ke server
 const COL_PEMDA = 'konfirmasiTw3';
 const COL_PUSAT = 'verifikasiTw3';
 const CDN_PIZZIP = 'https://unpkg.com/pizzip@3.2.0/dist/pizzip.min.js';
@@ -53,6 +54,9 @@ const STATUS = {
   kembali: { label: 'Dikembalikan pusat',         rgb: '251 113 133' },
   verif:   { label: 'Terverifikasi',              rgb: '52 211 153'  }
 };
+/* Daerah dengan beberapa ruas: tiap kartu diberi warna sendiri supaya
+   ruas yang sedang diisi mudah dibedakan dari tetangganya. */
+const AKSEN = ['45 212 191', '167 139 250', '251 191 36', '56 189 248', '251 113 133', '163 230 53', '251 146 60', '232 121 249'];
 const URUT_STATUS = ['verif', 'dikirim', 'kembali', 'draf', 'belum'];   // urutan segmen bilah
 const URUT_PUSAT  = ['dikirim', 'kembali', 'draf', 'verif', 'belum'];   // urutan daftar daerah
 
@@ -99,6 +103,38 @@ function bacaAngka(tipe, s) {
   }
   const n = parseFloat(s.replace(/\s/g, '').replace(',', '.'));
   return isFinite(n) ? n : null;
+}
+
+/** Angka tersimpan ditampilkan kembali di kotak isian dengan format ketikan:
+    rupiah bertitik ribuan tanpa "Rp" (awalan sudah ada di kotaknya), persen
+    dengan koma desimal. */
+function teksIsian(tipe, v) {
+  if (v == null || v === '') return '';
+  if (tipe === 'rp') return Math.round(Number(v)).toLocaleString('id-ID');
+  if (tipe === 'persen') return String(v).replace('.', ',');
+  return String(v);
+}
+
+/** Kotak isian hanya menerima angka. Rupiah diberi titik ribuan sambil
+    diketik; persen boleh satu koma dengan dua angka di belakangnya. Posisi
+    kursor dijaga supaya tidak meloncat ke ujung saat titik bertambah. */
+function rapikanKetikan(tipe, inp) {
+  const lama = inp.value, pos = inp.selectionStart == null ? lama.length : inp.selectionStart;
+  let baru;
+  if (tipe === 'rp') {
+    const dig = lama.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 15);
+    baru = dig ? Number(dig).toLocaleString('id-ID') : '';
+  } else {
+    const t = lama.replace(/\./g, ',').replace(/[^\d,]/g, '');
+    const [bulat, ...sisa] = t.split(',');
+    baru = bulat.replace(/^0+(?=\d)/, '').slice(0, 3) + (sisa.length ? ',' + sisa.join('').slice(0, 2) : '');
+  }
+  if (baru === lama) return;
+  const pentingSebelum = lama.slice(0, pos).replace(tipe === 'rp' ? /\D/g : /[^\d,.]/g, '').length;
+  inp.value = baru;
+  let i = 0, n = 0;
+  while (i < baru.length && n < pentingSebelum) { if (tipe === 'rp' ? /\d/.test(baru[i]) : /[\d,]/.test(baru[i])) n++; i++; }
+  try { inp.setSelectionRange(i, i); } catch (e) {}
 }
 
 function salahNilai(tipe, v) {
@@ -188,6 +224,59 @@ async function tulisRuas(col, kunci, id, isi) {
   tujuan[kunci].ruas = { ...(tujuan[kunci].ruas || {}), [id]: isiPenuh };
 }
 
+/** Hapus jawaban beberapa ruas dari satu koleksi. Bila tidak ada ruas yang
+    tersisa, dokumennya ikut dihapus. */
+async function hapusRuas(col, kunci, ids) {
+  const sumber = col === COL_PEMDA ? KONF : VERIF;
+  const dok = sumber[kunci];
+  if (!dok || !ids.length) return;
+  const sisa = Object.keys(dok.ruas || {}).filter(x => !ids.includes(x));
+  if (pakaiFirebase()) {
+    const { doc, deleteDoc, updateDoc, deleteField, FieldPath, serverTimestamp } = store.fs;
+    const ref = doc(store.db, col, kunci);
+    if (!sisa.length) await deleteDoc(ref);
+    else {
+      const arg = [];
+      ids.forEach(id => arg.push(new FieldPath('ruas', id), deleteField()));
+      await updateDoc(ref, ...arg, 'diperbaruiAt', serverTimestamp());
+    }
+  } else {
+    const L = lokal();
+    const d = (L[col] || {})[kunci];
+    if (d) {
+      ids.forEach(id => { delete d.ruas[id]; });
+      if (!sisa.length) delete L[col][kunci];
+      simpanLokal(L);
+    }
+  }
+  if (!sisa.length) delete sumber[kunci];
+  else ids.forEach(id => { delete dok.ruas[id]; });
+}
+
+/** Pusat mengosongkan seluruh data satu daerah — jawaban pemda sekaligus
+    putusan pusat — supaya pemda mengisi ulang dari awal. */
+async function hapusDaerah(kunci) {
+  if (pakaiFirebase()) {
+    const { doc, deleteDoc } = store.fs;
+    await Promise.all([deleteDoc(doc(store.db, COL_PEMDA, kunci)), deleteDoc(doc(store.db, COL_PUSAT, kunci))]);
+  } else {
+    const L = lokal();
+    [COL_PEMDA, COL_PUSAT].forEach(c => { if (L[c]) delete L[c][kunci]; });
+    simpanLokal(L);
+  }
+  delete KONF[kunci]; delete VERIF[kunci];
+}
+
+/* Cadangan di perangkat: bila server menolak, isian pemda tidak hilang
+   saat halaman dimuat ulang. Dihapus begitu penyimpanan berhasil. */
+function cadangan() { try { return JSON.parse(localStorage.getItem(LS_CADANGAN)) || {}; } catch (e) { return {}; } }
+function tulisCadangan(kunci, id, isi) {
+  const c = cadangan();
+  c[kunci] = c[kunci] || {};
+  if (isi) c[kunci][id] = isi; else delete c[kunci][id];
+  try { localStorage.setItem(LS_CADANGAN, JSON.stringify(c)); } catch (e) {}
+}
+
 
 /* ═══════════════════════════════════════════════════════════════
    3. STATUS
@@ -233,15 +322,29 @@ const chip = (st, kecil) => {
    ═══════════════════════════════════════════════════════════════ */
 function salinanKerja(kunci, r) {
   if (EDIT[r.id]) return EDIT[r.id];
-  const j = jawabanPemda(kunci, r.id);
+  const server = jawabanPemda(kunci, r.id);
+  /* Cadangan yang lebih baru dari salinan server berarti penyimpanan
+     terakhir gagal; isian itulah yang dilanjutkan. */
+  const cad = (cadangan()[kunci] || {})[r.id];
+  const pakaiCad = cad && (!server || (cad.diubahAt || 0) > (server.diubahAt || 0));
+  const j = pakaiCad ? cad : server;
   const f = {};
   KOLOM.forEach(c => {
     const a = j && j.f && j.f[c.k];
-    f[c.k] = a ? { s: a.s, v: a.v == null ? null : a.v, teks: a.v == null ? '' : String(a.v) } : { s: '', v: null, teks: '' };
+    const v = a && a.v != null ? a.v : null;
+    f[c.k] = a
+      /* `ok`: angka perbaikan sudah di-submit. Jawaban lama tanpa tanda ini
+         dianggap sudah, asalkan angkanya ada. */
+      ? { s: a.s, v, teks: c.tipe === 'tgl' ? (v || '') : teksIsian(c.tipe, v), ok: a.ok != null ? !!a.ok : v != null }
+      : { s: '', v: null, teks: '', ok: false };
   });
-  EDIT[r.id] = { f, kendala: (j && j.kendala) || '', galat: {} };
+  const lk = (j && Array.isArray(j.lk) && j.lk.length === LK.length ? j.lk : r.lk).map(x => x ? 1 : 0);
+  EDIT[r.id] = { f, lk, kendala: (j && j.kendala) || '', galat: {}, dariCadangan: !!pakaiCad };
   return EDIT[r.id];
 }
+
+/** Warna kartu ke-i, hanya bila daerahnya punya lebih dari satu ruas. */
+const aksenKartu = (kunci, i) => ((DATA[kunci] || {}).ruas || []).length > 1 ? AKSEN[i % AKSEN.length] : '';
 
 function ringkasanRing(n) {
   const R = 46, C = 2 * Math.PI * R;
@@ -299,7 +402,14 @@ function renderPemda() {
       </div>
     </div>
 
-    <div id="konfDaftar" class="mt-8 space-y-4">
+    <div class="konf-muncul mt-9 flex flex-wrap items-center justify-between gap-3" style="animation-delay:.18s">
+      <p class="text-[13px] text-white/55">${d.ruas.length} ruas${d.ruas.length > 1 ? ' — tiap kartu diberi warna berbeda' : ''}</p>
+      <button type="button" onclick="KONF.ulangSemua()" ${SIBUK ? 'disabled' : ''}
+        class="inline-flex items-center gap-2 rounded-full border border-rose-400/40 px-4 py-2 text-[12.5px] font-semibold text-rose-200 transition hover:bg-rose-500/10 disabled:opacity-40">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+        Hapus isian &amp; ulang input</button>
+    </div>
+    <div id="konfDaftar" class="mt-4 space-y-4">
       ${d.ruas.map((r, i) => kartuPemda(kunci, r, i)).join('')}
     </div>`;
 }
@@ -312,14 +422,16 @@ function barMini(label, nilai, warna) {
   </div>`;
 }
 
-function kepalaKartu(kunci, r, st, buka, fungsi) {
+function kepalaKartu(kunci, r, st, buka, fungsi, i) {
   const j = jawabanPemda(kunci, r.id);
-  const fisik = j && j.f && j.f.fisik && j.f.fisik.s === 'ubah' ? j.f.fisik.v : r.e.fisik;
-  const keu = j && j.f && j.f.keu && j.f.keu.s === 'ubah' ? j.f.keu.v : r.e.keu;
+  const fisik = j && j.f && j.f.fisik && j.f.fisik.s === 'ubah' && j.f.fisik.v != null && j.f.fisik.ok !== false ? j.f.fisik.v : r.e.fisik;
+  const keu = j && j.f && j.f.keu && j.f.keu.s === 'ubah' && j.f.keu.v != null && j.f.keu.ok !== false ? j.f.keu.v : r.e.keu;
+  const aksen = aksenKartu(kunci, i);
   return `<button type="button" onclick="${fungsi}" aria-expanded="${buka}"
       class="flex w-full flex-wrap items-center gap-x-5 gap-y-3 px-5 py-5 text-left md:px-6">
     <div class="min-w-[220px] flex-[2]">
-      <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">${aman(r.rin)} · No. ${aman(r.kode)}</p>
+      <p class="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">${aksen
+        ? `<span class="konf-nomor">Ruas ${i + 1}</span>` : ''}<span>${aman(r.rin)} · No. ${aman(r.kode)}</span></p>
       <h3 class="mt-1 text-[17px] font-semibold leading-snug">${aman(r.nama)}</h3>
       <p class="mt-1 text-[12.5px] text-white/50">${r.vol != null ? aman(String(r.vol).replace('.', ',')) + ' ' + aman(r.sat || '') + ' · ' : ''}Pagu ${fmtRp(r.pagu)}</p>
     </div>
@@ -338,10 +450,16 @@ function kepalaKartu(kunci, r, st, buka, fungsi) {
 function kartuPemda(kunci, r, i) {
   const st = statusRuas(kunci, r.id);
   const buka = BUKA.has(r.id);
-  return `<article id="konf-${aman(r.id)}" class="glass konf-kartu konf-muncul overflow-hidden rounded-3xl" style="--st:${STATUS[st].rgb};animation-delay:${(0.2 + i * 0.05).toFixed(2)}s">
-    ${kepalaKartu(kunci, r, st, buka, `KONF.buka('${aman(r.id)}')`)}
+  return `<article id="konf-${aman(r.id)}" ${atributKartu(kunci, st, i, 0.2)}>
+    ${kepalaKartu(kunci, r, st, buka, `KONF.buka('${aman(r.id)}')`, i)}
     ${buka ? `<div class="konf-isi border-t border-white/10 px-5 pb-6 pt-5 md:px-6">${st === 'verif' ? isiTerkunci(kunci, r) : isiPemda(kunci, r, st)}</div>` : ''}
   </article>`;
+}
+
+function atributKartu(kunci, st, i, jeda) {
+  const aksen = aksenKartu(kunci, i);
+  return `class="glass konf-kartu konf-muncul overflow-hidden rounded-3xl${aksen ? ' konf-kartu--aksen' : ''}"
+    style="--st:${STATUS[st].rgb};${aksen ? `--aksen:${aksen};` : ''}animation-delay:${(jeda + i * 0.05).toFixed(2)}s"`;
 }
 
 function catatanPusat(kunci, r) {
@@ -356,6 +474,40 @@ function catatanPusat(kunci, r) {
   </div>`;
 }
 
+const IKON_CENTANG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3"><path d="M20 6 9 17l-5-5"/></svg>';
+const IKON_SERU = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" class="h-3 w-3"><path d="M12 7v6M12 17h.01"/></svg>';
+
+/** Isian angka perbaikan satu baris: kotak isian + tombol Submit selama
+    belum dikonfirmasi; setelah di-submit berganti ringkasan rapi. */
+function panelPerbaikan(r, c, a, id) {
+  if (a.ok && a.v != null) {
+    return `<div class="konf-perbaikan konf-perbaikan--ok">
+      <span class="konf-perbaikan__ikon">${IKON_CENTANG}</span>
+      <div class="min-w-0 flex-1">
+        <p class="text-[11.5px] font-medium text-emerald-200/85">${c.tipe === 'tgl' ? 'Tanggal PHO tercatat' : 'Angka perbaikan tercatat'}</p>
+        <p class="mt-0.5 text-[16px] font-semibold tabular-nums text-white">${fmtNilai(c.tipe, a.v)}</p>
+      </div>
+      <button type="button" onclick="KONF.ubahLagi('${id}','${c.k}')" class="rounded-full border border-white/20 px-3.5 py-1.5 text-[12px] font-medium text-white/80 transition hover:bg-white/10">Ubah</button>
+    </div>`;
+  }
+  const enter = `onkeydown="if(event.key==='Enter'){event.preventDefault();KONF.terapkan('${id}','${c.k}')}"`;
+  const kotak = c.tipe === 'tgl'
+    ? `<input type="date" value="${aman(a.teks)}" oninput="KONF.isi('${id}','${c.k}',this.value)" ${enter}
+         aria-label="Tanggal PHO ${aman(r.nama)}" class="konf-angka__isian" />`
+    : `${c.tipe === 'rp' ? '<span class="konf-angka__imbuh">Rp</span>' : ''}
+       <input type="text" inputmode="${c.tipe === 'rp' ? 'numeric' : 'decimal'}" autocomplete="off" value="${aman(a.teks)}"
+         placeholder="${c.tipe === 'rp' ? '0' : '0,00'}" oninput="KONF.ketik(this,'${id}','${c.k}')" ${enter}
+         aria-label="${c.label} terbaru ${aman(r.nama)}" class="konf-angka__isian tabular-nums" />
+       ${c.tipe === 'persen' ? '<span class="konf-angka__imbuh">%</span>' : ''}`;
+  return `<div class="konf-perbaikan">
+    <p class="text-[11.5px] font-medium text-white/55">${c.tipe === 'tgl' ? 'Tanggal PHO' : c.tipe === 'rp' ? 'Nilai terbaru (angka saja)' : 'Persen terbaru (angka saja)'}</p>
+    <div class="mt-1.5 flex flex-wrap items-stretch gap-2">
+      <div class="konf-angka ${a.galat ? 'konf-angka--galat' : ''}">${kotak}</div>
+      <button type="button" onclick="KONF.terapkan('${id}','${c.k}')" ${SIBUK ? 'disabled' : ''} class="konf-submit">Submit</button>
+    </div>
+  </div>`;
+}
+
 function isiPemda(kunci, r, st) {
   const w = salinanKerja(kunci, r);
   const id = aman(r.id);
@@ -367,44 +519,49 @@ function isiPemda(kunci, r, st) {
     const opsi = c.tipe === 'tgl'
       ? [['belum', 'Belum PHO'], ['sudah', 'Sudah PHO']]
       : [['ok', 'Sesuai'], ['ubah', 'Perbarui']];
-    const tampilInput = c.tipe === 'tgl' ? a.s === 'sudah' : a.s === 'ubah';
+    const perbaikan = c.tipe === 'tgl' ? a.s === 'sudah' : a.s === 'ubah';
+    const tercatat = perbaikan && a.ok && a.v != null;
     const galat = w.galat[c.k];
-    return `<div class="konf-baris grid items-center gap-x-4 gap-y-2 py-3.5 md:grid-cols-[1.1fr,1fr,auto]">
-      <div>
-        <p class="text-[13.5px] font-medium">${c.label}${c.ket ? ` <span class="text-[11.5px] font-normal text-white/40">${c.ket}</span>` : ''}</p>
-        <p class="mt-0.5 text-[12px] text-white/45">eMon: <span class="tabular-nums text-white/75">${emon}</span></p>
-      </div>
-      <div class="konf-input-wadah order-3 md:order-none ${tampilInput ? 'buka' : ''}">
-        <div>
-          ${c.tipe === 'tgl'
-            ? `<input type="date" value="${aman(a.teks)}" oninput="KONF.isi('${id}','${c.k}',this.value)" aria-label="Tanggal PHO ${aman(r.nama)}"
-                 class="konf-input w-full" />`
-            : `<input type="text" inputmode="decimal" value="${aman(a.teks)}" placeholder="${c.tipe === 'rp' ? 'mis. 5.250.000.000' : 'mis. 45,5'}"
-                 oninput="KONF.isi('${id}','${c.k}',this.value)" aria-label="${c.label} terbaru ${aman(r.nama)}"
-                 class="konf-input w-full tabular-nums" />
-               <p id="konf-pratinjau-${id}-${c.k}" class="mt-1 text-[11.5px] tabular-nums text-teal-200/80">${a.v != null ? fmtNilai(c.tipe, a.v) : ''}</p>`}
+    return `<div class="konf-baris py-4">
+      <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5">
+        <div class="min-w-0">
+          <p class="text-[13.5px] font-medium">${c.label}${c.ket ? ` <span class="text-[11.5px] font-normal text-white/40">${c.ket}</span>` : ''}</p>
+          <p class="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[12px] text-white/45">eMon:
+            <span class="tabular-nums ${tercatat && c.tipe !== 'tgl' ? 'text-white/40 line-through decoration-white/30' : 'text-white/75'}">${emon}</span>
+            ${tercatat ? `<span class="text-amber-300/80">→</span><span class="font-semibold tabular-nums text-amber-200">${fmtNilai(c.tipe, a.v)}</span>` : ''}
+          </p>
+        </div>
+        <div class="konf-segmen" role="radiogroup" aria-label="${c.label}">
+          ${opsi.map(([s, t]) => `<button type="button" role="radio" aria-checked="${a.s === s}" onclick="KONF.pilih('${id}','${c.k}','${s}')"
+              class="konf-segmen__opsi ${a.s === s ? 'on' : ''} ${s === 'ok' || s === 'belum' ? 'konf-segmen__opsi--ok' : ''}">${t}</button>`).join('')}
         </div>
       </div>
-      <div class="konf-segmen order-2 justify-self-start md:order-none md:justify-self-end" role="radiogroup" aria-label="${c.label}">
-        ${opsi.map(([s, t]) => `<button type="button" role="radio" aria-checked="${a.s === s}" onclick="KONF.pilih('${id}','${c.k}','${s}')"
-            class="konf-segmen__opsi ${a.s === s ? 'on' : ''} ${s === 'ok' || s === 'belum' ? 'konf-segmen__opsi--ok' : ''}">${t}</button>`).join('')}
+      <div class="konf-input-wadah ${perbaikan ? 'buka' : ''}">
+        <div>${perbaikan ? panelPerbaikan(r, c, { ...a, galat }, id) : ''}</div>
       </div>
-      ${galat ? `<p class="order-4 text-[12px] font-medium text-rose-300 md:order-none md:col-span-3">${aman(galat)}</p>` : ''}
+      ${galat ? `<p class="mt-2 text-[12px] font-medium text-rose-300">${aman(galat)}</p>` : ''}
     </div>`;
   }).join('');
 
-  const lk = r.lk.map((x, i) => `<span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11.5px] font-medium ${x
-      ? 'bg-emerald-400/10 text-emerald-200 ring-1 ring-emerald-400/30' : 'bg-rose-400/10 text-rose-200 ring-1 ring-rose-400/30'}">
-      ${x ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3"><path d="M20 6 9 17l-5-5"/></svg>'
-          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" class="h-3 w-3"><path d="M12 7v6M12 17h.01"/></svg>'}
-      ${LK[i]}</span>`).join('');
+  const lk = LK.map((t, i) => {
+    const on = !!w.lk[i];
+    return `<button type="button" role="switch" aria-checked="${on}" onclick="KONF.lk('${id}',${i})"
+        title="Klik untuk menandai ${on ? 'belum lengkap (merah)' : 'lengkap (hijau)'}"
+        class="konf-lk ${on ? 'konf-lk--ok' : 'konf-lk--kurang'}">
+      <span class="konf-lk__ikon">${on ? IKON_CENTANG : IKON_SERU}</span>${t}
+      <span class="konf-lk__ket">${on ? 'Lengkap' : 'Belum'}</span></button>`;
+  }).join('');
+  const lkBeda = w.lk.some((x, i) => !!x !== !!r.lk[i]);
+  const adaJawaban = !!jawabanPemda(kunci, r.id);
 
   return `${catatanPusat(kunci, r)}
+    ${w.dariCadangan ? `<div class="mb-4 rounded-2xl border border-amber-300/35 bg-amber-400/10 px-4 py-3 text-[12.5px] leading-[1.6] text-amber-100">
+      Isian ini dipulihkan dari perangkat Anda karena penyimpanan terakhir ke server gagal. Klik <strong>Simpan draf</strong> atau <strong>Kirim</strong> untuk mencoba lagi.</div>` : ''}
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <p class="text-[13px] text-white/60">Periksa lima isian berikut.</p>
+      <p class="max-w-[560px] text-[13px] leading-[1.6] text-white/60">Periksa lima isian berikut. Bila angka berubah, pilih <strong class="font-semibold text-white/85">Perbarui</strong>, ketik angkanya, lalu klik <strong class="font-semibold text-white/85">Submit</strong>.</p>
       <button type="button" onclick="KONF.semuaSesuai('${id}')" class="rounded-full border border-teal-300/40 px-4 py-2 text-[12.5px] font-semibold text-teal-200 transition hover:bg-teal-400/10">Tandai semua sesuai eMon</button>
     </div>
-    <div class="mt-2 divide-y divide-white/[.07]">${baris}</div>
+    <div class="mt-1 divide-y divide-white/[.07]">${baris}</div>
 
     <div class="mt-5">
       <label for="konf-kendala-${id}" class="text-[13.5px] font-medium">Kendala atau permasalahan <span class="font-normal text-white/40">(bila ada)</span></label>
@@ -413,19 +570,22 @@ function isiPemda(kunci, r, st) {
     </div>
 
     <div class="mt-5">
-      <p class="text-[12px] text-white/50">Kelengkapan di aplikasi eMonitoring — yang merah perlu dilengkapi langsung di eMon.</p>
-      <div class="mt-2 flex flex-wrap gap-2">${lk}</div>
+      <p class="text-[13.5px] font-medium">Kelengkapan di aplikasi eMonitoring</p>
+      <p class="mt-0.5 text-[12px] leading-[1.6] text-white/50">Klik tiap item untuk memverifikasi: <span class="text-emerald-300">hijau</span> = sudah lengkap di eMon, <span class="text-rose-300">merah</span> = belum lengkap.${lkBeda ? ' <span class="text-amber-200/90">Berbeda dari catatan eMon.</span>' : ''}</p>
+      <div class="mt-2.5 flex flex-wrap gap-2">${lk}</div>
     </div>
 
-    <div id="konf-galat-${id}" class="mt-4 hidden rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-[13px] text-rose-200"></div>
+    <div id="konf-galat-${id}" class="mt-4 hidden rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-[13px] leading-[1.6] text-rose-200"></div>
 
     <div class="mt-6 flex flex-wrap items-center justify-end gap-3">
-      ${st === 'dikirim' ? '<p class="mr-auto text-[12.5px] text-sky-200/80">Sudah terkirim. Perubahan akan dikirim ulang ke pusat.</p>' : ''}
+      ${adaJawaban ? `<button type="button" onclick="KONF.ulangRuas('${id}')" ${SIBUK ? 'disabled' : ''}
+        class="mr-auto rounded-full px-3 py-2.5 text-[12.5px] font-medium text-rose-200/80 transition hover:bg-rose-500/10 hover:text-rose-200 disabled:opacity-40">Kosongkan ruas ini</button>` : ''}
+      ${st === 'dikirim' ? `<p class="${adaJawaban ? '' : 'mr-auto'} text-[12.5px] text-sky-200/80">Sudah terkirim. Perubahan akan dikirim ulang.</p>` : ''}
       <button type="button" onclick="KONF.simpan('${id}',false)" ${SIBUK ? 'disabled' : ''}
         class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 transition hover:bg-white/10 disabled:opacity-40">Simpan draf</button>
       <button type="button" onclick="KONF.simpan('${id}',true)" ${SIBUK ? 'disabled' : ''}
         class="cta-glow inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-[13px] font-semibold text-black disabled:opacity-40">
-        ${SIBUK === r.id ? '<span class="konf-putar"></span>Mengirim…' : 'Kirim ke pusat'}
+        ${SIBUK === r.id ? '<span class="konf-putar"></span>Menyimpan…' : st === 'kembali' ? 'Kirim perbaikan ke pusat' : 'Kirim ke pusat'}
       </button>
     </div>`;
 }
@@ -440,6 +600,7 @@ function isiTerkunci(kunci, r) {
     return a && a.s === 'ubah' ? fmtNilai(c.tipe, a.v) : fmtNilai(c.tipe, r.e[c.k]);
   };
   const kes = (p && p.kes) || r.tw2;
+  const lk = lkAkhir(j, r);
   return `${catatanPusat(kunci, r)}
     <dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
       ${KOLOM.map(c => `<div class="rounded-2xl bg-white/[.04] px-4 py-3"><dt class="text-[11.5px] text-white/50">${c.label}</dt>
@@ -448,8 +609,14 @@ function isiTerkunci(kunci, r) {
     <p class="mt-5 text-[12px] text-white/50">Kesesuaian item menurut pusat</p>
     <div class="mt-2 flex flex-wrap gap-2">${KES.map((t, i) => `<span class="rounded-full px-3 py-1 text-[11.5px] font-medium ${kes[i] === 'S'
         ? 'bg-emerald-400/10 text-emerald-200 ring-1 ring-emerald-400/30' : kes[i] === 'T'
-        ? 'bg-rose-400/10 text-rose-200 ring-1 ring-rose-400/30' : 'bg-white/5 text-white/50 ring-1 ring-white/15'}">${t}</span>`).join('')}</div>`;
+        ? 'bg-rose-400/10 text-rose-200 ring-1 ring-rose-400/30' : 'bg-white/5 text-white/50 ring-1 ring-white/15'}">${t}</span>`).join('')}</div>
+    <p class="mt-4 text-[12px] text-white/50">Kelengkapan eMonitoring menurut pemda</p>
+    <div class="mt-2 flex flex-wrap gap-2">${LK.map((t, i) => `<span class="konf-lk konf-lk--diam ${lk[i] ? 'konf-lk--ok' : 'konf-lk--kurang'}">
+        <span class="konf-lk__ikon">${lk[i] ? IKON_CENTANG : IKON_SERU}</span>${t}</span>`).join('')}</div>`;
 }
+
+/** Kelengkapan eMon versi pemda bila sudah diverifikasinya, selain itu catatan eMon. */
+const lkAkhir = (j, r) => (j && Array.isArray(j.lk) && j.lk.length === LK.length ? j.lk : r.lk).map(x => x ? 1 : 0);
 
 /** Gambar ulang satu kartu. Kartu yang sekadar berubah isinya digambar
     `diam` — animasi masuk hanya untuk kartu yang baru dibuka, supaya klik
@@ -477,7 +644,7 @@ function pilih(id, k, s) {
   delete w.galat[k];
   const sebelumnya = el(`#konf-${CSS.escape(id)}`);
   const bukaLama = sebelumnya ? els(`#konf-${CSS.escape(id)} .konf-input-wadah`).map(x => x.classList.contains('buka')) : [];
-  if (s === 'ok' || s === 'belum') { w.f[k].v = null; w.f[k].teks = ''; }
+  if (s === 'ok' || s === 'belum') { w.f[k].v = null; w.f[k].teks = ''; w.f[k].ok = false; }
   const kartu = gambarUlangKartu(id);
   if (!kartu) return;
   /* Kotak isian yang baru dibuka digambar tertutup dulu, lalu dibuka pada
@@ -490,20 +657,71 @@ function pilih(id, k, s) {
     void wadah.offsetHeight;
     requestAnimationFrame(() => wadah.classList.toggle('buka', akhir));
   }
-  if (s === 'ubah' || s === 'sudah') {
-    const masuk = wadah && wadah.querySelector('input');
-    if (masuk) masuk.focus({ preventScroll: true });
+  if (s === 'ubah' || s === 'sudah') fokusIsian(kartu, k);
+}
+
+function fokusIsian(kartu, k) {
+  const idx = KOLOM.findIndex(c => c.k === k);
+  const wadah = kartu && kartu.querySelectorAll('.konf-input-wadah')[idx];
+  const masuk = wadah && wadah.querySelector('input');
+  if (masuk) {
+    masuk.focus({ preventScroll: true });
+    try { masuk.setSelectionRange(masuk.value.length, masuk.value.length); } catch (e) {}
   }
 }
 
+/** Tanggal PHO (kotak tanggal bawaan peramban). */
 function isi(id, k, nilai) {
   const kunci = kunciSaya(), r = DATA[kunci].ruas.find(x => x.id === id);
   const w = salinanKerja(kunci, r);
-  const c = KOLOM.find(x => x.k === k);
   w.f[k].teks = nilai;
-  w.f[k].v = c.tipe === 'tgl' ? (nilai || null) : bacaAngka(c.tipe, nilai);
-  const pr = el(`#konf-pratinjau-${CSS.escape(id)}-${k}`);
-  if (pr) pr.textContent = w.f[k].v != null ? fmtNilai(c.tipe, w.f[k].v) : '';
+  w.f[k].v = nilai || null;
+  w.f[k].ok = false;
+}
+
+/** Angka rupiah/persen: ketikan dirapikan, lalu dibaca menjadi angka. */
+function ketik(inp, id, k) {
+  const kunci = kunciSaya(), r = DATA[kunci].ruas.find(x => x.id === id);
+  const w = salinanKerja(kunci, r);
+  const c = KOLOM.find(x => x.k === k);
+  rapikanKetikan(c.tipe, inp);
+  w.f[k].teks = inp.value;
+  w.f[k].v = bacaAngka(c.tipe, inp.value);
+  w.f[k].ok = false;
+  const kotak = inp.closest('.konf-angka');
+  if (kotak && w.galat[k]) { delete w.galat[k]; kotak.classList.remove('konf-angka--galat'); }
+}
+
+/** Tombol Submit pada satu angka perbaikan: diperiksa, dicatat, lalu
+    langsung disimpan sebagai draf supaya tidak hilang. */
+function terapkan(id, k) {
+  const kunci = kunciSaya(), r = DATA[kunci].ruas.find(x => x.id === id);
+  const w = salinanKerja(kunci, r);
+  const c = KOLOM.find(x => x.k === k);
+  const g = salahNilai(c.tipe, w.f[k].v);
+  if (g) {
+    w.galat[k] = g;
+    fokusIsian(gambarUlangKartu(id), k);
+    return;
+  }
+  delete w.galat[k];
+  w.f[k].ok = true;
+  gambarUlangKartu(id);
+  simpan(id, false, true);
+}
+
+function ubahLagi(id, k) {
+  const kunci = kunciSaya(), r = DATA[kunci].ruas.find(x => x.id === id);
+  salinanKerja(kunci, r).f[k].ok = false;
+  fokusIsian(gambarUlangKartu(id), k);
+}
+
+/** Kelengkapan eMon: pemda menandai sendiri hijau (lengkap) atau merah. */
+function lk(id, i) {
+  const kunci = kunciSaya(), r = DATA[kunci].ruas.find(x => x.id === id);
+  const w = salinanKerja(kunci, r);
+  w.lk[i] = w.lk[i] ? 0 : 1;
+  gambarUlangKartu(id);
 }
 
 function kendala(id, nilai) {
@@ -515,45 +733,67 @@ function semuaSesuai(id) {
   const kunci = kunciSaya(), r = DATA[kunci].ruas.find(x => x.id === id);
   const w = salinanKerja(kunci, r);
   KOLOM.forEach(c => {
-    if (c.tipe === 'tgl') { if (!w.f.pho.s) w.f.pho = { s: r.e.pho ? 'sudah' : 'belum', v: null, teks: '' }; }
-    else w.f[c.k] = { s: 'ok', v: null, teks: '' };
+    if (c.tipe === 'tgl') { if (!w.f.pho.s) w.f.pho = { s: r.e.pho ? 'sudah' : 'belum', v: null, teks: '', ok: false }; }
+    else w.f[c.k] = { s: 'ok', v: null, teks: '', ok: false };
   });
   /* BA PHO yang sudah terunggah tetap butuh tanggalnya; selain itu cukup "Belum". */
-  if (w.f.pho.s === 'sudah' && !w.f.pho.v) w.galat.pho = 'eMon mencatat BA PHO sudah terunggah. Isi tanggal PHO-nya.';
+  if (w.f.pho.s === 'sudah' && !(w.f.pho.ok && w.f.pho.v)) w.galat = { pho: 'eMon mencatat BA PHO sudah terunggah. Isi tanggal PHO-nya, lalu Submit.' };
   else w.galat = {};
   gambarUlangKartu(id);
 }
 
-async function simpan(id, kirim) {
+function tampilGalat(id, pesan) {
+  const kotak = el('#konf-galat-' + CSS.escape(id));
+  if (!kotak) { toast(pesan); return; }
+  kotak.innerHTML = pesan;
+  kotak.classList.remove('hidden');
+  kotak.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+/** Pesan galat penyimpanan yang bisa ditindaklanjuti pengguna. */
+function pesanGagal(e) {
+  if (e && e.code === 'permission-denied') {
+    return '<strong>Gagal menyimpan: server menolak (izin ditolak).</strong> Aturan Firestore terbaru untuk menu Konfirmasi Data belum '
+      + 'di-<em>Publish</em> di Firebase Console, atau sesi masuk Anda sudah kedaluwarsa. Isian Anda sudah disimpan sementara di perangkat ini — '
+      + 'coba keluar lalu masuk lagi; bila masih gagal, hubungi admin PFID.';
+  }
+  if (e && (e.code === 'unavailable' || e.code === 'deadline-exceeded')) {
+    return '<strong>Gagal menyimpan: koneksi ke server terputus.</strong> Isian Anda disimpan sementara di perangkat ini. Periksa internet lalu coba lagi.';
+  }
+  return '<strong>Gagal menyimpan.</strong> ' + aman((e && (e.message || e.code)) || 'Periksa koneksi internet.') + ' Isian Anda disimpan sementara di perangkat ini.';
+}
+
+async function simpan(id, kirim, senyap) {
   if (SIBUK) return;
   const kunci = kunciSaya(), d = DATA[kunci], r = d.ruas.find(x => x.id === id);
   const w = salinanKerja(kunci, r);
-  w.galat = {};
   if (kirim) {
+    w.galat = {};
     KOLOM.forEach(c => {
       const a = w.f[c.k];
       if (!a.s) { w.galat[c.k] = c.tipe === 'tgl' ? 'Pilih sudah atau belum PHO.' : 'Pilih Sesuai atau Perbarui.'; return; }
       if (a.s === 'ubah' || a.s === 'sudah') {
         const g = salahNilai(c.tipe, a.v);
         if (g) w.galat[c.k] = g;
+        else if (!a.ok) w.galat[c.k] = 'Klik Submit untuk mengonfirmasi angka perbaikan ini.';
       }
     });
     if (Object.keys(w.galat).length) {
       gambarUlangKartu(id);
-      const kotak = el('#konf-galat-' + CSS.escape(id));
-      if (kotak) {
-        kotak.textContent = Object.keys(w.galat).length + ' isian belum lengkap. Periksa tanda merah di atas.';
-        kotak.classList.remove('hidden');
-        kotak.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
+      tampilGalat(id, Object.keys(w.galat).length + ' isian belum lengkap. Periksa tanda merah di atas.');
       return;
     }
   }
   const f = {};
-  KOLOM.forEach(c => { const a = w.f[c.k]; if (a.s) f[c.k] = { s: a.s, v: a.s === 'ubah' || a.s === 'sudah' ? a.v : null }; });
+  KOLOM.forEach(c => {
+    const a = w.f[c.k];
+    if (!a.s) return;
+    const pakaiNilai = a.s === 'ubah' || a.s === 'sudah';
+    f[c.k] = { s: a.s, v: pakaiNilai ? (a.v == null ? null : a.v) : null, ok: pakaiNilai ? !!a.ok : true };
+  });
   const lama = jawabanPemda(kunci, id);
   const isiBaru = {
-    f, kendala: w.kendala.trim(),
+    f, lk: w.lk.slice(), kendala: w.kendala.trim(),
     status: kirim ? 'dikirim' : (lama && lama.status === 'dikirim' ? 'dikirim' : 'draf'),
     dikirimAt: kirim ? Date.now() : ((lama && lama.dikirimAt) || null),
     diubahAt: Date.now()
@@ -564,6 +804,7 @@ async function simpan(id, kirim) {
     await tulisRuas(COL_PEMDA, kunci, id, isiBaru);
     SIBUK = '';
     delete EDIT[id];
+    tulisCadangan(kunci, id, null);
     if (kirim) {
       BUKA.delete(id);
       const berikut = d.ruas.find(x => x.id !== id && ['belum', 'draf', 'kembali'].includes(statusRuas(kunci, x.id)));
@@ -575,21 +816,116 @@ async function simpan(id, kirim) {
         if (k) k.scrollIntoView({ block: 'start', behavior: 'smooth' });
       }, 120);
     } else {
-      toast('Draf tersimpan.');
+      toast(senyap ? 'Perbaikan tersimpan.' : 'Draf tersimpan.');
       gambarUlangKartu(id);
     }
     tandaiNav();
   } catch (e) {
     console.error('[MonevDAK] konfirmasi gagal disimpan:', e);
     SIBUK = '';
+    tulisCadangan(kunci, id, isiBaru);
     gambarUlangKartu(id);
-    const kotak = el('#konf-galat-' + CSS.escape(id));
-    if (kotak) {
-      kotak.textContent = 'Gagal menyimpan: ' + (e.code === 'permission-denied'
-        ? 'basis data menolak. Aturan Firestore untuk konfirmasi belum dipasang — hubungi admin.'
-        : (e.message || e.code || 'periksa koneksi internet.'));
-      kotak.classList.remove('hidden');
-    }
+    tampilGalat(id, pesanGagal(e));
+  }
+}
+
+/* ── Hapus isian (ulang input) ───────────────────────────────── */
+
+/** Dialog konfirmasi sederhana. Mengembalikan Promise<boolean>. */
+function tanya(judul, isi, tombol) {
+  return new Promise(selesai => {
+    const lapis = document.createElement('div');
+    lapis.className = 'konf-dialog';
+    lapis.innerHTML = `<div class="konf-dialog__kotak" role="alertdialog" aria-modal="true" aria-labelledby="konfDialogJudul">
+        <h2 id="konfDialogJudul" class="text-[18px] font-semibold">${judul}</h2>
+        <p class="mt-2 text-[13.5px] leading-[1.7] text-white/65">${isi}</p>
+        <div class="mt-6 flex flex-wrap justify-end gap-3">
+          <button type="button" data-jawab="0" class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 transition hover:bg-white/10">Batal</button>
+          <button type="button" data-jawab="1" class="rounded-full bg-rose-500 px-5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-rose-400">${tombol}</button>
+        </div>
+      </div>`;
+    const tutup = v => { document.removeEventListener('keydown', esc); lapis.remove(); selesai(v); };
+    const esc = e => { if (e.key === 'Escape') tutup(false); };
+    lapis.addEventListener('click', e => {
+      if (e.target === lapis) return tutup(false);
+      const b = e.target.closest('[data-jawab]');
+      if (b) tutup(b.dataset.jawab === '1');
+    });
+    document.addEventListener('keydown', esc);
+    document.body.appendChild(lapis);
+    lapis.querySelector('[data-jawab="0"]').focus();
+  });
+}
+
+/** Pemda mengosongkan isian ruas (yang belum terverifikasi) untuk diisi ulang. */
+async function kosongkan(ids, pesanSukses) {
+  const kunci = kunciSaya();
+  SIBUK = '*';
+  try {
+    await hapusRuas(COL_PEMDA, kunci, ids.filter(id => jawabanPemda(kunci, id)));
+    ids.forEach(id => { delete EDIT[id]; tulisCadangan(kunci, id, null); });
+    SIBUK = '';
+    toast(pesanSukses);
+    renderPemda();
+    tandaiNav();
+  } catch (e) {
+    console.error('[MonevDAK] isian gagal dihapus:', e);
+    SIBUK = '';
+    renderPemda();
+    toast(e && e.code === 'permission-denied'
+      ? 'Gagal menghapus: server menolak. Aturan Firestore terbaru belum di-Publish.'
+      : 'Gagal menghapus: ' + ((e && (e.message || e.code)) || 'periksa koneksi.'));
+  }
+}
+
+async function ulangRuas(id) {
+  if (SIBUK) return;
+  const kunci = kunciSaya(), r = DATA[kunci].ruas.find(x => x.id === id);
+  const ok = await tanya('Kosongkan isian ruas ini?',
+    `Semua isian untuk <strong class="text-white">${aman(r.nama)}</strong> — angka perbaikan, kelengkapan, dan kendala — dihapus, dan statusnya kembali “Belum diperiksa”. Ruas lain tidak tersentuh.`,
+    'Kosongkan');
+  if (!ok) return;
+  BUKA = new Set([id]);
+  kosongkan([id], 'Isian ruas dikosongkan. Silakan isi ulang.');
+}
+
+async function ulangSemua() {
+  if (SIBUK) return;
+  const kunci = kunciSaya(), d = DATA[kunci];
+  const bisa = d.ruas.filter(r => statusRuas(kunci, r.id) !== 'verif').map(r => r.id);
+  const terisi = bisa.filter(id => jawabanPemda(kunci, id) || EDIT[id]);
+  if (!terisi.length) { toast('Belum ada isian yang perlu dihapus.'); return; }
+  const verif = d.ruas.length - bisa.length;
+  const ok = await tanya('Hapus semua isian dan ulang input?',
+    `Isian ${terisi.length} ruas di <strong class="text-white">${aman(d.kab)}</strong> akan dihapus — termasuk yang sudah dikirim ke pusat — dan Anda mengisi ulang dari awal.`
+    + (verif ? ` ${verif} ruas yang sudah terverifikasi pusat tidak ikut dihapus.` : '') + ' Tindakan ini tidak bisa dibatalkan.',
+    'Hapus & ulang');
+  if (!ok) return;
+  BUKA = new Set();
+  kosongkan(terisi, 'Isian dihapus. Silakan mulai input ulang.');
+}
+
+/** Pusat: kosongkan seluruh data satu daerah (jawaban pemda + verifikasi). */
+async function hapusDataDaerah() {
+  if (SIBUK || !PILIH) return;
+  const kunci = PILIH, d = DATA[kunci];
+  const ok = await tanya('Hapus data konfirmasi daerah ini?',
+    `Seluruh jawaban pemda <strong class="text-white">${aman(d.kab)}</strong> dan hasil verifikasi pusat untuk ${d.ruas.length} ruas akan dihapus, sehingga pemda mengisi ulang dari awal. Tindakan ini tidak bisa dibatalkan.`,
+    'Hapus data');
+  if (!ok) return;
+  SIBUK = '*';
+  try {
+    await hapusDaerah(kunci);
+    SIBUK = '';
+    BUKA = new Set(); PUTUS = {};
+    toast('Data ' + d.kab + ' dihapus. Pemda dapat mengisi ulang.');
+    renderDetailPusat();
+  } catch (e) {
+    console.error('[MonevDAK] data daerah gagal dihapus:', e);
+    SIBUK = '';
+    toast(e && e.code === 'permission-denied'
+      ? 'Gagal menghapus: server menolak. Publish ulang firestore.rules di Firebase Console.'
+      : 'Gagal menghapus: ' + ((e && (e.message || e.code)) || 'periksa koneksi.'));
   }
 }
 
@@ -696,15 +1032,19 @@ function renderDetailPusat() {
     </button>
     <p class="konf-muncul text-[12px] font-semibold uppercase tracking-[0.2em] text-teal-300/80">${aman(d.prov)}</p>
     <h1 class="konf-muncul mt-2 text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] md:text-[36px]" style="animation-delay:.05s">${aman(d.kab)}</h1>
-    <p class="konf-muncul mt-2 text-[14px] text-white/60" style="animation-delay:.08s">${n.total} ruas · ${n.verif} terverifikasi · ${n.dikirim} menunggu · ${n.kembali} dikembalikan · ${n.belum + n.draf} belum dikirim pemda</p>
+    <div class="konf-muncul mt-2 flex flex-wrap items-center justify-between gap-3" style="animation-delay:.08s">
+      <p class="text-[14px] text-white/60">${n.total} ruas · ${n.verif} terverifikasi · ${n.dikirim} menunggu · ${n.kembali} dikembalikan · ${n.belum + n.draf} belum dikirim pemda</p>
+      ${KONF[kunci] || VERIF[kunci] ? `<button type="button" onclick="KONF.hapusDataDaerah()" ${SIBUK ? 'disabled' : ''}
+        class="rounded-full border border-rose-400/40 px-4 py-2 text-[12.5px] font-semibold text-rose-200 transition hover:bg-rose-500/10 disabled:opacity-40">Hapus data &amp; minta pemda input ulang</button>` : ''}
+    </div>
     <div class="mt-7 space-y-4">${d.ruas.map((r, i) => kartuPusat(kunci, r, i)).join('')}</div>`;
 }
 
 function kartuPusat(kunci, r, i) {
   const st = statusRuas(kunci, r.id);
   const buka = BUKA.has(r.id);
-  return `<article id="konf-${aman(r.id)}" class="glass konf-kartu konf-muncul overflow-hidden rounded-3xl" style="--st:${STATUS[st].rgb};animation-delay:${(0.1 + i * 0.05).toFixed(2)}s">
-    ${kepalaKartu(kunci, r, st, buka, `KONF.buka('${aman(r.id)}')`)}
+  return `<article id="konf-${aman(r.id)}" ${atributKartu(kunci, st, i, 0.1)}>
+    ${kepalaKartu(kunci, r, st, buka, `KONF.buka('${aman(r.id)}')`, i)}
     ${buka ? `<div class="konf-isi border-t border-white/10 px-5 pb-6 pt-5 md:px-6">${isiPusat(kunci, r, st)}</div>` : ''}
   </article>`;
 }
@@ -768,7 +1108,12 @@ function isiPusat(kunci, r, st) {
           <p class="text-[11.5px] text-white/45">Kendala dari pemda</p>
           <p class="mt-1 text-[13.5px] leading-[1.6] ${j && j.kendala ? 'text-white/85' : 'text-white/35'}">${j && j.kendala ? aman(j.kendala) : 'Tidak ada'}</p>
         </div>
-        <div class="mt-3 flex flex-wrap gap-1.5">${r.lk.map((x, i) => `<span class="rounded-full px-2.5 py-0.5 text-[11px] ${x ? 'bg-emerald-400/10 text-emerald-200' : 'bg-rose-400/10 text-rose-200'}">${LK[i]}: ${x ? 'lengkap' : 'tidak lengkap'}</span>`).join('')}</div>
+        <p class="mt-4 text-[11.5px] text-white/45">Kelengkapan eMon ${j && Array.isArray(j.lk) ? 'menurut verifikasi pemda' : '(catatan eMon, belum diverifikasi pemda)'}</p>
+        <div class="mt-1.5 flex flex-wrap gap-1.5">${lkAkhir(j, r).map((x, i) => {
+          const beda = !!x !== !!r.lk[i];
+          return `<span class="rounded-full px-2.5 py-0.5 text-[11px] ${x ? 'bg-emerald-400/10 text-emerald-200' : 'bg-rose-400/10 text-rose-200'} ${beda ? 'ring-1 ring-amber-300/50' : ''}"
+            title="${beda ? 'Berbeda dari catatan eMon (' + (r.lk[i] ? 'lengkap' : 'tidak lengkap') + ')' : ''}">${LK[i]}: ${x ? 'lengkap' : 'tidak lengkap'}${beda ? ' *' : ''}</span>`;
+        }).join('')}</div>
       </div>
       <div>
         <p class="text-[12px] font-semibold uppercase tracking-[0.14em] text-white/45">Kesesuaian item <span class="normal-case tracking-normal text-white/35">— terisi dari rakor TW II</span></p>
@@ -872,7 +1217,7 @@ async function unduh() {
       const j = jawabanPemda(kunci, r.id) || {};
       const p = putusanPusat(kunci, r.id) || {};
       const f = j.f || {};
-      const akhir = k => (f[k] && f[k].s === 'ubah' && f[k].v != null) ? f[k].v : r.e[k];
+      const akhir = k => (f[k] && f[k].s === 'ubah' && f[k].v != null && f[k].ok !== false) ? f[k].v : r.e[k];
       const diubah = KOLOM.filter(c => f[c.k] && (f[c.k].s === 'ubah' || f[c.k].s === 'sudah')).map(c => c.label);
       const pho = f.pho && f.pho.s === 'sudah' ? fmtTgl(f.pho.v) : (f.pho && f.pho.s === 'belum' ? '' : (r.e.pho || ''));
       const kes = p.kes || r.tw2;
@@ -881,7 +1226,7 @@ async function unduh() {
         'Provinsi ' + d.prov, d.kab, r.rin, r.kode + ' - ' + r.nama, r.vol == null ? '' : r.vol, r.sat || '', r.pagu == null ? '' : r.pagu,
         akhir('fisik') == null ? '' : akhir('fisik'), akhir('keu') == null ? '' : akhir('keu'),
         akhir('kontrak') == null ? '' : akhir('kontrak'), akhir('real') == null ? '' : akhir('real'), pho,
-        ...r.lk.map(x => x ? 'Lengkap' : 'Tidak Lengkap'),
+        ...lkAkhir(j, r).map(x => x ? 'Lengkap' : 'Tidak Lengkap'),
         ...kes.map(x => x === 'S' ? 'Sesuai' : x === 'T' ? 'Tidak Sesuai' : ''),
         j.kendala || '', p.tl || '',
         { belum: 'Belum diperiksa', draf: 'Draf', dikirim: 'Dikirim', kembali: 'Dikirim', verif: 'Dikirim' }[st],
@@ -1027,13 +1372,22 @@ function gambarMemuat() {
 
 function tandaiNav() {
   if (!akunSaya() || iniPusat()) {
-    els('[data-nav="konfirmasi"]').forEach(b => b.classList.remove('nav-belum'));
+    setLabelNav('');
     return;
   }
   const k = kunciSaya();
   const n = DATA[k] ? hitungDaerah(k) : null;
-  const perlu = n && (n.belum + n.draf + n.kembali) > 0;
-  els('[data-nav="konfirmasi"]').forEach(b => b.classList.toggle('nav-belum', !!perlu));
+  if (!n || !n.total) { setLabelNav(''); return; }
+  const terkirim = n.dikirim + n.verif;
+  setLabelNav(terkirim === n.total ? 'hijau' : terkirim === 0 ? 'merah' : 'kuning');
+}
+
+/** Label NEW di menu: merah (belum dikirim), kuning (sebagian), hijau (semua terkirim). */
+function setLabelNav(warna) {
+  els('[data-nav="konfirmasi"]').forEach(b => {
+    b.classList.remove('nav-belum', 'nav-new', 'nav-new--merah', 'nav-new--kuning', 'nav-new--hijau');
+    if (warna) b.classList.add('nav-new', 'nav-new--' + warna);
+  });
 }
 
 window.KONF = {
@@ -1082,7 +1436,7 @@ window.KONF = {
     if (BUKA.has(id)) BUKA.delete(id); else BUKA.add(id);
     gambarUlangKartu(id, true);
   },
-  pilih, isi, kendala, semuaSesuai, simpan,
+  pilih, isi, ketik, terapkan, ubahLagi, lk, kendala, semuaSesuai, simpan, ulangRuas, ulangSemua, hapusDataDaerah,
 
   periksa(kunci) {
     PILIH = kunci; BUKA = new Set(); PUTUS = {};
