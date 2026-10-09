@@ -1,10 +1,11 @@
 /* ═══════════════════════════════════════════════════════════════════════
    PANDUAN PEMDA — TRIWULAN III
 
-   Pemda menjalankan tiga misi berurutan:
+   Pemda menjalankan empat misi berurutan:
      1. Pre test
      2. Konfirmasi data ruas  (terkunci sampai pre test selesai)
-     3. Post test             (diajak setelah konfirmasi terkirim)
+     3. Survei kepuasan       (terbuka setelah konfirmasi terkirim)
+     4. Post test             (terbuka setelah survei terisi)
 
    Isinya:
      - Tur bergaya tutorial game saat akun pemda pertama kali dibuka di
@@ -48,6 +49,13 @@ function tandai(k) {
 let NKONF;
 const adaKonf = () => !!NKONF && NKONF.total > 0;
 const konfBeres = () => !adaKonf() || (NKONF.dikirim + NKONF.verif === NKONF.total && !NKONF.kembali);
+
+/* Survei kepuasan TW III sudah terisi atau belum (dari SURVEI.sudahDiisi). */
+let SURV = false;
+async function bacaSurvei() {
+  try { SURV = !!(window.SURVEI && await window.SURVEI.sudahDiisi()); } catch (e) { SURV = false; }
+  return SURV;
+}
 
 
 /* ═══════════════════════════════════════════════════════════════
@@ -410,10 +418,10 @@ function mulaiTur() {
   const pre = sudah('pre'), post = sudah('post');
   const langkah = [
     { mood: 'halo', judul: `Halo, ${amanT(sapaan())}! 👋`,
-      teks: `Saya ${NAMA}, petugas lapangan yang akan memandu Anda di Triwulan III. Ada 3 misi yang dikerjakan berurutan. Yuk, kita lihat satu per satu — tidak lama kok!` },
+      teks: `Saya ${NAMA}, petugas lapangan yang akan memandu Anda di Triwulan III. Ada 4 misi yang dikerjakan berurutan. Yuk, kita lihat satu per satu — tidak lama kok!` },
     { sasaran: '#dashMisi', mood: 'tunjuk', label: 'MISI ANDA',
       judul: 'Ini papan misi Anda',
-      teks: 'Urutannya: ① Pre test → ② Konfirmasi data ruas → ③ Post test. Misi berikutnya terbuka setelah misi sebelumnya selesai, dan progresnya tercatat di sini.' },
+      teks: 'Urutannya: ① Pre test → ② Konfirmasi data ruas → ③ Survei kepuasan → ④ Post test. Misi berikutnya terbuka setelah misi sebelumnya selesai, dan progresnya tercatat di sini.' },
     { sasaran: '[data-tutor="pre"]', mood: 'tunjuk', label: 'MISI 1',
       judul: pre ? 'Misi 1 · Pre test — sudah beres ✅' : 'Misi 1 · Pre test',
       teks: pre ? 'Pre test Anda sudah tercatat. Mantap! Nilainya bisa dilihat di kartu ini beserta pembahasannya.'
@@ -423,8 +431,11 @@ function mulaiTur() {
       teks: adaKonf()
         ? `Periksa angka eMonitoring tiap ruas ${akun().kab}: klik "Sesuai" bila benar, atau "Perbarui" lalu "Submit" angka terbarunya. Setelah itu kirim ke pusat. ${pre ? '' : '🔒 Terbuka setelah pre test selesai.'}`
         : 'Daerah Anda tidak punya ruas di kertas kerja TW III, jadi misi ini otomatis dilewati.' },
-    { sasaran: '[data-tutor="post"]', mood: 'tunjuk', label: 'MISI 3',
-      judul: 'Misi 3 · Post test',
+    { sasaran: () => [...document.querySelectorAll('[data-misi="survei"],[data-nav="survei"]')], mood: 'tunjuk', label: 'MISI 3',
+      judul: SURV ? 'Misi 3 · Survei kepuasan — sudah diisi ✅' : 'Misi 3 · Survei kepuasan',
+      teks: 'Beri penilaian atas pelayanan rapat koordinasi TW III. Isinya sama seperti survei TW II, tetapi diisi ulang dari awal — sekitar dua menit, tiap pertanyaan ada gambarnya.' },
+    { sasaran: '[data-tutor="post"]', mood: 'tunjuk', label: 'MISI 4',
+      judul: 'Misi 4 · Post test',
       teks: 'Terakhir, kerjakan post test untuk melihat peningkatan nilai Anda. Saya akan memberi tahu begitu waktunya tiba!' }
   ];
   /* Langkah penutup: pemda sendiri yang mengklik kartu misi berikutnya. */
@@ -434,6 +445,9 @@ function mulaiTur() {
   else if (!konfBeres()) langkah.push({ sasaran: () => document.querySelector('#dashKonf button'), mood: 'halo', klikSasaran: true, label: 'KLIK DI SINI',
     judul: 'Lanjut ke Misi 2',
     teks: 'Pre test sudah beres. Klik tombol yang bersinar untuk memeriksa data ruas Anda.' });
+  else if (!SURV && !post) langkah.push({ sasaran: '[data-misi="survei"] button', mood: 'halo', klikSasaran: true, label: 'KLIK DI SINI',
+    judul: 'Lanjut ke Misi 3',
+    teks: 'Data ruas sudah terkirim. Klik tombol yang bersinar untuk mengisi survei kepuasan.' });
   else if (!post) langkah.push({ sasaran: '[data-tutor="post"]', mood: 'halo', klikSasaran: true, label: 'KLIK DI SINI',
     judul: 'Tinggal satu misi lagi!',
     teks: 'Klik kartu Post test yang bersinar untuk menyelesaikan misi terakhir.' });
@@ -456,12 +470,21 @@ function ajakKonfirmasi() {
   { konfeti: true });
 }
 
-function ajakPost() {
+function ajakSurvei() {
   tandai('konfOk');
-  notif({ mood: 'senang', judul: adaKonf() ? 'Misi 2 beres! Data ruas terkirim 🎉' : 'Saatnya misi terakhir!',
-    teks: adaKonf()
-      ? 'Terima kasih, data ruas Anda sudah sampai di pusat. Sekarang tinggal Misi 3: kerjakan post test untuk melihat peningkatan nilai Anda.'
-      : 'Daerah Anda tidak punya ruas untuk dikonfirmasi, jadi langsung ke Misi 3: post test.',
+  notif({ mood: 'senang', judul: adaKonf() ? 'Misi 2 beres! Data ruas terkirim 🎉' : 'Lanjut ke Misi 3',
+    teks: (adaKonf()
+      ? 'Terima kasih, data ruas Anda sudah sampai di pusat. '
+      : 'Daerah Anda tidak punya ruas untuk dikonfirmasi, jadi misi 2 dilewati. ')
+      + 'Sekarang Misi 3: isi survei kepuasan rapat koordinasi TW III — sekitar dua menit.',
+    tombol: [{ teks: 'Nanti', aksi: 'tutup' }, { teks: 'Isi survei →', utama: true, aksi: () => go('survei') }] },
+  { konfeti: true });
+}
+
+function ajakPost() {
+  tandai('survOk');
+  notif({ mood: 'senang', judul: 'Misi 3 beres! Survei terkirim 🎉',
+    teks: 'Terima kasih atas penilaiannya. Tinggal Misi 4: kerjakan post test untuk melihat peningkatan nilai Anda.',
     tombol: [{ teks: 'Nanti', aksi: 'tutup' }, { teks: 'Kerjakan post test →', utama: true, aksi: () => startQuiz('post') }] },
   { konfeti: true });
 }
@@ -469,7 +492,7 @@ function ajakPost() {
 function rayakan() {
   tandai('postOk');
   notif({ mood: 'senang', judul: 'Semua misi TW III selesai! 🏆',
-    teks: `Luar biasa, ${sapaan()}! Pre test, konfirmasi data, dan post test sudah lengkap. Terima kasih atas kerja samanya.`,
+    teks: `Luar biasa, ${sapaan()}! Pre test, konfirmasi data, survei kepuasan, dan post test sudah lengkap. Terima kasih atas kerja samanya.`,
     tombol: [{ teks: 'Siap, terima kasih!', utama: true, aksi: 'tutup' }] }, { konfeti: true });
 }
 
@@ -489,7 +512,9 @@ function renderMisi() {
     { judul: 'Konfirmasi data', ket: !adaKonf() ? 'Tidak ada ruas — dilewati' : konf ? 'Semua ruas terkirim'
         : NKONF.kembali ? NKONF.kembali + ' ruas dikembalikan pusat' : terkirim + '/' + NKONF.total + ' ruas terkirim',
       beres: konf, kunci: !pre, aksi: `go('konfirmasi')`, tombol: konf ? 'Lihat' : 'Periksa' },
-    { judul: 'Post test', ket: post ? 'Selesai' : 'Ukur peningkatan nilai', beres: post, kunci: !pre || !konf,
+    { id: 'survei', judul: 'Survei kepuasan', ket: SURV ? 'Sudah diisi' : 'Sekitar 2 menit', beres: SURV || post, kunci: !konf,
+      aksi: `go('survei')`, tombol: SURV ? 'Lihat' : 'Isi' },
+    { judul: 'Post test', ket: post ? 'Selesai' : 'Ukur peningkatan nilai', beres: post, kunci: !pre || !konf || !SURV,
       aksi: post ? `showResult('post')` : `startQuiz('post')`, tombol: post ? 'Lihat' : 'Mulai' }
   ];
   const aktif = misi.findIndex(m => !m.beres);
@@ -497,6 +522,7 @@ function renderMisi() {
   const kata = aktif < 0 ? 'Semua misi beres. Terima kasih! 🎉'
     : aktif === 0 ? 'Mulai dari pre test dulu, ya!'
     : aktif === 1 ? 'Pre test beres! Sekarang cek data ruas Anda.'
+    : aktif === 2 ? 'Data terkirim! Beri penilaian di survei kepuasan.'
     : 'Tinggal post test — semangat!';
   kotak.className = 'misi konf-muncul mt-7 p-5 md:p-6';
   kotak.innerHTML = `
@@ -504,19 +530,19 @@ function renderMisi() {
       <div class="flex min-w-[260px] flex-1 items-center gap-3">
         ${avatar(aktif < 0 ? 'senang' : 'halo', 74)}
         <div class="min-w-0">
-          <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-300">Misi Triwulan III · ${jumlah}/3</p>
+          <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-300">Misi Triwulan III · ${jumlah}/${misi.length}</p>
           <div class="misi-gelembung mt-1.5">${kata}</div>
         </div>
       </div>
       <button type="button" onclick="TUTOR.mulaiTur()" class="rounded-full border border-white/20 px-4 py-2 text-[12px] font-semibold text-white/80 transition hover:bg-white/10">▶ Putar panduan</button>
     </div>
-    <div class="misi-bar mt-4"><div style="width:${Math.round(jumlah / 3 * 100)}%"></div></div>
-    <div class="mt-4 grid gap-3 md:grid-cols-3">
-      ${misi.map((m, i) => `<div class="misi-langkah ${m.beres ? 'beres' : i === aktif ? 'aktif' : m.kunci ? 'kunci' : ''}">
+    <div class="misi-bar mt-4"><div style="width:${Math.round(jumlah / misi.length * 100)}%"></div></div>
+    <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      ${misi.map((m, i) => `<div${m.id ? ` data-misi="${m.id}"` : ''} class="misi-langkah ${m.beres ? 'beres' : i === aktif ? 'aktif' : m.kunci ? 'kunci' : ''}">
         <span class="misi-nomor">${m.beres ? '✓' : m.kunci ? '🔒' : i + 1}</span>
         <div class="min-w-0 flex-1">
           <p class="text-[14px] font-semibold">${m.judul}</p>
-          <p class="text-[11.5px] text-white/55">${m.kunci && !m.beres ? (i === 1 ? 'Terbuka setelah pre test' : 'Terbuka setelah misi 2') : amanT(m.ket)}</p>
+          <p class="text-[11.5px] text-white/55">${m.kunci && !m.beres ? (i === 1 ? 'Terbuka setelah pre test' : 'Terbuka setelah misi ' + i) : amanT(m.ket)}</p>
         </div>
         ${!m.kunci || m.beres ? `<button type="button" onclick="${m.aksi}" class="shrink-0 rounded-full ${i === aktif
           ? 'bg-white text-black' : 'border border-white/20 text-white/80 hover:bg-white/10'} px-3.5 py-1.5 text-[12px] font-semibold">${m.tombol}</button>` : ''}
@@ -534,18 +560,20 @@ window.TUTOR = {
   avatar, mulaiTur, tutup: () => tutup(true),
 
   /** Dipanggil dashboard setelah status konfirmasi terbaca (n boleh null). */
-  diDashboard(n) {
+  async diDashboard(n) {
     NKONF = n;
+    await bacaSurvei();
     renderMisi();
     if (!pemda() || T || !diDashboard()) return;
     let b = bendera();
     /* Pre test kosong padahal misinya pernah dirayakan: akun ini di-reset
        admin. Panduan dan notifikasinya diulang dari awal. */
-    if (!sudah('pre') && (b.preOk || b.konfOk || b.postOk)) { setel(); b = {}; }
+    if (!sudah('pre') && (b.preOk || b.konfOk || b.survOk || b.postOk)) { setel(); b = {}; }
     if (!b.tur) return setTimeout(() => { if (!T && diDashboard()) mulaiTur(); }, 600);
     const pre = sudah('pre'), post = sudah('post');
     if (pre && !konfBeres() && !b.preOk) return ajakKonfirmasi();
-    if (pre && konfBeres() && !post && !b.konfOk) return ajakPost();
+    if (pre && konfBeres() && !SURV && !post && !b.konfOk) return ajakSurvei();
+    if (pre && konfBeres() && SURV && !post && !b.survOk) return ajakPost();
     if (post && !b.postOk) return rayakan();
   },
 
@@ -554,7 +582,8 @@ window.TUTOR = {
     if (!pemda()) return;
     if (kind === 'pre') {
       try { NKONF = await window.KONF.ringkasSaya(); } catch (e) {}
-      setTimeout(() => { if (konfBeres()) ajakPost(); else ajakKonfirmasi(); }, 1300);
+      await bacaSurvei();
+      setTimeout(() => { if (!konfBeres()) ajakKonfirmasi(); else if (!SURV) ajakSurvei(); else ajakPost(); }, 1300);
     } else if (kind === 'post') setTimeout(rayakan, 1300);
   },
 
@@ -563,7 +592,43 @@ window.TUTOR = {
     if (!pemda()) return;
     NKONF = n;
     if (sudah('post') || !konfBeres()) return;
-    setTimeout(ajakPost, 700);
+    setTimeout(() => SURV ? ajakPost() : ajakSurvei(), 700);
+  },
+
+  /** Dari menu Survei, begitu penilaian terkirim pertama kali. */
+  setelahSurvei() {
+    if (!pemda()) return;
+    SURV = true;
+    if (sudah('post')) return;
+    setTimeout(ajakPost, 900);
+  },
+
+  /** Survei boleh diisi bila pre test sudah selesai dan data ruas terkirim.
+      Mengembalikan '' bila terbuka, atau sebab terkuncinya: 'pre' / 'konf'. */
+  async kunciSurvei() {
+    if (!pemda()) return '';
+    if (!sudah('pre')) return 'pre';
+    try { NKONF = await window.KONF.ringkasSaya(); } catch (e) {}
+    return konfBeres() ? '' : 'konf';
+  },
+
+  /** Layar pengganti menu Survei selama misinya belum terbuka. */
+  layarSurveiTerkunci(sebab) {
+    const pre = sebab === 'pre';
+    return `<div class="misi konf-muncul mx-auto max-w-[760px] p-6 md:p-9">
+      <div class="flex flex-col items-center gap-6 text-center md:flex-row md:text-left">
+        ${avatar('pikir', 150)}
+        <div>
+          <p class="text-[12px] font-bold uppercase tracking-[0.18em] text-orange-300">🔒 Misi 3 masih terkunci</p>
+          <h1 class="mt-2 text-[24px] font-semibold leading-tight md:text-[30px]">${pre ? 'Kerjakan pre test dulu, ya!' : 'Kirim konfirmasi data ruas dulu, ya!'}</h1>
+          <p class="mt-3 text-[14.5px] leading-[1.7] text-white/65">Survei kepuasan terbuka setelah pre test selesai dan semua data ruas ${amanT((akun() || {}).kab || '')} terkirim ke pusat.</p>
+          <div class="mt-6 flex flex-wrap justify-center gap-3 md:justify-start">
+            <button type="button" onclick="${pre ? "startQuiz('pre')" : "go('konfirmasi')"}" class="tutor-tombol tutor-tombol--utama">${pre ? 'Kerjakan pre test →' : 'Ke Konfirmasi Data →'}</button>
+            <button type="button" onclick="go('dashboard')" class="rounded-full border border-white/20 px-5 text-[13px] font-semibold text-white/80 hover:bg-white/10">Ke dashboard</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
   },
 
   /** Layar pengganti menu Konfirmasi Data selama pre test belum dikerjakan. */

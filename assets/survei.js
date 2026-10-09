@@ -9,8 +9,12 @@
      - pertanyaannya bisa disajikan satu per satu dengan tombol yang hidup,
        bukan gulungan formulir yang panjang.
 
-   Satu pemda satu dokumen (`survei/{uid}`); mengisi ulang berarti memperbarui
-   jawabannya sendiri, bukan menambah baris baru.
+   Satu akun satu dokumen; mengisi ulang berarti memperbarui jawabannya
+   sendiri, bukan menambah baris baru. Tiap triwulan punya koleksi sendiri
+   supaya pemda mengisi ulang dari kosong tanpa menimpa penilaian lama:
+     TW II  → `survei/{uid}`      (ditutup, tinggal dibaca admin)
+     TW III → `surveiTw3/{pid}`   (aktif; pid = akun asal, sehingga sesi
+                                   masuk-dengan-nama tetap satu dokumen)
    ═══════════════════════════════════════════════════════════════════════ */
 (() => {
 'use strict';
@@ -18,7 +22,11 @@
 const LS_SURVEI = 'monevdak_survei';
 const CDN_PIZZIP = 'https://unpkg.com/pizzip@3.2.0/dist/pizzip.min.js';
 
-const JUDUL_KEGIATAN = 'Rapat Koordinasi TW II DAK Fisik Bidang Konektivitas Subbidang Jalan TA 2026';
+/* Triwulan yang sedang diisi pemda, dan nama koleksinya per triwulan. */
+const TW_ISI = 3;
+const KOLEKSI = { 2: 'survei', 3: 'surveiTw3' };
+const LABEL_TW = { 2: 'TW II', 3: 'TW III' };
+const judulKegiatan = tw => `Rapat Koordinasi ${LABEL_TW[tw]} DAK Fisik Bidang Konektivitas Subbidang Jalan TA 2026`;
 
 /* Empat wajah untuk skala 1–4; angka saja terasa dingin dan lambat dibaca. */
 const WAJAH = ['😞', '😕', '🙂', '😄'];
@@ -127,25 +135,30 @@ const NAMA_UNSUR = {
 /* ═══════════════════════════════════════════════════════════════
    1. PENYIMPANAN
    ═══════════════════════════════════════════════════════════════ */
-const bacaLokal = () => { try { return JSON.parse(localStorage.getItem(LS_SURVEI) || '{}'); } catch (e) { return {}; } };
-const tulisLokal = x => { try { localStorage.setItem(LS_SURVEI, JSON.stringify(x)); } catch (e) {} };
+const kunciLs = tw => tw === 2 ? LS_SURVEI : LS_SURVEI + '_tw' + tw;
+const bacaLokal = (tw = TW_ISI) => { try { return JSON.parse(localStorage.getItem(kunciLs(tw)) || '{}'); } catch (e) { return {}; } };
+const tulisLokal = (x, tw = TW_ISI) => { try { localStorage.setItem(kunciLs(tw), JSON.stringify(x)); } catch (e) {} };
+
+/* Dokumen TW III dinamai pid akun asal, bukan uid sesi: pemda yang masuk
+   dengan memilih nama mendapat sesi anonim baru tiap kali masuk. */
+const idSaya = () => (ME && (ME.pid || ME.uid)) || '';
 
 async function ambilSurveiSaya() {
-  const uid = (ME && (ME.uid || ME.pid)) || '';
+  const uid = idSaya();
   if (!uid) return null;
   if (pakaiFirebase()) {
     const { doc, getDoc } = store.fs;
-    const d = await getDoc(doc(store.db, 'survei', uid));
+    const d = await getDoc(doc(store.db, KOLEKSI[TW_ISI], uid));
     return d.exists() ? d.data() : null;
   }
   return bacaLokal()[uid] || null;
 }
 
 async function kirimSurvei(jawaban) {
-  const uid = (ME && (ME.uid || ME.pid)) || '';
+  const uid = idSaya();
   if (!uid) throw new Error('Akun tidak dikenali.');
   const rekaman = {
-    uid,
+    uid, sesi: (ME && ME.uid) || '', tw: TW_ISI,
     nama: ME.nama || '',
     prov: ME.prov || '',
     kab: ME.kab || '',
@@ -155,7 +168,7 @@ async function kirimSurvei(jawaban) {
   };
   if (pakaiFirebase()) {
     const { doc, setDoc, serverTimestamp } = store.fs;
-    await setDoc(doc(store.db, 'survei', uid), { ...rekaman, dikirimAt: serverTimestamp() });
+    await setDoc(doc(store.db, KOLEKSI[TW_ISI], uid), { ...rekaman, dikirimAt: serverTimestamp() });
   } else {
     const semua = bacaLokal();
     semua[uid] = { ...rekaman, dikirimAt: Date.now() };
@@ -164,25 +177,25 @@ async function kirimSurvei(jawaban) {
   return rekaman;
 }
 
-async function semuaSurvei() {
+async function semuaSurvei(tw = TW_REKAP) {
   if (pakaiFirebase()) {
     const { collection, getDocs } = store.fs;
-    const snap = await getDocs(collection(store.db, 'survei'));
+    const snap = await getDocs(collection(store.db, KOLEKSI[tw]));
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   }
-  return Object.entries(bacaLokal()).map(([id, x]) => ({ id, ...x }));
+  return Object.entries(bacaLokal(tw)).map(([id, x]) => ({ id, ...x }));
 }
 
 /** Hapus satu penilaian. Hanya admin yang diizinkan firestore.rules; pemda
     yang penilaiannya dihapus dapat mengisi surveinya lagi dari awal. */
-async function hapusSurvei(id) {
+async function hapusSurvei(id, tw = TW_REKAP) {
   if (pakaiFirebase()) {
     const { doc, deleteDoc } = store.fs;
-    await deleteDoc(doc(store.db, 'survei', id));
+    await deleteDoc(doc(store.db, KOLEKSI[tw], id));
   } else {
-    const semua = bacaLokal();
+    const semua = bacaLokal(tw);
     delete semua[id];
-    tulisLokal(semua);
+    tulisLokal(semua, tw);
   }
 }
 
@@ -238,7 +251,7 @@ function render() {
     <h1 class="mt-3 max-w-[760px] text-[26px] font-semibold leading-[1.2] tracking-[-0.02em] md:text-[34px]">
       Kuesioner kepuasan pemerintah daerah
     </h1>
-    <p class="mt-3 max-w-[680px] text-[15px] text-white/65">${aman(JUDUL_KEGIATAN)}</p>
+    <p class="mt-3 max-w-[680px] text-[15px] text-white/65">${aman(judulKegiatan(TW_ISI))}</p>
     <p class="mt-2 text-[13px] text-white/45">
       ${aman(ME.nama)} · ${aman(ME.kab)}${ME.prov ? ', ' + aman(ME.prov) : ''} · ${aman(ME.email || '—')}
       <span class="ml-1 text-white/30">— diambil dari akun Anda, tidak perlu diketik lagi.</span>
@@ -324,9 +337,14 @@ function viewPertanyaan() {
   return `
   <div class="sv-masuk glass rounded-3xl p-6 md:p-9">
     ${bilahKemajuan()}
-    ${p2.bagian ? `<p class="mb-3 inline-block rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">${aman(p2.bagian)}</p>` : ''}
-    <h2 class="max-w-[680px] text-[19px] font-semibold leading-[1.45] md:text-[21px]">${aman(p2.judul)}</h2>
-    ${p2.petunjuk ? `<p class="mt-2 max-w-[620px] text-[13px] text-white/45">${aman(p2.petunjuk)}</p>` : ''}
+    <div class="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-7">
+      ${window.SV_GAMBAR ? `<div class="sv-gambar shrink-0" aria-hidden="true">${window.SV_GAMBAR(p2.k)}</div>` : ''}
+      <div class="min-w-0 flex-1 text-center sm:text-left">
+        ${p2.bagian ? `<p class="mb-3 inline-block rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">${aman(p2.bagian)}</p>` : ''}
+        <h2 class="max-w-[680px] text-[19px] font-semibold leading-[1.45] md:text-[21px]">${aman(p2.judul)}</h2>
+        ${p2.petunjuk ? `<p class="mt-2 max-w-[620px] text-[13px] text-white/45">${aman(p2.petunjuk)}</p>` : ''}
+      </div>
+    </div>
     ${isi}
     <div class="mt-8 flex flex-wrap items-center justify-between gap-3">
       <button id="svMundur" class="${KELAS_TOMBOL}"${IDX === 0 ? ' disabled style="opacity:.35"' : ''}>Kembali</button>
@@ -436,11 +454,14 @@ function pasangTinjau() {
     const t = el('#svKirim');
     t.disabled = true; t.textContent = 'Mengirim…';
     try {
+      const pertama = !TERKIRIM;
       TERKIRIM = await kirimSurvei(JAWAB);
       TERKIRIM.dikirimAt = Date.now();
       TINJAU = false; IDX = -1; GALAT = '';
+      window.SURVEI.tandaiBelum(false);
       render();
       toast('Terima kasih, penilaian Anda tersimpan.');
+      if (pertama && window.TUTOR && window.TUTOR.setelahSurvei) window.TUTOR.setelahSurvei();
     } catch (e) {
       GALAT = 'Penilaian belum tersimpan: ' + (e.code || e.message)
             + '. Pastikan aturan Firestore untuk koleksi survei sudah dipasang.';
@@ -472,7 +493,11 @@ function viewTerimaKasih() {
       <p class="mt-1 text-[38px] font-semibold tabular-nums leading-none">${ikm == null ? '—' : ikm}</p>
       <p class="mt-1.5 text-[12px] text-white/55">${aman(MUTU(ikm))}</p>
     </div>
-    <button id="svUbah" class="${KELAS_TOMBOL} mt-8">Ubah jawaban</button>
+    <div class="mt-8 flex flex-wrap justify-center gap-3">
+      <button id="svUbah" class="${KELAS_TOMBOL}">Ubah jawaban</button>
+      ${typeof hasilSaya === 'function' && !hasilSaya('post')
+        ? `<button onclick="startQuiz('post')" class="${KELAS_UTAMA}">Lanjut ke post test →</button>` : ''}
+    </div>
   </div>`;
 }
 
@@ -486,6 +511,10 @@ function pasangTerimaKasih() {
    ═══════════════════════════════════════════════════════════════ */
 let REKAP = [];
 let REKAP_GALAT = '';
+/* Triwulan yang sedang direkap admin; bawaannya yang sedang diisi pemda. */
+let TW_REKAP = TW_ISI;
+/* Rekap tiap triwulan, untuk cadangan nomor telepon lintas triwulan. */
+const REKAP_TW = {};
 
 /* Penyaring rekap. Provinsi yang utama — rapat koordinasi ditindaklanjuti
    per provinsi, jadi seluruh angka dan grafik ikut menyempit bersamanya. */
@@ -802,7 +831,7 @@ async function unduhExcel() {
   const blob = await buatXlsx('Survei Kepuasan', baris);
   const d = new Date();
   const tanda = SARING.prov ? ' - ' + SARING.prov.replace(/[\\/:*?"<>|]/g, ' ') : '';
-  const nama = `Survei Kepuasan Pemda - Rakor TW II 2026${tanda} - ${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.xlsx`;
+  const nama = `Survei Kepuasan Pemda - Rakor ${LABEL_TW[TW_REKAP]} 2026${tanda} - ${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.xlsx`;
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = nama;
@@ -1237,7 +1266,7 @@ function bilahSaring() {
       <div class="ml-auto flex flex-wrap gap-2">
         <button id="svAdmMuat" class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 transition hover:bg-white/10">Muat ulang</button>
         <!-- jawaban yang terlanjur masuk lewat Google Formulir putaran pertama -->
-        <button id="svAdmImpor" class="rounded-full border border-sky-400/50 bg-sky-500/15 px-5 py-2.5 text-[13px] font-medium text-sky-200 transition hover:bg-sky-500/25">Impor Google Formulir</button>
+        <button id="svAdmImpor" ${TW_REKAP === 2 ? '' : 'hidden'} class="rounded-full border border-sky-400/50 bg-sky-500/15 px-5 py-2.5 text-[13px] font-medium text-sky-200 transition hover:bg-sky-500/25">Impor Google Formulir</button>
         <!-- pengisian coba-coba saat uji coba perlu bisa dibuang dari rekap -->
         <button id="svAdmHapus" disabled
                 class="rounded-full border border-red-400/50 bg-red-500/15 px-5 py-2.5 text-[13px] font-medium text-red-200 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-40">
@@ -1324,6 +1353,14 @@ function renderAdminSurvei() {
   const sedangCari = document.activeElement && document.activeElement.id === 'svCari';
 
   wadah.innerHTML = GAYA_ADM + `
+    <div class="mb-5 flex flex-wrap items-center gap-3">
+      <div class="glass inline-flex rounded-full p-1" role="tablist" aria-label="Triwulan survei">
+        ${[3, 2].map(tw => `<button data-svtw="${tw}" role="tab" aria-selected="${TW_REKAP === tw}"
+          class="rounded-full px-4 py-1.5 text-[12.5px] font-semibold transition ${TW_REKAP === tw ? 'bg-white text-black' : 'text-white/65 hover:text-white'}">
+          ${LABEL_TW[tw]}${tw === TW_ISI ? ' · aktif' : ' · arsip'}${REKAP_TW[tw] ? ' (' + REKAP_TW[tw].length + ')' : ''}</button>`).join('')}
+      </div>
+      <p class="text-[12.5px] text-white/50">${aman(judulKegiatan(TW_REKAP))}</p>
+    </div>
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       ${kartuAngka('Responden', rows.length, SARING.prov ? 'pemda di ' + SARING.prov
         : LANDASAN === 'semua' ? provAda + ' provinsi · seluruh penilaian'
@@ -1434,6 +1471,17 @@ function pasangAdminSurvei() {
   if (tutup) tutup.onclick = () => { UNSUR_PILIH = null; gambarUlang(); };
 
   el('#svAdmMuat').onclick = () => window.SURVEI.renderAdmin(true);
+  els('#adSurvei [data-svtw]').forEach(t => t.onclick = () => {
+    const tw = Number(t.dataset.svtw);
+    if (tw === TW_REKAP) return;
+    TW_REKAP = tw;
+    REKAP = (REKAP_TW[tw] || []).slice();
+    SARING = { prov: '', mutu: '', cari: '', ganda: '' };
+    UNSUR_PILIH = null;
+    gambarUlang();
+    /* Ceklis kesiapan memakai rekap triwulan yang sedang dipilih. */
+    if (window.CEKLIS) window.CEKLIS.render();
+  });
   el('#svAdmImpor').onclick = () => pilihBerkasImpor();
   el('#svAdmExcel').onclick = async () => {
     const t = el('#svAdmExcel');
@@ -1747,7 +1795,7 @@ async function tulisImpor(daftar) {
   if (pakaiFirebase()) {
     const { doc, setDoc, serverTimestamp } = store.fs;
     for (const r of daftar) {
-      await setDoc(doc(store.db, 'survei', r.id), {
+      await setDoc(doc(store.db, KOLEKSI[TW_REKAP], r.id), {
         uid: r.id, nama: r.nama, prov: r.prov, kab: r.kab, email: r.email,
         jawaban: r.jawaban, indeks: r.indeks,
         /* Jejak asal-usul: dari mana datangnya, instansi apa adanya yang
@@ -1757,13 +1805,13 @@ async function tulisImpor(daftar) {
       });
     }
   } else {
-    const semua = bacaLokal();
+    const semua = bacaLokal(TW_REKAP);
     daftar.forEach(r => {
       semua[r.id] = { uid: r.id, nama: r.nama, prov: r.prov, kab: r.kab, email: r.email,
         jawaban: r.jawaban, indeks: r.indeks, sumber: 'gform', instansiAsal: r.instansi,
         dikirimAt: r.waktu ? r.waktu.getTime() : Date.now() };
     });
-    tulisLokal(semua);
+    tulisLokal(semua, TW_REKAP);
   }
 }
 
@@ -1955,6 +2003,9 @@ window.SURVEI = {
 
   async render() {
     if (!ME || pfidan()) return;
+    /* Misi 3 TW III: terbuka setelah pre test dan konfirmasi data. */
+    const kunci = window.TUTOR && window.TUTOR.kunciSurvei ? await window.TUTOR.kunciSurvei() : '';
+    if (kunci) { const w = el('#view-survei'); if (w) w.innerHTML = window.TUTOR.layarSurveiTerkunci(kunci); return; }
     if (!DIMUAT) {
       DIMUAT = true;
       try {
@@ -1975,17 +2026,18 @@ window.SURVEI = {
     const wadah = el('#adSurvei');
     if (!wadah) return;
     if (paksa) REKAP = [];
-    try {
-      REKAP_GALAT = '';
-      REKAP = (await semuaSurvei()).sort((a, b) => {
-        const w = x => (x.dikirimAt && x.dikirimAt.toMillis ? x.dikirimAt.toMillis() : Number(x.dikirimAt || 0));
-        return w(b) - w(a);
-      });
-    } catch (e) {
-      REKAP = [];
-      REKAP_GALAT = 'Hasil survei tidak terbaca (' + (e.code || e.message)
-                  + '). Pastikan aturan Firestore untuk koleksi survei sudah dipasang dan email admin ini terdaftar.';
+    const w = x => (x.dikirimAt && x.dikirimAt.toMillis ? x.dikirimAt.toMillis() : Number(x.dikirimAt || 0));
+    REKAP_GALAT = '';
+    for (const tw of Object.keys(KOLEKSI).map(Number)) {
+      try {
+        REKAP_TW[tw] = (await semuaSurvei(tw)).sort((a, b) => w(b) - w(a));
+      } catch (e) {
+        REKAP_TW[tw] = [];
+        if (tw === TW_REKAP) REKAP_GALAT = 'Hasil survei ' + LABEL_TW[tw] + ' tidak terbaca (' + (e.code || e.message)
+          + '). Pastikan aturan Firestore untuk koleksi ' + KOLEKSI[tw] + ' sudah dipasang dan email admin ini terdaftar.';
+      }
     }
+    REKAP = REKAP_TW[TW_REKAP].slice();
     renderAdminSurvei();
     if (paksa) toast('Rekap survei dimuat ulang.');
   },
@@ -1994,6 +2046,15 @@ window.SURVEI = {
       untuk menandai daerah mana yang surveinya sudah terisi. Salinan, bukan
       larik aslinya, supaya pemanggilnya tidak dapat mengubah rekap. */
   rekap() { return REKAP.slice(); },
+
+  /** Penilaian semua triwulan, terbaru dulu. Untuk cadangan nomor telepon:
+      nomor yang ditulis di TW II tetap berguna selama TW III belum diisi. */
+  rekapSemua() {
+    return Object.keys(KOLEKSI).map(Number).sort((a, b) => b - a).flatMap(tw => REKAP_TW[tw] || []);
+  },
+
+  /** Hapus penilaian TW III milik satu akun (reset uji coba di panel admin). */
+  async hapusSaya(pid) { await hapusSurvei(pid, TW_ISI); },
 
   /** Keterangan galat bila rekapnya gagal terbaca; kosong berarti aman. */
   galatRekap() { return REKAP_GALAT; },

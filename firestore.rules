@@ -204,6 +204,23 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Survei kepuasan Rakor TW III: pemda mengisi ulang dari awal, terpisah
+    // dari TW II. Dokumennya dinamai pid AKUN ASAL, bukan uid sesi — pemda
+    // yang masuk dengan memilih nama mendapat sesi anonim baru tiap kali,
+    // dan akun asalnya tercatat di `akunAsal` pada dokumen pesertanya.
+    function akunSaya(pid) {
+      return request.auth != null && (
+        request.auth.uid == pid
+        || (punyaProfil() && profilSaya().get('akunAsal', '') == pid));
+    }
+    match /surveiTw3/{pid} {
+      allow read: if isAdmin() || akunSaya(pid);
+      allow create, update: if isAdmin() || (akunSaya(pid)
+        && request.resource.data.uid == pid
+        && request.resource.data.jawaban is map);
+      allow delete: if isAdmin();
+    }
+
     // Progres pelaporan tiap daerah di aplikasi eMonitoring. Angkanya tidak
     // bisa diambil sendiri oleh aplikasi ini, jadi admin mengunggahnya secara
     // berkala dari berkas .xlsx atau .csv; satu dokumen per daerah, dinamai

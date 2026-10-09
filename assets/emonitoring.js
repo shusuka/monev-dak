@@ -753,7 +753,7 @@ async function uraiBerkas(berkas) {
     hanya sebagai cadangan bila berkas unggahan tidak memuatnya. */
 function dariSurvei() {
   const peta = new Map();
-  const rekap = (window.SURVEI && window.SURVEI.rekap) ? window.SURVEI.rekap() : [];
+  const rekap = (window.SURVEI && window.SURVEI.rekapSemua) ? window.SURVEI.rekapSemua() : [];
   rekap.forEach(r => {
     const k = kunciDaerah(r.kab || '');
     if (!k) return;

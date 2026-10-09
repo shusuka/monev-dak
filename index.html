@@ -405,7 +405,8 @@
   @keyframes konfDialog { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }
   .konf-dialog { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 1rem;
     background: rgba(0,0,0,.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-  .konf-dialog__kotak { width: 100%; max-width: 460px; border-radius: 1.5rem; padding: 1.6rem; color: #fff; background: rgb(22 24 28);
+  .konf-dialog__kotak { width: 100%; max-width: 460px; max-height: calc(100dvh - 2rem); overflow-y: auto; overscroll-behavior: contain;
+    border-radius: 1.5rem; padding: 1.6rem; color: #fff; background: rgb(22 24 28);
     border: 1px solid rgba(255,255,255,.14); box-shadow: 0 30px 80px rgba(0,0,0,.6); animation: konfDialog .3s cubic-bezier(.22,.61,.36,1); }
   .konf-beda td { background: rgb(251 191 36 / .06); }
   .konf-segbar { display: block; height: 100%; animation: growBar .9s cubic-bezier(.22,.61,.36,1); }
@@ -1061,7 +1062,7 @@
          ajakannya ditaruh di sini, bukan hanya mengandalkan menu. -->
     <div id="dashSurvei" class="mt-7 hidden"></div>
 
-    <!-- Papan misi TW III pemda (assets/tutor.js): pre test → konfirmasi → post test. -->
+    <!-- Papan misi TW III pemda (assets/tutor.js): pre test → konfirmasi → survei → post test. -->
     <div id="dashMisi" class="hidden"></div>
 
     <!-- Tugas utama pemda di TW III: memastikan angka eMon tiap ruasnya. -->
@@ -1699,10 +1700,10 @@ async function go(view) {
   /* Menu arsip terbuka untuk semua akun; isinya yang dibatasi per daerah.
      Survei kepuasan sebaliknya: respondennya pemda, bukan petugas PFID. */
   if (view === 'berita' && !pfid()) view = 'dashboard';
-  /* Input TW II sudah ditutup: survei kepuasannya tidak dibuka lagi. Pemda
-     hanya melihat dashboard pre/post test dan menu konfirmasi data; arsip,
-     peringkat, dan perbandingan tetap untuk petugas PFID. */
-  if (view === 'survei') view = 'dashboard';
+  /* Survei kepuasan dibuka lagi untuk TW III, khusus pemda (misi ke-3,
+     sesudah konfirmasi data). Arsip, peringkat, dan perbandingan tetap
+     untuk petugas PFID. */
+  if (view === 'survei' && ME && pfid()) view = 'dashboard';
   if (['arsip', 'rank', 'compare'].includes(view) && ME && !pfid()) view = 'dashboard';
   if (ADMIN_VIEWS.includes(view) && !ADMIN) view = 'adminlogin';
 
@@ -2314,8 +2315,7 @@ function syncChip() {
   if (window.KONF) window.KONF.syncNav();
   /* Menu yang hanya untuk petugas PFID; pemda cukup dashboard dan konfirmasi. */
   $$('[data-nav="rank"],[data-nav="compare"]').forEach(b => b.classList.toggle('hidden', !pfid()));
-  if (!pfid()) $$('[data-nav="arsip"],[data-nav="survei"]').forEach(b => b.classList.add('hidden'));
-  if (pfid()) $$('[data-nav="survei"]').forEach(b => b.classList.add('hidden'));
+  if (!pfid()) $$('[data-nav="arsip"]').forEach(b => b.classList.add('hidden'));
 }
 
 
@@ -2334,6 +2334,9 @@ async function renderDashboard() {
   bannerPfid.classList.toggle('hidden', !pfid());
 
   const rp = hasilSaya('pre'), rq = hasilSaya('post');
+  /* Post test pemda menunggu survei kepuasan (misi ke-3) terisi. */
+  let surveiOk = true;
+  if (rp && !rq && !pfid() && window.SURVEI) surveiOk = !!(await window.SURVEI.sudahDiisi());
   $('#kpiPre').textContent  = rp ? rp.nilai : '—';
   $('#kpiPost').textContent = rq ? rq.nilai : '—';
 
@@ -2365,7 +2368,7 @@ async function renderDashboard() {
       return `<div data-tutor="${kind}" class="rounded-2xl border border-red-400/45 bg-red-500/[.14] px-4 py-3">
         <p class="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-red-200/90">${IKON.kunci}${judul}</p>
         <p class="mt-1.5 text-[15px] font-semibold text-red-50">Terkunci</p>
-        <p class="mt-0.5 text-[11px] leading-[1.5] text-red-200/75">Selesaikan pre test lebih dahulu</p>
+        <p class="mt-0.5 text-[11px] leading-[1.5] text-red-200/75">${terkunci === true ? 'Selesaikan pre test lebih dahulu' : terkunci}</p>
       </div>`;
     }
 
@@ -2392,7 +2395,7 @@ async function renderDashboard() {
         </div>
         <span class="shrink-0 rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-black">Dinilai</span>
       </div>
-      <div class="mt-5 grid grid-cols-2 gap-3">${kartu(rp, 'pre', false)}${kartu(rq, 'post', !rp)}</div>
+      <div class="mt-5 grid grid-cols-2 gap-3">${kartu(rp, 'pre', false)}${kartu(rq, 'post', !rp || (!surveiOk && 'Isi survei kepuasan lebih dahulu'))}</div>
       ${d !== null ? `<div class="mt-4 flex items-center gap-2 rounded-2xl bg-white/[.06] px-4 py-3">
         <span class="text-[12px] text-white/60">Peningkatan</span>
         <span class="text-[15px] font-semibold tabular-nums ${d > 0 ? 'text-emerald-400' : d < 0 ? 'text-red-400' : 'text-white/70'}">${d > 0 ? '+' : ''}${d} poin</span>
@@ -2554,10 +2557,16 @@ function buatSesi() {
   return shuffle(BANK).slice(0, ATURAN.jumlahSoal).map(s => ({ id: s.id, ord: shuffle([0, 1, 2, 3]) }));
 }
 
-function startQuiz(kind) {
+async function startQuiz(kind) {
   if (hasilSaya(kind)) { toast('Sesi ini sudah pernah Anda selesaikan.'); return; }
   // post test terkunci sampai pre test selesai
   if (kind === 'post' && !hasilSaya('pre')) { toast('Post test terbuka setelah pre test selesai.'); return; }
+  /* Urutan TW III: pre test → konfirmasi data → survei kepuasan → post test. */
+  if (kind === 'post' && !pfid() && window.SURVEI && !(await window.SURVEI.sudahDiisi())) {
+    toast('Post test terbuka setelah survei kepuasan diisi.');
+    go('survei');
+    return;
+  }
   if (BANK.length < ATURAN.jumlahSoal) { toast('Bank soal kurang dari ' + ATURAN.jumlahSoal + ' soal.'); return; }
 
   Q = {
@@ -3602,8 +3611,9 @@ async function jalankanHapus(daftar) {
 }
 
 /* ── reset pengisian TW III (uji coba diulang dari awal) ──
-   Akun tetap ada; yang dihapus nilai pre/post test TW III dan, bila
-   dicentang, data konfirmasi daerahnya (jawaban pemda + verifikasi pusat).
+   Akun tetap ada; yang dihapus nilai pre/post test TW III, survei kepuasan
+   TW III, dan, bila dicentang, data konfirmasi daerahnya (jawaban pemda +
+   verifikasi pusat).
    Panduan/tutorial di perangkat pemda ikut terulang dengan sendirinya
    karena pre test-nya kembali kosong (lihat assets/tutor.js). */
 async function resetSatu(pid) {
@@ -3634,9 +3644,16 @@ function dialogReset(daftar) {
       <label class="mt-2 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/[.05] px-4 py-3">
         <input type="checkbox" data-r="konf" checked class="mt-1 h-4 w-4 accent-amber-400" />
         <span><span class="block text-[13.5px] font-medium">Konfirmasi data ruas daerahnya</span>
-          <span class="text-[12px] text-white/50">${esc(daerah.join(', ') || '—')} — berlaku untuk semua akun di daerah itu, termasuk hasil verifikasi pusat.</span></span>
+          <span class="text-[12px] text-white/50">${daerah.length > 6
+            ? daerah.length + ' daerah (' + esc(daerah.slice(0, 4).join(', ')) + ', dan ' + (daerah.length - 4) + ' lainnya)'
+            : esc(daerah.join(', ') || '—')} — berlaku untuk semua akun di daerah itu, termasuk hasil verifikasi pusat.</span></span>
       </label>
-      <div class="mt-6 flex flex-wrap justify-end gap-3">
+      <label class="mt-2 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/[.05] px-4 py-3">
+        <input type="checkbox" data-r="survei" checked class="mt-1 h-4 w-4 accent-amber-400" />
+        <span><span class="block text-[13.5px] font-medium">Survei kepuasan TW III</span>
+          <span class="text-[12px] text-white/50">Penilaian TW III akun yang dipilih dihapus; survei TW II tidak tersentuh.</span></span>
+      </label>
+      <div class="sticky -bottom-[1.6rem] -mx-[1.6rem] -mb-[1.6rem] mt-6 flex flex-wrap justify-end gap-3 bg-[rgb(22_24_28)] px-[1.6rem] pb-[1.6rem] pt-3">
         <button type="button" data-j="0" class="rounded-full border border-white/20 px-5 py-2.5 text-[13px] font-medium text-white/85 hover:bg-white/10">Batal</button>
         <button type="button" data-j="1" class="rounded-full bg-amber-400 px-5 py-2.5 text-[13px] font-semibold text-black hover:bg-amber-300">Reset sekarang</button>
       </div>
@@ -3647,8 +3664,9 @@ function dialogReset(daftar) {
       const b = e.target.closest('[data-j]');
       if (!b) return;
       if (b.dataset.j === '0') return tutup(null);
-      const pilih = { tes: lapis.querySelector('[data-r="tes"]').checked, konf: lapis.querySelector('[data-r="konf"]').checked };
-      tutup(pilih.tes || pilih.konf ? pilih : null);
+      const pilih = { tes: lapis.querySelector('[data-r="tes"]').checked, konf: lapis.querySelector('[data-r="konf"]').checked,
+                      survei: lapis.querySelector('[data-r="survei"]').checked };
+      tutup(pilih.tes || pilih.konf || pilih.survei ? pilih : null);
     });
     document.body.appendChild(lapis);
   });
@@ -3661,6 +3679,10 @@ async function jalankanReset(daftar) {
   if (pilih.tes) for (const g of daftar) {
     try { await store.resetTesPeserta(g.pid); }
     catch (e) { console.error('reset nilai gagal', g.pid, e); gagal.push(g.nama + ' (' + ((e && e.code) || e.message) + ')'); }
+  }
+  if (pilih.survei && window.SURVEI) for (const g of daftar) {
+    try { await window.SURVEI.hapusSaya(g.pid); }
+    catch (e) { console.error('reset survei gagal', g.pid, e); gagal.push('survei ' + g.nama + ' (' + ((e && e.code) || e.message) + ')'); }
   }
   if (pilih.konf && window.KONF) {
     for (const kunci of new Set(daftar.map(g => slug(g.kab || '')).filter(Boolean))) {
@@ -3798,6 +3820,7 @@ function exportXLS() {
 <script src="assets/impor-ba.js"></script>
 <script src="assets/rekap-ba.js"></script>
 <script src="assets/berita-acara.js"></script>
+<script src="assets/survei-gambar.js"></script>
 <script src="assets/survei.js"></script>
 <script src="assets/ceklis.js"></script>
 <script src="assets/emonitoring.js"></script>
